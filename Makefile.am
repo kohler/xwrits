@@ -30,7 +30,7 @@ COLOR_PIC = color/bars.gif color/lock.gif \
 	color/clenchl.gif color/spreadl.gif color/fingerl.gif color/restl.gif \
 	color/okl.gif color/clenchi.gif color/spreadi.gif color/fingeri.gif \
 	color/resti.gif color/oki.gif color/koreanl.gif color/koreani.gif \
-	color/germanl.gif
+	color/germanl.gif color/germani.gif
 MONO_PIC = mono/barsm.gif mono/lockm.gif \
 	mono/clenchlm.gif mono/spreadlm.gif mono/fingerlm.gif mono/restlm.gif \
 	mono/oklm.gif mono/clenchim.gif mono/spreadim.gif mono/fingerim.gif \

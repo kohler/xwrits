@@ -44,7 +44,7 @@ struct named_record built_in_pictures[] = {
 
   /* other cultures' finger gestures */
   {"korean", &koreanl_gif, 0},		{"koreanicon", &koreani_gif, 0},
-  {"german", &germanl_gif, 0},		{"germanicon", 0, 0, "koreanicon"},
+  {"german", &germanl_gif, 0},		{"germanicon", &germani_gif, 0},
   {"japanese", 0, 0, "korean"},		{"japaneseicon", 0, 0, "koreanicon"},
   {"russian", 0, 0, "korean"},		{"russianicon", 0, 0, "koreanicon"},
 
