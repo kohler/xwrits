@@ -18,9 +18,9 @@
 
 #define DefaultLockpassword	"quit"
 
-#define DefaultIdleselectdelay	2
+#define DefaultIdleselectdelay	1
 #define DefaultIdlegapdelay	0
-#define DefaultIdlegapdelayUsec	20000
+#define DefaultIdlegapdelayUsec	10000
 
 #define DefaultSlideshow	"clench;spread"
 #define DefaultSlideshowFinger	"clench;spread;finger"

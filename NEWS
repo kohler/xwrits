@@ -1,3 +1,8 @@
+Version 2.6
+
+* Added support for --longoptions and --version.
+
+
 Version 2.6b7
 
 * Clock improvements: fixed problem with black-on-black clock on 24-plane

@@ -44,6 +44,7 @@ install: $(PROGRAMS)
 	$(INSTALL_DATA) xwrits.man $(mandir)/xwrits.$(manext)
 
 main.o: main.c defaults.h
+	$(CC) $(CPPFLAGS) -DVERSION='"$(VERSION)"' $(CFLAGS) -c $<
 
 #####
 # Making pictures

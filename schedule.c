@@ -19,6 +19,8 @@ Alarm *alarms;
 struct timeval idle_select_delay;
 struct timeval idle_gap_delay;
 int check_idle;
+static unsigned long created_count;
+static unsigned long key_press_selected_count;
 
 
 int
@@ -55,12 +57,15 @@ idle_create(Window w, struct timeval *now)
     return; /* the window doesn't exist */
   
   XSelectInput(display, w, SubstructureNotifyMask);
+  created_count++;
   
   /* Better processing for the creation of new windows: we don't want to
      do idle processing for all of them all at once, in case we are doing
      something else as well (e.g., "spectacular effects").
      This code ensures that:
      - at least idleselectdelay elapses before selection is done on the window.
+       We want to wait so we can make sure the window selects for KeyPress
+       events.
      - at least idlegapdelay elapses between selection on any 2 windows. */
   a = new_alarm_data(IdleSelect, (void *)w);
   xwADDTIME(a->timer, *now, idle_select_delay);
@@ -81,16 +86,27 @@ idle_create(Window w, struct timeval *now)
 void
 idle_select(Window w)
 {
-  XWindowAttributes attr;
+  /* Before I only selected KeyPress if someone else had selected KeyPress on
+     the window (indicated by the `or' of all_event_masks and
+     do_not_propagate_mask). That seems obviously wrong! What if they only
+     selected KeyRelease? What if they selected KeyPress later? So I've
+     removed it. Hopefully this won't cause any strange behavior. */
   
+  /* Even though I didn't test long enough to see if it causes strange
+     behavior, I'm going back to the old method (we select KeyPress only if
+     someone else could receive it); this is a good idea because there are so
+     many window manager windows which otherwise we would select events on,
+     and not selecting events on 'em would seem to help performance. */
+  
+  XWindowAttributes attr;
   if (XGetWindowAttributes(display, w, &attr) == 0)
     return;
-  if (attr.root == w)
-    attr.all_event_masks = KeyPressMask;
-  
-  XSelectInput(display, w, SubstructureNotifyMask |
-	       ((attr.all_event_masks | attr.do_not_propagate_mask)
-		& KeyPressMask));
+  if (attr.root == w
+      || ((attr.all_event_masks | attr.do_not_propagate_mask)
+	  & KeyPressMask)) {
+    key_press_selected_count++;
+    XSelectInput(display, w, SubstructureNotifyMask | KeyPressMask);
+  }
 }
 
 
@@ -171,19 +187,24 @@ unschedule_data(int actions, void *data)
 
 
 int
-loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
+loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 {
   struct timeval timeout, now, *timeoutptr;
   XEvent event;
   fd_set xfds;
-  int retval = 0;
+  int pending;
+  int ret_val = 0;
+
+  /* 26 May 1998: Changed logic to avoid race conditions. Now we always flush
+     the output queue and check if there are any pending X events before
+     entering select() to wait for data. I wouldn't have noticed this, since
+     the effects were so transient, if it hadn't been for the --animate option
+     to gifview, which exercised this code more strenuously. */
   
   xwGETTIME(now);
   FD_ZERO(&xfds);
   
   while (1) {
-    int flush_needed = 0;
-    
     while (alarms && xwTIMEGEQ(now, alarms->timer)) {
       Alarm *a = alarms;
       Hand *h = (Hand *)a->data;
@@ -202,7 +223,6 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	while (xwTIMEGEQ(now, a->timer))
 	  xwADDTIME(a->timer, a->timer, ocurrent->top_delay);
 	schedule(a);
-	flush_needed = 1;
 	break;
 	
        case Flash:
@@ -213,7 +233,6 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	}
 	set_picture(h, ss, h->slide);
 	schedule(a);
-	flush_needed = 1;
 	break;
 	
        case Clock:
@@ -221,11 +240,10 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	refresh_hands();
 	xwADDTIME(a->timer, a->timer, clock_tick);
 	schedule(a);
-	flush_needed = 0;
 	break;
 	
        case Return:
-	retval = Return;
+	ret_val = Return;
 	break;
 	
        case IdleSelect:
@@ -233,34 +251,36 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	break;
 	
        default:
-	retval = alarmlooper(a, &now);
+	ret_val = alarm_looper(a, &now);
 	break;
 	
       }
       
       if (!a->scheduled) free(a);
-      if (retval != 0) return retval;
+      if (ret_val != 0) return ret_val;
     }
-    
-    if (flush_needed) XFlush(display);
     
     if (alarms) {
       timeoutptr = &timeout;
       xwSUBTIME(timeout, alarms->timer, now);
-    } else timeoutptr = 0;
+    } else
+      timeoutptr = 0;
     
-    FD_SET(x_socket, &xfds);
-    select(x_socket + 1, &xfds, 0, 0, timeoutptr);
+    pending = XPending(display);
+    if (!pending) {
+      FD_SET(x_socket, &xfds);
+      select(x_socket + 1, &xfds, 0, 0, timeoutptr);
+      pending = FD_ISSET(x_socket, &xfds);
+    }
     
-    if (FD_ISSET(x_socket, &xfds))
+    if (pending)
       while (XPending(display)) {
 	XNextEvent(display, &event);
 	default_x_processing(&event);
-	if (xlooper) retval = xlooper(&event);
-	if (retval != 0) return retval;
+	if (x_looper) ret_val = x_looper(&event);
+	if (ret_val != 0) return ret_val;
       }
     
     xwGETTIME(now);
-    
   }
 }

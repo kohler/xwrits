@@ -463,8 +463,12 @@ optparse(char *arg, char *option, int unique, char *format, ...)
   struct timeval *timeptr;
   char **charptr;
   int *intptr;
-    
+  
   va_start(val, format);
+  
+  /* Allow for long options. --[option] is equivalent to [option]. */
+  if (arg[0] == '-' && arg[1] == '-')
+    arg += 2;
   
   if (*format == 't') {
     /* Toggle switch. -[option] means off; +[option] or [option] means on.
@@ -616,8 +620,17 @@ parse_options(int pargc, char **pargv)
       ;
     else if (optparse(s, "top", 2, "tT", &o->top_delay))
       o->top = optparse_yesno;
-    
-    else
+
+    else if (optparse(s, "version", 1, "s")) {
+      printf("Xwrits version %s\n", VERSION);
+      printf("\
+Copyright (C) 1994-8 Eddie Kohler\n\
+This is free software; see the source for copying conditions.\n\
+There is NO warranty, not even for merchantability or fitness for a\n\
+particular purpose. That's right: you're on your own!\n");
+      exit(0);
+      
+    } else
       usage();
   }
   

@@ -61,7 +61,7 @@ ensure_one_hand(void)
 
 
 static int
-restxloop(XEvent *e)
+rest_x_loop(XEvent *e)
 {
   if (e->type == ClientMessage)
     /* Window manager deleted only xwrits window. Consider break over. */
@@ -97,7 +97,7 @@ rest(void)
   }
   
   XFlush(display);
-  val = loopmaster(0, restxloop);
+  val = loopmaster(0, rest_x_loop);
   
   unschedule(Return | Clock);
   return val == Return ? RestOK : val;
@@ -105,7 +105,7 @@ rest(void)
 
 
 static int
-readyxloop(XEvent *e)
+ready_x_loop(XEvent *e)
 {
   if (e->type == ButtonPress)
     return 1;
@@ -130,7 +130,7 @@ ready(void)
     XBell(display, 0);
   XFlush(display);
   
-  loopmaster(0, readyxloop);
+  loopmaster(0, ready_x_loop);
 }
 
 
