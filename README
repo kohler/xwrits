@@ -38,9 +38,9 @@ is designed to allow you to alter and redistribute the package, as long as
 you do not deny that freedom to others.
 
    Xwrits uses the currently-patented GIF file format to store its images.
-It is, nevertheless, compatible with the GPL, because GIF reading is not
-patented -- only GIF writing/compression. Xwrits is not distributed with,
-and does not link with, any GIF writing or compression code.
+It is, nevertheless, compatible with the GPL, because only GIF
+writing/compression is patented, not GIF reading. Xwrits is not distributed
+with, and does not link with, any GIF writing or compression code.
 
 BUGS, SUGGESTIONS, ETC.
 -----------------------
