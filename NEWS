@@ -1,5 +1,18 @@
 Xwrits NEWS
 
+Version 2.6.2
+
+* Bug fix: If `idle' was off, the warning window would never appear (it was
+  waiting for a key press -- stupid, since it wasn't listening for any key
+  presses).
+
+
+Version 2.6.1
+
+* Fixed the clock, which will now disappear properly instead of leaving a
+  black square (even in mono).
+
+
 Version 2.6
 
 * Made and included pictures for monochromatic screens and added `mono'
@@ -12,7 +25,7 @@ Version 2.6
 
 Version 2.6b8
 
-* Added support for --longoptions and --version.
+* Added support for --long-options and --version.
 
 * Fixed race condition in schedule.c.
 

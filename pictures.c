@@ -44,6 +44,7 @@ register_picture(char *name, int offset)
   p->next = pictures;
   p->used = 0;
   p->clock = 0;
+  p->background = None;
   pictures = p;
   
   p->clock_x_off = 10;
@@ -100,12 +101,7 @@ load_needed_pictures(Window window, int has_lock, int force_mono)
       
       if (large) {
 	Gif_Stream *gfs = Gif_ReadRecord(large);
-	if (gfs) {
-	  Gif_Color *gfc;
-	  p->large = Gif_XImage(gfx, gfs, 0);
-	  gfc = Gif_GetBackground(gfs, 0);
-	  if (gfc) p->background = gfc->pixel;
-	}
+	if (gfs) p->large = Gif_XImage(gfx, gfs, 0);
 	Gif_DeleteStream(gfs);
       }
       

@@ -51,6 +51,16 @@ draw_1_clock(Picture *p, int seconds)
   
   p->clock = 1;
   if (!p->large) return;
+
+  if (!p->background) {
+    p->background =
+      XCreatePixmap(display, p->large, ClockWidth + 10, ClockHeight + 10,
+		    port.depth);
+    XCopyArea(display, p->large, p->background, clock_fore_gc,
+	      p->clock_x_off - 2, p->clock_y_off - 2,
+	      ClockWidth + 10, ClockHeight + 10, 0, 0);
+  }
+  
   x = p->clock_x_off;
   y = p->clock_y_off;
   
@@ -90,10 +100,9 @@ erase_1_clock(Picture *p)
 {
   p->clock = 0;
   if (!p->large) return;
-  XSetForeground(display, clock_back_gc, p->background);
-  XFillRectangle(display, p->large, clock_back_gc,
-		 p->clock_x_off - 1, p->clock_y_off - 1,
-		 ClockWidth + 11, ClockHeight + 11);
+  XCopyArea(display, p->background, p->large, clock_fore_gc,
+	    0, 0, ClockWidth + 10, ClockHeight + 10,
+	    p->clock_x_off - 2, p->clock_y_off - 2);
 }
 
 
@@ -105,7 +114,6 @@ erase_clock(void)
     Picture *p = current_slideshow->picture[i];
     if (p->clock) erase_1_clock(p);
   }
-  XSetForeground(display, clock_back_gc, port.white);
 }
 
 

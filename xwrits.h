@@ -92,7 +92,6 @@ extern Options *ocurrent;
 
 extern struct timeval type_delay;
 extern struct timeval break_delay;
-extern struct timeval idle_check_delay;
 
 #define MaxPasswordSize 256
 extern struct timeval lock_message_delay;
@@ -244,10 +243,10 @@ struct Picture {
   
   Pixmap large;
   Pixmap icon;
+  Pixmap background;
   
   int clock_x_off;
   int clock_y_off;
-  unsigned long background;
 
   unsigned used: 1;
   unsigned clock: 1;
@@ -267,6 +266,7 @@ void load_needed_pictures(Window, int, int force_mono);
 
 extern struct timeval idle_select_delay;
 extern struct timeval idle_gap_delay;
+extern struct timeval idle_check_delay;
 extern int check_idle;
 
 void idle_create(Window, struct timeval *);

@@ -38,12 +38,21 @@ wait_for_break(void)
   if (xwTIMELEQ0(type_delay)) return;
   
   xwGETTIME(last_key_time);
+  if (!check_idle) {
+    /* Oops! Bug fix (8/17/98): If check_idle is off, we won't get keypresses;
+       so schedule an alarm for exactly type_delay in the future. */
+    Alarm *a = new_alarm(Return);
+    xwADDTIME(a->timer, last_key_time, type_delay);
+    schedule(a);
+  }
   
   do {
     xwGETTIME(wait_over_time);
     xwADDTIME(wait_over_time, wait_over_time, type_delay);
     val = loopmaster(0, wait_x_loop);
   } while (val == WarnRest);
+  
+  unschedule(Return);
 }
 
 

@@ -1,4 +1,7 @@
-.TH XWRITS 1 "28 May 1998" "Version 2.6"
+.\" -*- mode: nroff -*-
+.ds V 2.6.2
+'
+.TH XWRITS 1 "28 May 1998" "Version \*V"
 .SH NAME
 xwrits \- reminds you to take wrist breaks
 .SH SYNOPSIS
