@@ -16,20 +16,25 @@ Copyright: GPL
 BuildRoot: /tmp/xwrits-build
 
 %description
-Xwrits reminds you to take wrist breaks, which should help you prevent
-or manage a repetitive stress injury. It pops up an X window when you
-should rest; you click on that window, then take a break.
+Xwrits reminds you to take wrist breaks, which
+should help you prevent or manage a repetitive
+stress injury. It pops up an X window when you
+should rest; you click on that window, then take a
+break.
 
-Xwrits's graphics are brightly colored pictures of a wrist and the
-attached hand. The wrist clenches and stretches ``as if in pain'' when you
-should rest, slumps relaxed during the break, and points forward valiantly
-when the break is over. It is trapped behind bars while the keyboard is
-locked. Other gestures are included.
+Xwrits's graphics are brightly colored pictures of
+a wrist and the attached hand. The wrist clenches
+and stretches ``as if in pain'' when you should
+rest, slumps relaxed during the break, and points
+forward valiantly when the break is over. It is
+trapped behind bars while the keyboard is locked.
+Other gestures are included.
 
-Extensive command line options let you control how often xwrits appears. It
-can escalate its behavior over time -- by putting up more flashing windows
-or actually locking you out of the keyboard, for example -- which makes it
-harder to cheat.
+Extensive command line options let you control how
+often xwrits appears. It can escalate its behavior
+over time -- by putting up more flashing windows
+or actually locking you out of the keyboard, for
+example -- which makes it harder to cheat.
 
 %prep
 %setup
