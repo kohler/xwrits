@@ -313,7 +313,7 @@ Version 2.6b2
   Thanks to Albert L. Ting <alt@artisan.com> for a patch.
 
 
-Version 2.5
+Version 2.5   13.Nov.1995
 
 * The most important change is the +idle option, on by default, which makes
   xwrits slightly smarter than an alarm clock. The code has also been
