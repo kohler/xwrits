@@ -1,5 +1,28 @@
 Xwrits NEWS
 
+Version 2.9b1   10.Aug.1999
+
+* Added `+quota' option. With `+quota=TIME' on, if you leave your
+  workstation idle for more than TIME, xwrits will subtract that idle time
+  from the length of the next break. Requested by Justin Wells
+  <justin@fever.semiotek.com>.
+
+* Xwrits always monitors your key presses, even with `-idle'. Sort of
+  requested by Malcolm Ross Kinsella Ryan <malcolmr@cse.unsw.edu.au>.
+
+* Changed semantics of `+idle=IDLETIME'. Now the IDLETIME argument is the
+  amount of time that must pass before an idle period is treated like a
+  break. Something like this was requested by Peter Boult
+  <pjb@sagres.com.au>.
+
+* Pressing the mouse button on an xwrits window counts as a key press.
+
+* Thickened index finger on `+finger=korean' picture.
+
+* Added `german', `japanese', and `russian' as synonyms for
+  `+finger=korean'.
+
+
 Version 2.8   9.Aug.1999
 
 * Added the `+cheat' option to allow limited cheating during a break.
@@ -30,8 +53,9 @@ Version 2.8b2   4.Aug.1999
   requested by Radoslaw Stachowiak <radek.stachowiak@alter.pl>, Justin
   Wells <justin@fever.semiotek.com>, Chris Brand
   <chris_brand@raytheon.com>, Mark Lewis <mlewis@cgrg.ohio-state.edu>, Alex
-  Westner <westner@media.mit.edu>, Peter Boult <pjb@sagres.com.au>, Sam
-  Ockman <ockman@cs.stanford.edu>, and possibly others.
+  Westner <westner@media.mit.edu>, Peter Boult <pjb@sagres.com.au>, Malcolm
+  Ross Kinsella Ryan <malcolmr@cse.unsw.edu.au>, Sam Ockman
+  <ockman@cs.stanford.edu>, and possibly others.
 
 * You can specify your own GIF pictures or animations for the warning,
   resting, and ready windows with the `--warning-picture',

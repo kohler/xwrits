@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.8
+.ds V 2.9b1
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -21,30 +21,35 @@ xwrits \- reminds you to take wrist breaks
 of repetitive stress injuries. When you should take a break, it pops up an
 X window, the warning window. You click on the warning window, then take a
 break. The window changes appearance while you take the break. It changes
-again when your break is over. Then you just resume typing. \fBXwrits\fP
-hides itself until you should take another break.
+again when your break is over. Then you just resume typing. Xwrits hides
+itself until you should take another break.
 .PP
 The \fBtypetime\fP option changes the amount of time between breaks, and
 the \fBbreaktime\fP option changes the length of a break. The defaults are
 55 minutes and 5 minutes, respectively.
 .PP
-\fBXwrits\fP's graphics are brightly colored pictures of a wrist and hand.
-The hand clenches and spreads ``as if in pain'' on the warning window,
-slumps relaxed during the break, and points forward valiantly when the
-break is over. It is trapped behind bars while the keyboard is locked.
-Other gestures are included (see the \fB+finger\fP option). You can also
-use your own pictures: see the \fBwarning-picture\fP, \fBrest-picture\fP,
-and \fBready-picture\fP options.
+Xwrits's graphics are brightly colored pictures of a wrist and hand. The
+hand clenches and spreads ``as if in pain'' on the warning window, slumps
+relaxed during the break, and points forward valiantly when the break is
+over. It is trapped behind bars while the keyboard is locked. Other
+gestures are included (see the \fB+finger\fP option). You can also use your
+own pictures: see the \fBwarning-picture\fP, \fBrest-picture\fP, and
+\fBready-picture\fP options.
 .PP
-\fBXwrits\fP normally works through annoyance\*Eit flashes until you stop
+Normally, xwrits works through annoyance\*Eit flashes until you stop
 typing. However, an option makes it actively prevent you from typing by
 locking the screen. See \fB+lock\fP below.
 .PP
-\fBXwrits\fP monitors your typing and notices when you leave your
-workstation idle or cheat on a break; you can turn this off with the
-\fB-idle\fP option. With the \fB+mouse\fP option, it will also monitor your
-mouse movements\*Eyou won't be able to move the mouse during a break
-without aborting the break.
+Xwrits notices when you leave your workstation idle, and treats a long idle
+period as if you took a break. You can turn this off with the \fB-idle\fP
+option. With the \fB+mouse\fP option, it will also monitor your mouse
+movements\*Eyou won't be able to move the mouse during a break without
+aborting the break.
+.PP
+Each wrist break normally lasts the same amount of time even if you've
+taken small breaks while typing. This is what doctors suggest, but, if
+you'd like, the \fB+quota\fP option will reward you for taking small breaks
+by reducing the length of the next official break.
 '
 .SH ESCALATION
 It is easy to put the warning window aside ``for 5 minutes'' and
@@ -137,7 +142,7 @@ The warning window will be rude to you.
 \fB+finger\fP=\fIculture\fP
 The warning window will be rude to you, according to \fIculture\fP's idea
 of rudeness. Possible values for \fIculture\fP are `american' (the default)
-and `korean'.
+and `korean' (synonyms `german', `japanese', and `russian').
 '
 .TP 5
 \fBflashtime\fP=\fItime\fP
@@ -153,15 +158,10 @@ Synonym for \fB+finger\fP.
 The warning window will initially appear as an icon.
 '
 .TP 5
-\fB+idle\fP[=\fIcheck-time\fP] (\fB\-idle\fP) [\fBi\fP]
-'
-When idle is on, xwrits will monitor your typing and adjust its actions
-accordingly. For instance, the warning window will not appear if you leave
-your workstation unattended. Also, if you stop typing while a warning
-window is active, but forget to click the warning window, xwrits will
-automatically start your wrist break after waiting for a while. You can set
-this waiting time with the optional \fIcheck-time\fP argument; by default,
-it's a third of the break's length. \fBidle\fP is on by default.
+\fB+idle\fP[=\fIidletime\fP] (\fB\-idle\fP) [\fBi\fP]
+If you leave your workstation idle for \fIidletime\fP or longer, xwrits
+will behave as if you took a break. The default for \fIidletime\fP is the
+break length (see \fBbreaktime\fP above). \fBidle\fP is on by default.
 '
 .TP 5
 \fB+lock\fP[=\fIjump-time\fP] (\fB\-lock\fP)
@@ -207,6 +207,15 @@ The password you type to unlock a locked screen (see \fB+lock\fP above).
 Xwrits does not protect this password from intruders.
 Therefore, do not use your login password or any other password you must
 keep secure. Default is ``quit''.
+'
+.TP 5
+\fB+quota\fP[=\fItime\fP] (\fB\-quota\fP)
+If you leave your workstation idle for more than \fItime\fP, the idle time
+is deducted from the length of your next break. This option turns the break
+length into a break quota\*Einstead of resting for \fIbreaktime\fP
+consecutive minutes every \fItypetime\fP, you must rest for a total of
+\fIbreaktime\fP minutes per \fItypetime\fP. Default for \fItime\fP is 1
+minute.
 '
 .TP 5
 \fBready-picture\fP=\fIfile\fP [\fBokp\fP=\fIfile\fP]

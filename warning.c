@@ -162,12 +162,15 @@ warn_x_loop(XEvent *e, struct timeval *now)
     
    case ButtonPress:
     /* OK; we can rest now. */
+    /* 10.Aug.1999 - treat the mouse click as a keypress */
+    last_key_time = *now;
     return TRAN_REST;
     
    case KeyPress:
+   case MotionNotify:
+    last_key_time = *now;
     if ((a = grab_alarm(A_IDLE_CHECK))) {
-      last_key_time = *now;
-      xwADDTIME(a->timer, last_key_time, idle_time);
+      xwADDTIME(a->timer, last_key_time, warn_idle_time);
       schedule(a);
     }
     break;
@@ -200,9 +203,9 @@ warn(int was_lock)
   
   pop_up_hand(hands);
   
-  if (check_idle && !xwTIMELEQ0(idle_time)) {
+  if (check_idle) {
     Alarm *a = new_alarm(A_IDLE_CHECK);
-    xwADDTIME(a->timer, last_key_time, idle_time);
+    xwADDTIME(a->timer, last_key_time, warn_idle_time);
     schedule(a);
   }
   

@@ -20,6 +20,7 @@ struct named_record {
   const char *name;
   Gif_Record *record;
   Gif_Stream *gfs;
+  const char *synonym;
 };
 
 struct named_record built_in_pictures[] = {
@@ -43,6 +44,9 @@ struct named_record built_in_pictures[] = {
 
   /* other cultures' finger gestures */
   {"korean", &koreanl_gif, 0},		{"koreanicon", &koreani_gif, 0},
+  {"german", 0, 0, "korean"},		{"germanicon", 0, 0, "koreanicon"},
+  {"japanese", 0, 0, "korean"},		{"japaneseicon", 0, 0, "koreanicon"},
+  {"russian", 0, 0, "korean"},		{"russianicon", 0, 0, "koreanicon"},
 
   /* last */
   {0, 0, 0}
@@ -74,12 +78,12 @@ add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
 }
 
 
-Gif_Image *
+Gif_Stream *
 get_built_in_image(const char *name)
 {
   struct named_record *nr;
   Gif_Stream *gfs;
-  int xoff;
+  int i, xoff;
   
   for (nr = built_in_pictures; nr->name; nr++)
     if (strcmp(nr->name, name) == 0)
@@ -88,24 +92,104 @@ get_built_in_image(const char *name)
   
  found:
   if (nr->gfs)
-    return nr->gfs->images[0];
+    return nr->gfs;
+  if (!nr->record && nr->synonym) {
+    nr->gfs = get_built_in_image(nr->synonym);
+    return nr->gfs;
+  }
   
   nr->gfs = gfs = Gif_FullReadRecord(nr->record, GIF_READ_COMPRESSED, 0, 0);
   if (!gfs)
     return 0;
   
   xoff = (strncmp(name, "locked", 6) == 0 ? 65 : 10);
-  add_picture(gfs->images[0], xoff, 10);
-  if (!gfs->images[0]->local) {
-    gfs->images[0]->local = gfs->global;
-    gfs->global->refcount++;
-  }
-  gfs->images[0]->delay = 0;
-  return gfs->images[0];
+  for (i = 0; i < gfs->nimages; i++)
+    add_picture(gfs->images[i], xoff, 10);
+
+  /* built-in images are all loop-forever. don't change the GIFs because it
+     makes the executable bigger */
+  gfs->loopcount = 0;
+  
+  return gfs;
 }
 
 
 #define MIN_DELAY 4
+
+static Gif_Image *
+clone_image_skeleton(Gif_Image *gfi)
+{
+  Gif_Image *ngfi = Gif_NewImage();
+  Picture *p = (Picture *)gfi->user_data;
+  assert(!gfi->image_data && gfi->compressed && p);
+  ngfi->local = gfi->local;
+  if (ngfi->local) ngfi->local->refcount++;
+  ngfi->transparent = gfi->transparent;
+  ngfi->left = gfi->left;
+  ngfi->top = gfi->top;
+  ngfi->width = gfi->width;
+  ngfi->height = gfi->height;
+  ngfi->compressed = gfi->compressed;
+  ngfi->compressed_len = gfi->compressed_len;
+  ngfi->free_compressed = 0;
+  ngfi->delay = gfi->delay;
+  add_picture(ngfi, p->clock_x_off, p->clock_y_off);
+  ((Picture *)ngfi->user_data)->canonical = gfi;
+  gfi->refcount++;
+  return ngfi;
+}
+
+static void
+add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
+			double flash_rate_ratio)
+{
+  Gif_Image *gfi;
+  int i;
+  double d;
+  
+  /* adapt delays for 1-frame images */
+  if (add->nimages == 1)
+    add->images[0]->delay = DEFAULT_FLASH_DELAY_SEC * 100;
+  
+  /* account for background and loopcount */
+  if (gfs->nimages == 0) {
+    if (add->global) {
+      gfs->global = add->global;
+      add->global->refcount++;
+      gfs->background = add->background;
+    }
+    gfs->loopcount = add->loopcount;
+  }
+  
+  /* adapt screen size */
+  if (add->screen_width > gfs->screen_width)
+    gfs->screen_width = add->screen_width;
+  if (add->screen_height > gfs->screen_height)
+    gfs->screen_height = add->screen_height;
+  
+  /* add images from add to gfs */
+  for (i = 0; i < add->nimages; i++) {
+    gfi = add->images[i];
+    /* don't use an image directly if it is shared */
+    if (gfi->user_data)
+      gfi = clone_image_skeleton(gfi);
+    else
+      add_picture(gfi, 10, 10);
+    /* ensure local colormap */
+    if (!gfi->local && add->global) {
+      gfi->local = add->global;
+      add->global->refcount++;
+    }
+    /* adapt delay */
+    d = gfi->delay * flash_rate_ratio;
+    if (d < 0 || d >= 0xFFFF)
+      gfi->delay = 0xFFFF;
+    else
+      gfi->delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
+    /* add image */
+    Gif_AddImage(gfs, gfi);
+  }
+}
 
 Gif_Stream *
 parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
@@ -113,11 +197,9 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
   char buf[BUFSIZ];
   char name[BUFSIZ + 4];
   char *s;
-  Gif_Stream *gfs;
+  Gif_Stream *gfs, *add;
   Gif_Image *gfi;
-  u_int16_t delay;
   int i;
-  double d;
   
   if (strlen(slideshowtext) >= BUFSIZ) return 0;
   strcpy(buf, slideshowtext);
@@ -125,12 +207,6 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
   
   gfs = Gif_NewStream();
   gfs->loopcount = 0;
-  
-  d = flash_rate_ratio * DEFAULT_FLASH_DELAY_SEC * 100;
-  if (d < 0 || d > 0xFFFF)
-    delay = 0xFFFF;
-  else
-    delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
   
   while (*s) {
     char *n, save;
@@ -146,92 +222,31 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
       strcpy(name, n + 1);
       if (mono) strcat(name, "mono");
       i = strlen(name);
-      gfi = get_built_in_image(name);
+      add = get_built_in_image(name);
       /* some images don't have monochromatic versions; fall back on color */
-      if (!gfi && i > 4 && strcmp(name + i - 4, "mono") == 0) {
+      if (!add && i > 4 && strcmp(name + i - 4, "mono") == 0) {
 	name[i-4] = 0;
-	gfi = get_built_in_image(name);
-	if (gfi)
+	add = get_built_in_image(name);
+	if (add)
 	  warning("no monochrome version of built-in picture `%s'", name);
 	name[i-4] = 'm';
       }
-      if (!gfi)
+      if (!add)
 	error("unknown built-in picture `%s'", name);
-      /* adapt delay */
-      if (!gfi->delay || gfi->delay == delay)
-	gfi->delay = delay;
-      else {
-	Gif_Image *ngfi = Gif_NewImage();
-	Picture *p = (Picture *)gfi->user_data;
-	assert(!gfi->image_data && gfi->compressed);
-	ngfi->local = gfi->local;
-	ngfi->local->refcount++;
-	ngfi->transparent = gfi->transparent;
-	ngfi->left = gfi->left;
-	ngfi->top = gfi->top;
-	ngfi->width = gfi->width;
-	ngfi->height = gfi->height;
-	ngfi->compressed = gfi->compressed;
-	ngfi->compressed_len = gfi->compressed_len;
-	ngfi->free_compressed = 0;
-	ngfi->delay = delay;
-	add_picture(ngfi, p->clock_x_off, p->clock_y_off);
-	((Picture *)ngfi->user_data)->canonical = gfi;
-	gfi->refcount++;
-	gfi = ngfi;
-      }
-      /* add image */
-      Gif_AddImage(gfs, gfi);
+      /* add images */
+      add_stream_to_slideshow(add, gfs, flash_rate_ratio);
       
     } else {
       /* load file from disk */
       FILE *f = fopen(n, "rb");
-      Gif_Stream *read = Gif_FullReadFile(f, GIF_READ_COMPRESSED, 0, 0);
+      add = Gif_FullReadFile(f, GIF_READ_COMPRESSED, 0, 0);
       if (!f)
 	error("%s: %s", n, strerror(errno));
-      else if (!read || (read->nimages == 0 && read->errors > 0))
+      else if (!add || (add->nimages == 0 && add->errors > 0))
 	error("%s: not a GIF", n);
-      else {
-	/* adapt delays */
-	if (read->nimages == 1)
-	  read->images[0]->delay = delay;
-	else
-	  for (i = 0; i < read->nimages; i++) {
-	    gfi = read->images[i];
-	    d = gfi->delay * flash_rate_ratio;
-	    if (d < 0 || d >= 0xFFFF)
-	      gfi->delay = 0xFFFF;
-	    else
-	      gfi->delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
-	  }
-	/* account for background and loopcount */
-	if (gfs->nimages == 0) {
-	  if (read->global) {
-	    gfs->global = read->global;
-	    read->global->refcount++;
-	    gfs->background = read->background;
-	  }
-	  gfs->loopcount = read->loopcount;
-	}
-	/* adapt screen size */
-	if (read->screen_width > gfs->screen_width)
-	  gfs->screen_width = read->screen_width;
-	if (read->screen_height > gfs->screen_height)
-	  gfs->screen_height = read->screen_height;
-	/* add images to gfs */
-	for (i = 0; i < read->nimages; i++) {
-	  Gif_Image *gfi = read->images[i];
-	  if (!gfi->local && read->global) {
-	    gfi->local = read->global;
-	    read->global->refcount++;
-	  }
-	  Gif_AddImage(gfs, gfi);
-	  add_picture(gfi, 10, 10);
-	  if (gfi->delay == 0)
-	    gfi->delay = 1;
-	}
-      }
-      if (read) Gif_DeleteStream(read);
+      else
+	add_stream_to_slideshow(add, gfs, flash_rate_ratio);
+      if (add) Gif_DeleteStream(add);
       if (f) fclose(f);
     }
     

@@ -210,7 +210,7 @@ extern Gif_Stream *resting_slideshow, *resting_icon_slideshow;
 extern Gif_Stream *ready_slideshow, *ready_icon_slideshow;
 #define DEFAULT_FLASH_DELAY_SEC 2
 
-Gif_Image *get_built_in_image(const char *);
+Gif_Stream *get_built_in_image(const char *);
 Gif_Stream *parse_slideshow(const char *, double, int mono);
 void set_slideshow(Hand *, Gif_Stream *, struct timeval *);
 void set_all_slideshows(Hand *, Gif_Stream *);
@@ -239,17 +239,25 @@ void load_needed_pictures(Window, int, int force_mono);
 extern struct timeval register_keystrokes_delay;
 extern struct timeval register_keystrokes_gap;
 
-extern int check_idle;
-extern struct timeval idle_time;
-extern struct timeval last_key_time;
+extern struct timeval last_key_time;	/* time of last keystroke/equivalent */
 
-extern int check_mouse;
-extern struct timeval check_mouse_time;
-extern int mouse_sensitivity;
-extern int last_mouse_x, last_mouse_y;
-extern Window last_mouse_root;
+extern int check_idle;			/* check for idle periods? */
+extern struct timeval idle_time;	/* idle period of idle_time = break */
+extern struct timeval warn_idle_time;	/* " during warning */
 
-extern int max_cheats;
+extern int check_mouse;			/* pay attention to mouse movement? */
+extern struct timeval check_mouse_time;	/* next time to check mouse pos */
+extern int mouse_sensitivity;		/* movement > sensitivity = keypress */
+extern int last_mouse_x, last_mouse_y;	/* last mouse position */
+extern Window last_mouse_root;		/* mouse was last on this root */
+
+extern int check_quota;			/* use quota system? */
+extern struct timeval quota_time;	/* if idle more than quota_time,
+					   count idle time towards break */
+extern struct timeval quota_allotment;	/* counted towards break */
+
+extern int max_cheats;			/* allow this many cheat events before
+					   cancelling break */
 
 void watch_keystrokes(Window, struct timeval *);
 void register_keystrokes(Window);
@@ -287,6 +295,10 @@ void unmap_all(void);
 #define SEC_PER_MIN 60
 #define MIN_PER_HOUR 60
 #define HOUR_PER_CYCLE 12
+
+#define xwSETTIME(timeval, sec, usec) do { \
+	(timeval).tv_sec = (sec); (timeval).tv_usec = (usec); \
+	} while (0)
 
 #define xwADDTIME(result, a, b) do { \
 	(result).tv_sec = (a).tv_sec + (b).tv_sec; \

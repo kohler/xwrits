@@ -7,8 +7,6 @@
 #include <assert.h>
 #include "gifx.h"
 
-#define SET_TIME(timeval, sec, usec) do { (timeval).tv_sec = (sec); (timeval).tv_usec = (usec); } while (0)
-
 static Options onormal;
 Options *ocurrent;
 
@@ -38,6 +36,7 @@ static char *display_name = 0;
 
 int check_idle;
 struct timeval idle_time;
+struct timeval warn_idle_time;
 
 int check_mouse;
 int mouse_sensitivity;
@@ -45,6 +44,10 @@ struct timeval check_mouse_time;
 int last_mouse_x;
 int last_mouse_y;
 Window last_mouse_root;
+
+int check_quota;
+struct timeval quota_time;
+struct timeval quota_allotment;
 
 #define MAX_CHEATS_UNSET -97979797
 int max_cheats;
@@ -80,43 +83,44 @@ All options may be abbreviated to their unique prefixes. The three forms\n\
 explicitly with `-OPTION'.\n\
 \n\
 General options:\n\
-  --display DISPLAY     Monitor the X display DISPLAY.\n\
-  --help                Print this message and exit.\n\
-  --version             Print version number and exit.\n\
+  --display DISPLAY   Monitor the X display DISPLAY.\n\
+  --help              Print this message and exit.\n\
+  --version           Print version number and exit.\n\
 \n");
   printf("\
 Break characteristics:\n\
-  --typetime=DURATION, t=DURATION   Allow typing for DURATION.\n\
-  --breaktime=DURATION, b=DURATION   Breaks last for DURATION.\n\
-  +lock                 Lock the keyboard during the break.\n\
-  --password=PW         Set the password for unlocking the keyboard.\n\
-  +idle                 Monitor your typing (on by default).\n\
-  +mouse                Monitor your mouse movements.\n\
-  +cheat[=NUM]          Allow NUM keystrokes before cancelling a break.\n\
+  --typetime=TIME, t=TIME    Allow typing for TIME (default 55 minutes).\n\
+  --breaktime=TIME, b=TIME   Breaks last for TIME (default 5 minutes).\n\
+  +lock               Lock the keyboard during the break.\n\
+  --password=PW       Set the password for unlocking the keyboard.\n\
+  +mouse              Monitor your mouse movements.\n\
+  +idle[=TIME]        Leaving the keyboard idle for TIME is the same as taking\n\
+                      a break. On by default. Default TIME is breaktime.\n\
+  +quota[=TIME]       Leaving the keyboard idle for more than TIME reduces next\n\
+                      break length by the idle time. Default TIME is 1 minute.\n\
+  +cheat[=NUM]        Allow NUM keystrokes before cancelling a break.\n\
 \n");
   printf("\
 Appearance:\n\
-  after=TIME            Change behavior if warning window is ignored for TIME;\n\
-                        options following `after' give new behavior.\n\
-  +beep                 Beep when the warning window appears.\n\
-  +breakclock           Show how much time remains during the break.\n\
-  +clock                Show how long you have ignored the warning window.\n\
-  +finger               Be rude.\n\
-  +finger=CULTURE       Be rude according to CULTURE. Choices: `american',\n\
-                        `korean'.\n\
-  flashtime=RATE        Flash the warning window at RATE.\n\
-  +iconified            Warning windows appear as icons.\n\
-  maxhands=NUM          Maximum number of warning windows is NUM (default: 25).\n\
-  +mono                 Use monochrome pictures.\n\
-  +multiply=PERIOD      Make a new warning window every PERIOD.\n\
-  +noiconify            Don't let anyone iconify the warning window.\n\
-  ready-picture=GIF-FILE, okp=GIF-FILE   Use a GIF animation as the\n\
-                        `OK' window picture.\n\
-  rest-picture=GIF-FILE, rp=GIF-FILE   Use a GIF animation as the\n\
-                        resting window picture.\n\
-  +top                  Keep the warning windows on top of the window stack.\n\
-  warning-picture=GIF-FILE, wp=GIF-FILE   Use a GIF animation as the\n\
-                        warning window picture.\n\
+  after=TIME          Change behavior if warning window is ignored for TIME.\n\
+                      Options following `after' give new behavior.\n\
+  +beep               Beep when the warning window appears.\n\
+  +breakclock         Show how much time remains during the break.\n\
+  +clock              Show how long you have ignored the warning window.\n\
+  +finger             Be rude.\n\
+  +finger=CULTURE     Be rude according to CULTURE. Choices: `american',\n\
+                      `korean' (synonyms `german', `japanese', `russian').\n\
+  flashtime=RATE      Flash the warning window at RATE (default 2 sec).\n\
+  +iconified          Warning windows appear as icons.\n\
+  maxhands=NUM        Maximum number of warning windows is NUM (default 25).\n\
+  +mono               Use monochrome pictures.\n\
+  +multiply=PERIOD    Make a new warning window every PERIOD.\n\
+  +noiconify          Don't let anyone iconify the warning window.\n\
+  ready-picture=GIF-FILE, okp=GIF-FILE   Show GIF animation on the `OK' window.\n\
+  rest-picture=GIF-FILE, rp=GIF-FILE     Show GIF animation on resting window.\n\
+  +top                Keep the warning windows on top of the window stack.\n\
+  warning-picture=GIF-FILE, wp=GIF-FILE  Show GIF animation on the warning\n\
+                      window.\n\
 \n\
 Report bugs and suggestions to <eddietwo@lcs.mit.edu>.\n");
 }
@@ -324,8 +328,7 @@ new_hand(int x, int y)
 		  PropModeReplace, (unsigned char *)mwm_hints, 4);
   
   XSelectInput(display, nh->w, ButtonPressMask | StructureNotifyMask
-	       | (check_idle ? KeyPressMask : 0) | VisibilityChangeMask
-	       | ExposureMask);
+	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
   
   nh->icon = nh_icon;
   nh->width = width;		/* will be reset correctly by */
@@ -821,7 +824,10 @@ parse_options(int pargc, char **pargv)
     
     else if (optparse(s, "password", 1, "ss", &lock_password))
       ;
-
+    
+    else if (optparse(s, "quota", 1, "tT", &quota_time))
+      check_quota = optparse_yesno;
+    
     else if (optparse(s, "rest-picture", 3, "ss", &resting_slideshow_text)
 	     || optparse(s, "rp", 2, "ss", &resting_slideshow_text))
       ;
@@ -970,46 +976,51 @@ initialize_port(Display *display, int screen_number)
 static void
 default_settings(void)
 {
-  /* Global default settings */
-  SET_TIME(type_delay, 55 * SEC_PER_MIN, 0);
-  SET_TIME(break_delay, 5 * SEC_PER_MIN, 0);
+  /* time settings */
+  xwSETTIME(type_delay, 55 * SEC_PER_MIN, 0);
+  xwSETTIME(break_delay, 5 * SEC_PER_MIN, 0);
   onormal.flash_rate_ratio = 1;
-  
-  SET_TIME(onormal.multiply_delay, 2, 300000);
+
+  /* multiply settings */
+  xwSETTIME(onormal.multiply_delay, 2, 300000);
   onormal.max_hands = 25;
   
-  /* Locking settings */
-  SET_TIME(onormal.lock_bounce_delay, 4, 0);
-  SET_TIME(lock_message_delay, 10, 0);
+  /* locking settings */
+  xwSETTIME(onormal.lock_bounce_delay, 4, 0);
+  xwSETTIME(lock_message_delay, 10, 0);
   lock_password = "quit";
   
-  /* Keystroke registration functions */
+  /* keystroke registration functions */
   check_idle = 1;
-  SET_TIME(idle_time, 0, 0);
-  SET_TIME(register_keystrokes_delay, 1, 0);
+  xwSETTIME(idle_time, 0, 0);
+  xwSETTIME(register_keystrokes_delay, 1, 0);
   
-  /* Mouse tracking functions */
+  /* mouse tracking functions */
   check_mouse = 0;
-  SET_TIME(check_mouse_time, 3, 0);
+  xwSETTIME(check_mouse_time, 3, 0);
   mouse_sensitivity = 15;
   last_mouse_x = last_mouse_y = 0;
 
-  /* Cheating */
+  /* quota settings */
+  check_quota = 0;
+  xwSETTIME(quota_time, 60, 0);
+  
+  /* cheating */
   max_cheats = MAX_CHEATS_UNSET;
   allow_cheats = 0;
   
-  /* Slideshows */
+  /* slideshows */
   onormal.slideshow_text = onormal.icon_slideshow_text = 0;
   slideshow_text_append_built_in(&onormal, "clench");
   slideshow_text_append_built_in(&onormal, "spread");
   
-  /* Clock tick time functions */
+  /* clock tick time functions */
   /* 20 seconds seems like a reasonable clock tick time, even though it'll
      redraw the same hands 3 times. */
-  SET_TIME(clock_tick, 20, 0);
+  xwSETTIME(clock_tick, 20, 0);
   
-  /* Next option set */
-  SET_TIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
+  /* next option set */
+  xwSETTIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
   onormal.next = 0;
   onormal.prev = 0;
 }
@@ -1021,6 +1032,7 @@ main(int argc, char *argv[])
   Hand *hand;
   Options *o;
   int lock_possible = 0;
+  struct timeval now;
   
   xwGETTIMEOFDAY(&genesis_time);
   
@@ -1029,31 +1041,28 @@ main(int argc, char *argv[])
   /* parse options. remove first argument = program name */
   default_settings();  
   parse_options(argc - 1, argv + 1);
-
+  
   /* check global options */
   if (strlen(lock_password) >= MaxPasswordSize)
     error("password too long");
   
+  /* default for idle_time and warn_idle_time is based on break_delay;
+     otherwise, warn_idle_time == idle_time */
   if (check_idle && xwTIMELEQ0(idle_time)) {
-    /* default for idle_time is based on break_delay */
     double time = 0.3 * (break_delay.tv_sec +
 			(break_delay.tv_usec / (double)MICRO_PER_SEC));
     long integral_time = (long)(floor(time));
-    idle_time.tv_sec = integral_time;
-    idle_time.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
-  }
-
-  if (check_mouse && !check_idle) {
-    warning("`+mouse' has no effect when `idle' has been turned off");
-    check_mouse = 0;
-  }
+    idle_time = break_delay;
+    warn_idle_time.tv_sec = integral_time;
+    warn_idle_time.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
+  } else
+    warn_idle_time = idle_time;
   
+  /* fix cheats */
   if (!allow_cheats)
     max_cheats = 0;
   else if (max_cheats == MAX_CHEATS_UNSET)
     max_cheats = 5;
-  if (max_cheats > 0 && !check_idle)
-    warning("`+cheat' has no effect when `idle' has been turned off");
   
   /* check local options */
   for (o = &onormal; o; o = o->next) {
@@ -1078,21 +1087,25 @@ main(int argc, char *argv[])
   port.drawable = hand->w;
   init_clock(hand->w);
   if (lock_possible) {
-    Gif_Image *gfi = get_built_in_image(force_mono ? "lockedmono" : "locked");
-    if (!gfi && force_mono) gfi = get_built_in_image("locked");
-    lock_pixmap = Gif_XImage(gfx, 0, gfi);
-    Gif_DeleteImage(gfi);
-    gfi = get_built_in_image(force_mono ? "barsmono" : "bars");
-    if (!gfi && force_mono) gfi = get_built_in_image("bars");
-    bars_pixmap = Gif_XImage(gfx, 0, gfi);
-    Gif_DeleteImage(gfi);
+    Gif_Stream *gfs = get_built_in_image(force_mono ? "lockedmono" : "locked");
+    if (!gfs && force_mono) gfs = get_built_in_image("locked");
+    lock_pixmap = Gif_XImage(gfx, gfs, 0);
+    gfs = get_built_in_image(force_mono ? "barsmono" : "bars");
+    if (!gfs && force_mono) gfs = get_built_in_image("bars");
+    bars_pixmap = Gif_XImage(gfx, gfs, 0);
   }
   
-  if (check_idle) {
-    struct timeval now;
-    xwGETTIME(now);
-    XSetErrorHandler(x_error_handler);
-    watch_keystrokes(port.root_window, &now);
+  /* watch keystrokes on all windows */
+  xwGETTIME(now);
+  XSetErrorHandler(x_error_handler);
+  watch_keystrokes(port.root_window, &now);
+  
+  /* start mouse checking */
+  if (check_mouse) {
+    Alarm *a = new_alarm(A_MOUSE);
+    xwGETTIME(a->timer);
+    schedule(a);
+    last_mouse_root = None;
   }
   
   while (1) {
