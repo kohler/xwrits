@@ -17,16 +17,18 @@ static int passwordpos = -1;
 static void
 move_lock(int domove)
 {
-  static int lockx, locky;
+  static int lock_x, lock_y;
   if (domove) {
-    XClearArea(display, cover, lockx, locky, WindowWidth, WindowHeight, False);
-    lockx = ((rand() >> 4) % (display_width / WindowWidth * 2 - 1))
+    XClearArea(display, cover, lock_x, lock_y, WindowWidth, WindowHeight,
+	       False);
+    lock_x = ((rand() >> 4) % (display_width / WindowWidth * 2 - 1))
       * (WindowWidth / 2);
-    locky = (rand() >> 4) % (display_height - WindowHeight);
+    lock_y = (rand() >> 4) % (display_height - WindowHeight);
+    lock_y = (lock_y & ~0x3) | 0x2;
   }
-  if (barspix) /* FIXME */
-    XCopyArea(display, barspix, cover, gc, 0, 0,
-	      WindowWidth, WindowHeight, lockx, locky);
+  if (lock_pixmap)
+    XCopyArea(display, lock_pixmap, cover, gc, 0, 0,
+	      WindowWidth, WindowHeight, lock_x, lock_y);
   XFlush(display);
 }
 
@@ -160,11 +162,11 @@ lock(void)
   {
     XSetWindowAttributes setattr;
     unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect;
-    if (!barspix) {
+    if (!bars_pixmap) {
       setattr.background_pixel = black_pixel;
       cwmask |= CWBackPixel;
     } else {
-      setattr.background_pixmap = barspix;
+      setattr.background_pixmap = bars_pixmap;
       cwmask |= CWBackPixmap;
     }
     setattr.backing_store = NotUseful;

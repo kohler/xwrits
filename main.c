@@ -26,19 +26,28 @@ Slideshow *slideshow[MaxState];
 
 Display *display;
 int screen_number;
-Window root_window;
-Visual *visual;
-Colormap colormap;
-unsigned long black_pixel, white_pixel;
-int depth;
-int display_width, display_height;
-XFontStruct *font;
+int display_width;
+int display_height;
 int x_socket;
-int wm_delta_x = NODELTAS, wm_delta_y = NODELTAS;
+
+Visual *visual;
+int depth;
+Colormap colormap;
+unsigned long black_pixel;
+unsigned long white_pixel;
+
+Window root_window;
+XFontStruct *font;
+
+int wm_delta_x = NODELTAS;
+int wm_delta_y = NODELTAS;
 
 static char *display_name = 0;
 
-static int icon_width, icon_height;
+static int icon_width;
+static int icon_height;
+
+static int force_mono = 0;
 
 
 static void
@@ -600,7 +609,9 @@ parse_options(int pargc, char **pargv)
     
     else if (optparse(s, "lock", 1, "tT", &o->lock_bounce_delay))
       o->lock = optparse_yesno;
-    
+
+    else if (optparse(s, "mono", 2, "t"))
+      force_mono = optparse_yesno;
     else if (optparse(s, "multiply", 1, "tT", &o->multiply_delay))
       o->multiply = optparse_yesno;
     else if (optparse(s, "maxhands", 2, "si", &o->max_hands))
@@ -705,7 +716,7 @@ choose_visual(void)
       colormap = DefaultColormap(display, screen_number);
     
   }
-
+  
   /* set up black_pixel and white_pixel */
   {
     XColor color;
@@ -748,7 +759,7 @@ main(int argc, char *argv[])
   xwSETTIME(idle_select_delay, DefaultIdleselectdelay, 0);
   xwSETTIME(idle_gap_delay, DefaultIdlegapdelay, DefaultIdlegapdelayUsec);
   check_idle = 1;
-
+  
   /* 15 seconds seems like a reasonable clock tick time, even though it'll
      redraw the same hands 4 times. */
   xwSETTIME(clock_tick, 15, 0);
@@ -786,7 +797,7 @@ main(int argc, char *argv[])
   if (lock_possible) slideshow[Locked] = parse_slideshow("locked", 0);
   
   hand = new_hand(NHCenter, NHCenter);
-  load_needed_pictures(hand->w, lock_possible);
+  load_needed_pictures(hand->w, lock_possible, force_mono);
   init_clock(hand->w);
   
   if (check_idle) {

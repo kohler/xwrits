@@ -9,7 +9,7 @@
 #define DefaultMultiplydelay	2
 #define DefaultMultiplydelayUsec 300000
 
-#define DefaultLockbouncedelay	8
+#define DefaultLockbouncedelay	4
 #define DefaultLockmessagedelay 10
 
 #define DefaultMaxHands		25

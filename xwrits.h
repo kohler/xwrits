@@ -223,8 +223,7 @@ struct Picture {
   char *name;
   Picture *next;
   
-  Gif_Record *large_record;
-  Gif_Record *icon_record;
+  int offset;
   
   Pixmap large;
   Pixmap icon;
@@ -239,10 +238,11 @@ struct Picture {
 };
 
 extern Picture *pictures;
-extern Pixmap barspix;
+extern Pixmap bars_pixmap;
+extern Pixmap lock_pixmap;
 
 void default_pictures(void);
-void load_needed_pictures(Window, int);
+void load_needed_pictures(Window, int, int force_mono);
 
 
 /*****************************************************************************/

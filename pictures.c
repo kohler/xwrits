@@ -5,23 +5,36 @@
 
 #include "gifx.h"
 
-#include "large/gifs.c"
-#include "icon/gifs.c"
-#include "other/gifs.c"
+#include "color/gifs.c"
+#include "mono/gifs.c"
 
-Pixmap lockpix;
-Pixmap barspix;
-unsigned long lockpixbackground;
+Pixmap bars_pixmap = None;
+Pixmap lock_pixmap = None;
 
 Picture *pictures = 0;
 Slideshow *current_slideshow = 0;
 
-static Drawable drawable;
 static Gif_XContext *gfx;
 
+static Gif_Record *large_color_records[] = {
+  &clenchl_gif, &spreadl_gif, &fingerl_gif, &restl_gif, &okl_gif,
+  &lock_gif, &bars_gif
+};
+static Gif_Record *icon_color_records[] = {
+  &clenchi_gif, &spreadi_gif, &fingeri_gif, &resti_gif, &oki_gif,
+  0, 0
+};
+static Gif_Record *large_mono_records[] = {
+  &clenchlm_gif, &spreadlm_gif, &fingerlm_gif, &restlm_gif, &oklm_gif,
+  &lockm_gif, &barsm_gif
+};
+static Gif_Record *icon_mono_records[] = {
+  &clenchim_gif, &spreadim_gif, &fingerim_gif, &restim_gif, &okim_gif,
+  0, 0
+};
 
 static Picture *
-register_picture(char *name, Gif_Record *large, Gif_Record *icon)
+register_picture(char *name, int offset)
 {
   Picture *p;
   
@@ -36,8 +49,7 @@ register_picture(char *name, Gif_Record *large, Gif_Record *icon)
   p->clock_x_off = 10;
   p->clock_y_off = 10;
   
-  p->large_record = large;
-  p->icon_record = icon;
+  p->offset = offset;
   
   return p;
 }
@@ -56,50 +68,60 @@ void
 default_pictures(void)
 {
   Picture *p;
-  register_picture("clench", &clenchl_gif, &clenchi_gif);
-  register_picture("spread", &spreadl_gif, &spreadi_gif);
-  register_picture("finger", &fingerl_gif, &fingeri_gif);
-  register_picture("ready", &okl_gif, &oki_gif);
-  register_picture("resting", &restingl_gif, &restingi_gif);
-  p = register_picture("locked", &lock_gif, 0);
+  register_picture("clench", 0);
+  register_picture("spread", 1);
+  register_picture("finger", 2);
+  register_picture("ready", 3);
+  register_picture("resting", 4);
+  p = register_picture("locked", 5);
   p->clock_x_off = 65;
 }
 
 
 void
-load_needed_pictures(Window window, int haslock)
+load_needed_pictures(Window window, int has_lock, int force_mono)
 {
+  Gif_Record **large_records, **icon_records;
   Picture *p;
-  drawable = window;
+  
   gfx = Gif_NewXContext(display, window);
+  if (gfx->depth == 1 || force_mono) {
+    large_records = large_mono_records;
+    icon_records = icon_mono_records;
+  } else {
+    large_records = large_color_records;
+    icon_records = icon_color_records;
+  }
   
   for (p = pictures; p; p = p->next)
     if (p->used) {
+      Gif_Record *large = large_records[p->offset];
+      Gif_Record *icon = icon_records[p->offset];
       
-      if (p->large_record) {
-	Gif_Stream *gfs = Gif_ReadRecord(p->large_record);
+      if (large) {
+	Gif_Stream *gfs = Gif_ReadRecord(large);
 	if (gfs) {
 	  Gif_Color *gfc;
 	  p->large = Gif_XImage(gfx, gfs, 0);
 	  gfc = Gif_GetBackground(gfs, 0);
 	  if (gfc) p->background = gfc->pixel;
-	  Gif_DeleteStream(gfs);
 	}
+	Gif_DeleteStream(gfs);
       }
       
-      if (p->icon_record) {
-	Gif_Stream *gfs = Gif_ReadRecord(p->icon_record);
-	if (gfs) {
-	  p->icon = Gif_XImage(gfx, gfs, 0);
-	  Gif_DeleteStream(gfs);
-	}
+      if (icon) {
+	Gif_Stream *gfs = Gif_ReadRecord(icon);
+	if (gfs) p->icon = Gif_XImage(gfx, gfs, 0);
+	Gif_DeleteStream(gfs);
       }
-      
     }
   
-  if (haslock) {
-    Gif_Stream *gfs = Gif_ReadRecord(&bars_gif);
-    barspix = Gif_XImage(gfx, gfs, 0);
+  if (has_lock) {
+    Gif_Stream *gfs = Gif_ReadRecord(large_records[5]);
+    lock_pixmap = Gif_XImage(gfx, gfs, 0);
+    Gif_DeleteStream(gfs);
+    gfs = Gif_ReadRecord(large_records[6]);
+    bars_pixmap = Gif_XImage(gfx, gfs, 0);
     Gif_DeleteStream(gfs);
   }
 }
