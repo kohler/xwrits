@@ -901,7 +901,8 @@ initialize_slave_port(Port *port)
     port->xwrits_window_atom = m->xwrits_window_atom;
     port->xwrits_notify_peer_atom = m->xwrits_notify_peer_atom;
     port->xwrits_break_atom = m->xwrits_break_atom;
-    port->hands = port->icon_hands = port->permanent_hand = 0;
+    port->hands = port->icon_hands = 0;
+    port->permanent_hand = m->permanent_hand;
     port->drawable = m->drawable;
     port->clock_fore_gc = m->clock_fore_gc;
     port->clock_hand_gc = m->clock_hand_gc;
