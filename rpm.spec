@@ -54,4 +54,4 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %attr(-,root,root) %doc NEWS README
 %attr(0755,root,root) /usr/X11R6/bin/xwrits
-%attr(0644,root,root) /usr/X11R6/man/man1/xwrits.1
+%attr(0644,root,root) /usr/X11R6/man/man1/xwrits.1*
