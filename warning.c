@@ -18,19 +18,6 @@ pop_up_hand(Hand *h)
   XFlush(h->port->display);
 }
 
-static void
-ensure_slave_port_hand(Port *p)
-{
-    Hand *h;
-    for (h = p->master->hands; h; h = h->next)
-	if (h->x >= p->left && h->x < p->left + p->width
-	    && h->y >= p->top && h->y < p->top + p->height) {
-	    pop_up_hand(h);
-	    return;
-	}
-    pop_up_hand(new_hand(p, NEW_HAND_CENTER, NEW_HAND_CENTER));
-}
-
 
 static int
 switch_options(Options *opt, const struct timeval *option_switch_time,
@@ -254,10 +241,7 @@ warn(int was_lock, Options *onormal)
     goto done;
 
   for (i = 0; i < nports; i++)
-      if (ports[i]->hands)
-	  pop_up_hand(ports[i]->hands);
-      else
-	  ensure_slave_port_hand(ports[i]);
+    find_one_hand(ports[i], 1);
   
   if (check_idle) {
     Alarm *a = new_alarm(A_IDLE_CHECK);

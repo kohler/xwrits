@@ -3,18 +3,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-static void
-ensure_one_hand(Port *port)
-{
-  Hand *h;
-  int nmapped = 0;
-  for (h = port->hands; h; h = h->next)
-    if (h->mapped)
-      nmapped++;
-  if (nmapped == 0)
-    XMapRaised(port->display, port->hands->w);
-}
-
 
 /* wait for break */
 
@@ -186,7 +174,7 @@ rest(void)
   for (i = 0; i < nports; i++) {
     set_all_slideshows(ports[i]->hands, resting_slideshow);
     set_all_slideshows(ports[i]->icon_hands, resting_icon_slideshow);
-    ensure_one_hand(ports[i]);
+    find_one_hand(ports[i], 1);
   }
   current_cheats = 0;
   
@@ -254,7 +242,7 @@ ready(void)
   for (i = 0; i < nports; i++) {
     set_all_slideshows(ports[i]->hands, ready_slideshow);
     set_all_slideshows(ports[i]->icon_hands, ready_icon_slideshow);
-    ensure_one_hand(ports[i]);
+    find_one_hand(ports[i], 1);
     if (ocurrent->beep)
       XBell(ports[i]->display, 0);
     XFlush(ports[i]->display);

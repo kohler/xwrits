@@ -187,6 +187,9 @@ add_port(const char *display_name, Display *display, int screen_number,
     p->display = display;
     p->screen_number = screen_number;
     p->master = (master ? master : p);
+    p->nslaves = 0;
+    if (master)
+	master->nslaves++;
     p->port_number = nports;
     nports++;
     return ports[nports - 1];

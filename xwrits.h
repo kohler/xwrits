@@ -49,6 +49,7 @@ struct Port {
   int height;			/* height of root window */
 
   struct Port *master;		/* points to master Port, if this is a slave */
+  int nslaves;			/* number of slave Ports */
 
   Drawable drawable;		/* drawable corresponding to visual */
   Visual *visual;		/* visual used for new windows */
@@ -254,6 +255,7 @@ int active_hands(void);
 Hand *new_hand(Port *, int x, int y);
 Hand *new_hand_subwindow(Port *, Window parent, int x, int y);
 void destroy_hand(Hand *);
+Hand *find_one_hand(Port *, int mapped);
 
 Hand *window_to_hand(Port *, Window, int allow_icon);
 

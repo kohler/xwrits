@@ -457,3 +457,36 @@ unmap_all(void)
     XFlush(ports[i]->display);
   }
 }
+
+
+/* search for some hand on a given port, which might be a slave, or have
+   slaves */
+
+Hand *
+find_one_hand(Port *port, int mapped)
+{
+    Hand *h, *acceptable;
+    
+    if (port->master == port) {
+	if (!mapped)
+	    return port->hands;
+	else
+	    for (h = acceptable = port->hands; h; h = h->next)
+		if (h->mapped)
+		    return h;
+    } else {
+	for (h = port->master->hands, acceptable = 0; h; h = h->next)
+	    if (h->x >= port->left && h->x < port->left + port->width
+		&& h->y >= port->top && h->y < port->top + port->height) {
+		acceptable = h;
+		if (mapped && h->mapped)
+		    return h;
+	    }
+	if (!acceptable)
+	    acceptable = new_hand(port, NEW_HAND_CENTER, NEW_HAND_CENTER);
+    }
+    
+    if (mapped && !acceptable->mapped)
+	XMapRaised(port->display, acceptable->w);
+    return acceptable;
+}
