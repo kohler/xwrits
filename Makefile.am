@@ -22,12 +22,9 @@ BUILT_SOURCES = colorpic.c monopic.c
 xwrits_DEPENDENCIES = @LIBOBJS@
 giftoc_DEPENDENCIES = @LIBOBJS@
 
-giffunc.o: giffunc.c gif.h
-gifread.o: gifread.c gif.h
-giftoc.o: giftoc.c
-gifx.o: gifx.c gifx.h gif.h
-
+giffunc.o gifread.o giftoc.o gifx.o: gif.h config.h
 pictures.o: pictures.c colorpic.c monopic.c
+clock.o lock.o main.o pictures.o rest.o schedule.o warning.o: xwrits.h config.h
 
 COLOR_PIC = color/bars.gif color/lock.gif \
 	color/clenchl.gif color/spreadl.gif color/fingerl.gif color/restl.gif \

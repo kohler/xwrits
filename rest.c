@@ -7,19 +7,17 @@ static struct timeval break_over_time;
 
 
 static int
-wait_x_loop(XEvent *e)
+wait_x_loop(XEvent *e, struct timeval *now)
 {
-  struct timeval now;
   struct timeval diff;
   
-  if (e->type == KeyPress) {
-    xwGETTIME(now);
-    xwSUBTIME(diff, now, last_key_time);
-    last_key_time = now;
+  if (e->type == KeyPress || e->type == MotionNotify) {
+    xwSUBTIME(diff, *now, last_key_time);
+    last_key_time = *now;
     
     if (xwTIMEGEQ(diff, break_delay))
       return TRAN_REST;
-    else if (xwTIMEGEQ(now, wait_over_time))
+    else if (xwTIMEGEQ(*now, wait_over_time))
       return TRAN_WARN;
     else
       return 0;
@@ -28,15 +26,10 @@ wait_x_loop(XEvent *e)
     return 0;
 }
 
-
 void
 wait_for_break(void)
 {
   int val;
-  
-  /* Hack to make "spectacular effects" work as expected.
-     Without this code, xwrits t=0 would not do anything until a keypress. */
-  if (xwTIMELEQ0(type_delay)) return;
   
   xwGETTIME(last_key_time);
   if (!check_idle) {
@@ -47,13 +40,20 @@ wait_for_break(void)
     schedule(a);
   }
   
+  if (check_mouse) {
+    Alarm *a = new_alarm(A_MOUSE);
+    xwGETTIME(a->timer);
+    schedule(a);
+    last_mouse_root = None;
+  }
+  
   do {
     xwGETTIME(wait_over_time);
     xwADDTIME(wait_over_time, wait_over_time, type_delay);
     val = loopmaster(0, wait_x_loop);
   } while (val == TRAN_REST);
-
-  unschedule(A_AWAKE);
+  
+  unschedule(A_AWAKE | A_MOUSE);
 }
 
 
@@ -69,21 +69,18 @@ ensure_one_hand(void)
     XMapRaised(display, hands->w);
 }
 
-
 static int
-rest_x_loop(XEvent *e)
+rest_x_loop(XEvent *e, struct timeval *now)
 {
-  struct timeval now;
   int break_over;
-  xwGETTIME(now);
-  break_over = xwTIMEGEQ(now, break_over_time);
+  break_over = xwTIMEGEQ(*now, break_over_time);
   
-  if (e->type == ClientMessage)
-    /* Window manager deleted only xwrits window. Consider break over. */
+  if (e->type == ClientMessage && active_hands() == 0)
+    /* Window manager deleted last xwrits window. Consider break over. */
     return (break_over ? TRAN_AWAKE : TRAN_CANCEL);
   
-  else if (e->type == KeyPress) {
-    last_key_time = now;
+  else if (e->type == KeyPress || e->type == MotionNotify) {
+    last_key_time = *now;
     return (break_over ? TRAN_AWAKE : TRAN_FAIL);
     
   } else
@@ -97,7 +94,8 @@ rest(void)
   Alarm *a;
   int tran;
   
-  blend_slideshow(slideshow[Resting]);
+  set_all_slideshows(hands, resting_slideshow);
+  set_all_slideshows(icon_hands, resting_icon_slideshow);
   ensure_one_hand();
   
   xwGETTIME(now);
@@ -111,11 +109,19 @@ rest(void)
   a = new_alarm(A_AWAKE);
   a->timer = break_over_time;
   schedule(a);
+
+  if (check_mouse) {
+    a = new_alarm(A_MOUSE);
+    a->timer = now;
+    a->timer.tv_sec += 5;	/* allow 5 seconds for people to jiggle the
+				   mouse before we save its position */
+    schedule(a);
+    last_mouse_root = None;
+  }
   
   if (ocurrent->break_clock) {
     clock_zero_time = a->timer;
-    draw_clock(&now);
-    refresh_hands();
+    draw_all_clocks(&now);
     a = new_alarm(A_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
@@ -124,39 +130,46 @@ rest(void)
   XFlush(display);
   tran = loopmaster(0, rest_x_loop);
   
-  unschedule(A_AWAKE | A_CLOCK);
+  unschedule(A_AWAKE | A_CLOCK | A_MOUSE);
+  erase_all_clocks();
   return tran;
 }
 
 
 static int
-ready_x_loop(XEvent *e)
+ready_x_loop(XEvent *e, struct timeval *now)
 {
   if (e->type == ButtonPress)
     return 1;
-  else if (e->type == ClientMessage)
-    /* last xwrits window deleted by window manager */
-    return 1;
-  else if (e->type == KeyPress) {
+  else if (e->type == KeyPress || e->type == MotionNotify) {
     /* if they typed, disappear automatically */
-    xwGETTIME(last_key_time);
+    last_key_time = *now;
     return 1;
   } else
     return 0;
 }
 
-
 void
 ready(void)
 {
-  blend_slideshow(slideshow[Ready]);
+  set_all_slideshows(hands, ready_slideshow);
+  set_all_slideshows(icon_hands, ready_icon_slideshow);
   ensure_one_hand();
   
   if (ocurrent->beep)
     XBell(display, 0);
   XFlush(display);
+
+  if (check_mouse) {
+    Alarm *a = new_alarm(A_MOUSE);
+    xwGETTIME(a->timer);
+    schedule(a);
+    last_mouse_root = None;
+  }
   
   loopmaster(0, ready_x_loop);
+  
+  unschedule(A_MOUSE);
 }
 
 
@@ -164,22 +177,11 @@ void
 unmap_all(void)
 {
   XEvent event;
-  Hand *h;
   
   while (hands->next)
     destroy_hand(hands);
-  h = hands;
-  
-  XUnmapWindow(display, h->w);
-  /* Synthetic UnmapNotify required by ICCCM to withdraw the window */
-  event.type = UnmapNotify;
-  event.xunmap.event = port.root_window;
-  event.xunmap.window = h->w;
-  event.xunmap.from_configure = False;
-  XSendEvent(display, port.root_window, False,
-	     SubstructureRedirectMask | SubstructureNotifyMask, &event);
-  
-  blend_slideshow(slideshow[Warning]);
+  destroy_hand(hands);		/* final destroy_hand() doesn't remove the
+                                   hand from the list, it unmaps it. */
   
   XFlush(display);
   while (XPending(display)) {

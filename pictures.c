@@ -3,154 +3,126 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
-#include "gifx.h"
 #include "colorpic.c"
 #include "monopic.c"
 
 Pixmap bars_pixmap = None;
 Pixmap lock_pixmap = None;
 
-Picture *pictures = 0;
-Slideshow *current_slideshow = 0;
+Gif_Stream *current_slideshow = 0;
 
-static Gif_XContext *gfx;
+#define NPICTURES 14
 
-static Gif_Record *large_color_records[] = {
+static const char *built_in_picture_names[NPICTURES] = {
+  "&clench", "&spread", "&finger", "&korean",
+  "&resting", "&ready", "&locked", "&bars",
+  "&clenchicon", "&spreadicon", "&fingericon", "&koreanicon",
+  "&restingicon", "&readyicon"
+};
+
+static Gif_Record *color_records[NPICTURES] = {
   &clenchl_gif, &spreadl_gif, &fingerl_gif, &koreanl_gif,
-  &restl_gif, &okl_gif, &lock_gif, &bars_gif
-};
-static Gif_Record *icon_color_records[] = {
+  &restl_gif, &okl_gif, &lock_gif, &bars_gif,
   &clenchi_gif, &spreadi_gif, &fingeri_gif, 0,
-  &resti_gif, &oki_gif, 0, 0
+  &resti_gif, &oki_gif
 };
-static Gif_Record *large_mono_records[] = {
+static Gif_Record *mono_records[NPICTURES] = {
   &clenchlm_gif, &spreadlm_gif, &fingerlm_gif, 0,
-  &restlm_gif, &oklm_gif, &lockm_gif, &barsm_gif
-};
-static Gif_Record *icon_mono_records[] = {
+  &restlm_gif, &oklm_gif, &lockm_gif, &barsm_gif,
   &clenchim_gif, &spreadim_gif, &fingerim_gif, 0,
-  &restim_gif, &okim_gif, 0, 0
+  &restim_gif, &okim_gif
 };
 
-static Picture *
-register_picture(char *name, int offset)
+static Gif_Stream *color_streams[NPICTURES];
+static Gif_Stream *mono_streams[NPICTURES];
+
+
+static void
+free_picture(void *v)
 {
-  Picture *p;
+  Picture *p = (Picture *)v;
+  if (p->pix)
+    XFreePixmap(display, p->pix);
+  xfree(p);
+}
+
+static void
+add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
+{
+  Picture *p = (Picture *)xmalloc(sizeof(Picture));
+  p->pix = None;
+  p->clock_x_off = clock_x_off;
+  p->clock_y_off = clock_y_off;
   
-  p = xwNEW(Picture);
-  
-  p->name = name;
-  p->next = pictures;
-  p->used = 0;
-  p->clock = 0;
-  p->background = None;
-  pictures = p;
-  
-  p->clock_x_off = 10;
-  p->clock_y_off = 10;
-  
-  p->offset = offset;
-  
-  return p;
+  gfi->user_data = p;
+  gfi->free_user_data = free_picture;
 }
 
 
-static Picture *
-find_picture(char *name)
+Gif_Image *
+get_built_in_image(const char *name, int mono)
 {
-  Picture *p = pictures;
-  while (p && strcmp(p->name, name) != 0) p = p->next;
-  return p;
-}
-
-
-void
-default_pictures(void)
-{
-  Picture *p;
-  register_picture("clench", 0);
-  register_picture("spread", 1);
-  register_picture("finger", 2);
-  register_picture("korean", 3);
-  register_picture("resting", 4);
-  register_picture("ready", 5);
-  p = register_picture("locked", 6);
-  p->clock_x_off = 65;
-}
-
-
-void
-load_needed_pictures(Window window, int has_lock, int force_mono)
-{
-  Gif_Record **large_records, **icon_records;
-  Picture *p;
+  Gif_Stream **store;
+  Gif_Record **records;
+  Gif_Stream *gfs;
+  int i;
   
-  gfx = Gif_NewXContext(display, window);
-  if (gfx->depth == 1 || force_mono) {
-    large_records = large_mono_records;
-    icon_records = icon_mono_records;
-  } else {
-    large_records = large_color_records;
-    icon_records = icon_color_records;
+  for (i = 0; i < NPICTURES; i++)
+    if (strcmp(built_in_picture_names[i], name) == 0)
+      goto found;
+  return 0;
+  
+ found:
+  store = (mono ? mono_streams : color_streams);
+  if (store[i])
+    return store[i]->images[0];
+  
+  records = (mono ? mono_records : color_records);
+  if (!records[i])
+    return 0;
+  
+  gfs = Gif_ReadRecord(records[i]);
+  if (!gfs)
+    return 0;
+  
+  add_picture(gfs->images[0], (strcmp(name, "&locked") == 0 ? 65 : 10), 10);
+  if (!gfs->images[0]->local) {
+    gfs->images[0]->local = gfs->global;
+    gfs->global->refcount++;
   }
   
-  for (p = pictures; p; p = p->next)
-    if (p->used) {
-      Gif_Record *large = large_records[p->offset];
-      Gif_Record *icon = icon_records[p->offset];
-      
-      if (large) {
-	Gif_Stream *gfs = Gif_ReadRecord(large);
-	if (gfs) p->large = Gif_XImage(gfx, gfs, 0);
-	Gif_DeleteStream(gfs);
-      }
-      
-      if (icon) {
-	Gif_Stream *gfs = Gif_ReadRecord(icon);
-	if (gfs) p->icon = Gif_XImage(gfx, gfs, 0);
-	Gif_DeleteStream(gfs);
-      }
-    }
-  
-  if (has_lock) {
-    Gif_Stream *gfs = Gif_ReadRecord(large_records[5]);
-    lock_pixmap = Gif_XImage(gfx, gfs, 0);
-    Gif_DeleteStream(gfs);
-    gfs = Gif_ReadRecord(large_records[6]);
-    bars_pixmap = Gif_XImage(gfx, gfs, 0);
-    Gif_DeleteStream(gfs);
-  }
+  store[i] = gfs;
+  return gfs->images[0];
 }
 
 
-Slideshow *
-parse_slideshow(char *slideshowtext, struct timeval *delayinput)
+#define MIN_DELAY 4
+
+Gif_Stream *
+parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 {
   char buf[BUFSIZ];
   char *s;
-  Slideshow *ss;
-  int size;
-  Picture *picture;
-  struct timeval delay;
+  Gif_Stream *gfs;
+  Gif_Image *gfi;
+  u_int16_t delay;
+  int i;
+  double d;
   
   if (strlen(slideshowtext) >= BUFSIZ) return 0;
   strcpy(buf, slideshowtext);
   s = buf;
   
-  ss = xwNEW(Slideshow);
-  ss->nslides = 0;
-  ss->picture = xwNEWARR(Picture *, 4);
-  ss->delay = xwNEWARR(struct timeval, 4);
-  size = 4;
-  
-  if (delayinput) delay = *delayinput;
-  if (!delayinput || xwTIMELEQ0(delay)) {
-    /* Simulate never flashing by flashing with a VERY long period --
-       30 days. */
-    delay.tv_sec = 30 * HOUR_PER_CYCLE * MIN_PER_HOUR * SEC_PER_MIN;
-    delay.tv_usec = 0;
-  }
+  gfs = Gif_NewStream();
+  gfs->loopcount = 0;
+
+  d = flash_rate_ratio * DEFAULT_FLASH_DELAY_SEC * 100;
+  if (d < 0 || d > 0xFFFF)
+    delay = 0xFFFF;
+  else
+    delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
   
   while (*s) {
     char *n, save;
@@ -161,66 +133,147 @@ parse_slideshow(char *slideshowtext, struct timeval *delayinput)
     save = *s;
     *s = 0;
     
-    picture = find_picture(n);
-    
-    if (picture) {
-      if (ss->nslides >= size) {
-	size *= 2;
-	xwREARRAY(ss->picture, Picture *, size);
-	xwREARRAY(ss->delay, struct timeval, size);
-      }
-      ss->picture[ss->nslides] = picture;
-      ss->delay[ss->nslides] = delay;
-      ss->nslides++;
+    gfi = get_built_in_image(n, mono);
+    if (gfi) {
+      gfi->delay = delay;
+      Gif_AddImage(gfs, gfi);
       
-      picture->used = 1;
+    } else {
+      /* load file from disk */
+      FILE *f = fopen(n, "rb");
+      Gif_Stream *read = Gif_FullReadFile(f, GIF_READ_COMPRESSED, 0, 0);
+      if (!f)
+	error("%s: %s", n, strerror(errno));
+      else if (!read || (read->nimages == 0 && read->errors > 0))
+	error("%s: not a GIF", n);
+      else {
+	/* adapt delays */
+	if (read->nimages == 1)
+	  read->images[0]->delay = delay;
+	else
+	  for (i = 0; i < read->nimages; i++) {
+	    gfi = read->images[i];
+	    d = gfi->delay * flash_rate_ratio;
+	    if (d < 0 || d >= 0xFFFF)
+	      gfi->delay = 0xFFFF;
+	    else
+	      gfi->delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
+	  }
+	/* account for background and loopcount */
+	if (gfs->nimages == 0) {
+	  if (read->global) {
+	    gfs->global = read->global;
+	    read->global->refcount++;
+	    gfs->background = read->background;
+	  }
+	  gfs->loopcount = read->loopcount;
+	}
+	/* adapt screen size */
+	if (read->screen_width > gfs->screen_width)
+	  gfs->screen_width = read->screen_width;
+	if (read->screen_height > gfs->screen_height)
+	  gfs->screen_height = read->screen_height;
+	/* add images to gfs */
+	for (i = 0; i < read->nimages; i++) {
+	  Gif_Image *gfi = read->images[i];
+	  if (!gfi->local && read->global) {
+	    gfi->local = read->global;
+	    read->global->refcount++;
+	  }
+	  Gif_AddImage(gfs, gfi);
+	  add_picture(gfi, 10, 10);
+	  if (gfi->delay == 0)
+	    gfi->delay = 1;
+	}
+      }
+      if (read) Gif_DeleteStream(read);
+      if (f) fclose(f);
     }
     
     *s = save;
     if (*s) s++;
   }
+
+  /* make sure screen_width and screen_height aren't 0 */
+  if (gfs->screen_width == 0 || gfs->screen_height == 0 || gfs->nimages == 1) {
+    gfs->screen_width = gfs->screen_height = 0;
+    for (i = 0; i < gfs->nimages; i++) {
+      gfi = gfs->images[i];
+      if (gfi->width > gfs->screen_width)
+	gfs->screen_width = gfi->width;
+      if (gfi->height > gfs->screen_height)
+	gfs->screen_height = gfi->height;
+    }
+  }
   
-  return ss;
+  return gfs;
 }
 
 
 void
-blend_slideshow(Slideshow *ss)
+set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
+{
+  int i = 0;
+  Alarm *a;
+  struct timeval t;
+
+  if (h->slideshow == gfs)
+    return;
+  
+  if (now)
+    t = *now;
+  else
+    xwGETTIME(t);
+  
+  a = grab_alarm_data(A_FLASH, h);
+  
+  if (h->slideshow) {
+    Gif_Image *cur_im = h->slideshow->images[h->slide];
+    if (a) xwSUBDELAY(t, a->timer, cur_im->delay);
+    /* Leave i with a picture that matches the old one, or 0 if no
+       picture matches the old one. */
+    for (i = gfs->nimages - 1; i > 0; i--)
+      if (gfs->images[i] == cur_im)
+	break;
+  }
+  
+  if (gfs->nimages > 1) {
+    if (!a) a = new_alarm_data(A_FLASH, h);
+    xwADDDELAY(a->timer, t, gfs->images[i]->delay);
+    schedule(a);
+  } else {
+    if (a) destroy_alarm(a);
+  }
+  
+  h->slideshow = gfs;
+  
+  if ((gfs->screen_width != h->width || gfs->screen_height != h->height)
+      && !h->is_icon) {
+    XWindowChanges wmch;
+    XSizeHints *xsh = XAllocSizeHints();
+    xsh->flags = USPosition | PMinSize | PMaxSize;
+    xsh->min_width = xsh->max_width = gfs->screen_width;
+    xsh->min_height = xsh->max_height = gfs->screen_height;
+    wmch.width = gfs->screen_width;
+    wmch.height = gfs->screen_height;
+    XSetWMNormalHints(display, h->w, xsh);
+    XReconfigureWMWindow(display, h->w, port.screen_number,
+			 CWWidth | CWHeight, &wmch);
+    XFree(xsh);
+  }
+
+  h->loopcount = 0;
+  h->slide = i;
+  draw_slide(h);
+}
+
+void
+set_all_slideshows(Hand *hands, Gif_Stream *gfs)
 {
   Hand *h;
-  Picture *p;
-  struct timeval t, now;
-  
-  current_slideshow = ss;
-  
+  struct timeval now;
   xwGETTIME(now);
-  for (h = hands; h; h = h->next) {
-    int i = 0;
-    Alarm *a = 0;
-    t = now;
-    
-    if (h->slideshow) {
-      p = h->slideshow->picture[h->slide];
-      if (h->slideshow->nslides > 1) {
-	a = grab_alarm_data(A_FLASH, h);
-	if (a)
-	  xwSUBTIME(t, a->timer, h->slideshow->delay[h->slide]);
-      }
-      /* Leave i with a picture that matches the old one, or 0 if no
-	 picture matches the old one. */
-      for (i = ss->nslides - 1; i > 0; i--)
-	if (ss->picture[i] == p)
-	  break;
-    }
-    
-    if (ss->nslides > 1) {
-      if (!a) a = new_alarm_data(A_FLASH, h);
-      xwADDTIME(a->timer, t, ss->delay[i]);
-      schedule(a);
-    } else {
-      if (a) destroy_alarm(a);
-    }
-    
-    set_picture(h, ss, i);
-  }
+  for (h = hands; h; h = h->next)
+    set_slideshow(h, gfs, &now);
+  current_slideshow = gfs;
 }

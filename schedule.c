@@ -18,8 +18,6 @@ Alarm *alarms;
 /* Support for Xidle is *not* included. */
 
 struct timeval register_keystrokes_delay;
-struct timeval register_keystrokes_gap;
-int check_idle;
 static unsigned long created_count;
 static unsigned long key_press_selected_count;
 
@@ -47,10 +45,9 @@ watch_keystrokes(Window w, struct timeval *now)
 {
   Window root, parent, *children;
   unsigned i, nchildren;
-  static struct timeval next_watch_keystrokes;
   Alarm *a;
   
-  if (window_to_hand(w) || icon_window_to_hand(w))
+  if (window_to_hand(w, 1))
     return; /* don't need to worry about our own windows */
   
   if (XQueryTree(display, w, &root, &parent, &children, &nchildren) == 0)
@@ -59,24 +56,12 @@ watch_keystrokes(Window w, struct timeval *now)
   XSelectInput(display, w, SubstructureNotifyMask);
   created_count++;
   
-  /* Better processing for the creation of new windows: we don't want to
-     do idle processing for all of them all at once, in case we are doing
-     something else as well (e.g., "spectacular effects").
-     This code ensures that:
-     - at least register_keystrokes_delay elapses before selection is done
-       on the window. We want to wait so we can make sure the window
-       selects for KeyPress events.
-     - at least register_keystrokes_gap elapses between selection on any
-       2 windows. */
+  /* This code ensures that at least register_keystrokes_delay elapses before
+     we listen for KeyPress events on the window. We want to wait so we can
+     make sure the window selects them first. */
   a = new_alarm_data(A_IDLE_SELECT, (void *)w);
   xwADDTIME(a->timer, *now, register_keystrokes_delay);
-  if (xwTIMEGT(a->timer, next_watch_keystrokes))
-    next_watch_keystrokes = a->timer;
-  else
-    a->timer = next_watch_keystrokes;
   schedule(a);
-  xwADDTIME(next_watch_keystrokes, next_watch_keystrokes,
-	    register_keystrokes_gap);
   
   for (i = 0; i < nchildren; i++)
     watch_keystrokes(children[i], now);
@@ -188,6 +173,8 @@ unschedule_data(int actions, void *data)
 }
 
 
+#define MOUSE_SENSITIVITY 5
+
 int
 loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 {
@@ -209,36 +196,33 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
     while (alarms && xwTIMEGEQ(now, alarms->timer)) {
       Alarm *a = alarms;
       Hand *h = (Hand *)a->data;
-      Slideshow *ss;
+      Gif_Stream *gfs;
       
       a->scheduled = 0;
       alarms = a->next;
       
       switch (a->action) {
 	
-       case A_RAISE:
-	if (h->mapped && h->obscured) {
-	  XMapRaised(display, h->w);
-	  h->obscured = 0;
-	}
-	while (xwTIMEGEQ(now, a->timer))
-	  xwADDTIME(a->timer, a->timer, ocurrent->top_delay);
-	schedule(a);
-	break;
-	
        case A_FLASH:
-	ss = h->slideshow;
+	gfs = h->slideshow;
+	/* cycle through slides */
 	while (xwTIMEGEQ(now, a->timer)) {
-	  h->slide = (h->slide + 1) % ss->nslides;
-	  xwADDTIME(a->timer, a->timer, ss->delay[h->slide]);
+	  h->slide = (h->slide + 1) % gfs->nimages;
+	  xwADDDELAY(a->timer, a->timer, gfs->images[h->slide]->delay);
+	  /* handle loopcount */
+	  if (h->slide == 0 && gfs->loopcount != 0
+	      && ++h->loopcount > gfs->loopcount) {
+	    h->slide = gfs->nimages - 1;
+	    goto flash_draw;
+	  }
 	}
-	set_picture(h, ss, h->slide);
 	schedule(a);
+       flash_draw:
+	if (h->mapped) draw_slide(h);
 	break;
 	
        case A_CLOCK:
-	draw_clock(&now);
-	refresh_hands();
+	draw_all_clocks(&now);
 	xwADDTIME(a->timer, a->timer, clock_tick);
 	schedule(a);
 	break;
@@ -251,6 +235,30 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	register_keystrokes((Window)a->data);
 	break;
 	
+       case A_MOUSE: {
+	 Window root, child;
+	 int root_x, root_y, win_x, win_y;
+	 unsigned mask;
+	 XQueryPointer(display, port.root_window, &root, &child,
+		       &root_x, &root_y, &win_x, &win_y, &mask);
+	 if (root != last_mouse_root
+	     || root_x < last_mouse_x - MOUSE_SENSITIVITY
+	     || root_x > last_mouse_x + MOUSE_SENSITIVITY
+	     || root_y < last_mouse_y - MOUSE_SENSITIVITY
+	     || root_y > last_mouse_y + MOUSE_SENSITIVITY) {
+	   XEvent event;
+	   event.type = MotionNotify; /* skeletal MotionNotify event */
+	   if (x_looper && last_mouse_root)
+	     ret_val = x_looper(&event, &now);
+	   last_mouse_root = root;
+	   last_mouse_x = root_x;
+	   last_mouse_y = root_y;
+	 }
+	 xwADDTIME(a->timer, a->timer, check_mouse_time);
+	 schedule(a);
+	 break;
+       }
+       
        default:
 	ret_val = alarm_looper(a, &now);
 	break;
@@ -275,15 +283,6 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       pending = (result <= 0 ? 0 : FD_ISSET(port.x_socket, &xfds));
     }
     
-    if (pending)
-      while (XPending(display)) {
-	XEvent event;
-	XNextEvent(display, &event);
-	default_x_processing(&event);
-	if (x_looper) ret_val = x_looper(&event);
-	if (ret_val != 0) return ret_val;
-      }
-    
     /* Behave robustly when the system clock is adjusted backwards. The idea:
        estimate the duration of the backwards jump and subtract that from
        genesis_time. This will compensate for the jump in any new times
@@ -299,5 +298,15 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       }
       now = new_now;
     }
+    
+    /* Handle X events. */
+    if (pending)
+      while (XPending(display)) {
+	XEvent event;
+	XNextEvent(display, &event);
+	default_x_processing(&event);
+	if (x_looper) ret_val = x_looper(&event, &now);
+	if (ret_val != 0) return ret_val;
+      }
   }
 }

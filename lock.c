@@ -3,11 +3,13 @@
 #include <stdlib.h>
 #include <X11/keysym.h>
 
+#define WINDOW_WIDTH	300
+#define WINDOW_HEIGHT	300
 
 struct timeval lock_message_delay;
 char *lock_password;
 
-#define RedrawMessage ((char *)1L)
+#define REDRAW_MESSAGE ((char *)1L)
 
 static Window cover;
 static GC gc;
@@ -20,16 +22,16 @@ move_lock(int domove)
 {
   static int lock_x, lock_y;
   if (domove) {
-    XClearArea(display, cover, lock_x, lock_y, WindowWidth, WindowHeight,
+    XClearArea(display, cover, lock_x, lock_y, WINDOW_WIDTH, WINDOW_HEIGHT,
 	       False);
-    lock_x = ((rand() >> 4) % (port.width / WindowWidth * 2 - 1))
-      * (WindowWidth / 2);
-    lock_y = (rand() >> 4) % (port.height - WindowHeight);
+    lock_x = ((rand() >> 4) % (port.width / WINDOW_WIDTH * 2 - 1))
+      * (WINDOW_WIDTH / 2);
+    lock_y = (rand() >> 4) % (port.height - WINDOW_HEIGHT);
     lock_y = (lock_y & ~0x3) | 0x2;
   }
   if (lock_pixmap)
     XCopyArea(display, lock_pixmap, cover, gc, 0, 0,
-	      WindowWidth, WindowHeight, lock_x, lock_y);
+	      WINDOW_WIDTH, WINDOW_HEIGHT, lock_x, lock_y);
   XFlush(display);
 }
 
@@ -39,9 +41,9 @@ draw_message(char *message)
 {
   static int msgx, msgy, msgw, msgh;
   static char *oldmessage;
-  if (oldmessage && message != RedrawMessage)
+  if (oldmessage && message != REDRAW_MESSAGE)
     XClearArea(display, cover, msgx, msgy, msgw, msgh, False);
-  if (message == RedrawMessage) message = oldmessage;
+  if (message == REDRAW_MESSAGE) message = oldmessage;
   if (message) {
     int length = strlen(message);
     msgw = XTextWidth(port.font, message, length);
@@ -90,13 +92,13 @@ lockalarmloop(Alarm *a, struct timeval *now)
     
    case A_LOCK_BOUNCE:
     move_lock(1);
-    draw_message(RedrawMessage);
+    draw_message(REDRAW_MESSAGE);
     xwADDTIME(a->timer, a->timer, ocurrent->lock_bounce_delay);
     schedule(a);
     break;
     
    case A_LOCK_CLOCK:
-    draw_clock(now);
+    draw_all_clocks(now);
     move_lock(0);
     draw_message(0);
     xwADDTIME(a->timer, a->timer, clock_tick);
@@ -116,7 +118,7 @@ lockalarmloop(Alarm *a, struct timeval *now)
 
 
 static int
-lockxloop(XEvent *e)
+lockxloop(XEvent *e, struct timeval *now)
 {
   Alarm *a;
   
@@ -139,7 +141,7 @@ lockxloop(XEvent *e)
     if (e->xvisibility.state != VisibilityUnobscured) {
       XRaiseWindow(display, cover);
       move_lock(0);
-      draw_message(RedrawMessage);
+      draw_message(REDRAW_MESSAGE);
     }
     break;
     
@@ -157,8 +159,6 @@ lock(void)
   
   XEvent event;
   int tran = TRAN_FAIL;
-  
-  blend_slideshow(slideshow[Locked]);
   
   {
     XSetWindowAttributes setattr;
@@ -210,7 +210,7 @@ lock(void)
   schedule(a);
   
   if (ocurrent->break_clock) {
-    draw_clock(&now);
+    draw_all_clocks(&now);
     a = new_alarm(A_LOCK_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
@@ -225,9 +225,8 @@ lock(void)
   XUngrabKeyboard(display, CurrentTime);
   
  no_keyboard_grab:
-  
   unschedule(A_LOCK_CLOCK | A_LOCK_BOUNCE | A_AWAKE | A_LOCK_MESS_ERASE);
-  if (ocurrent->break_clock) erase_clock();
+  if (ocurrent->break_clock) erase_all_clocks();
   XDestroyWindow(display, cover);
   XFlush(display);
   

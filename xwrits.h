@@ -15,7 +15,6 @@ typedef struct Port Port;
 typedef struct Options Options;
 typedef struct Hand Hand;
 typedef struct Picture Picture;
-typedef struct Slideshow Slideshow;
 typedef struct Alarm Alarm;
 
 #ifdef __cplusplus
@@ -41,10 +40,8 @@ struct Port {
   Window root_window;
   int width;
   int height;
-  
-  int wm_delta_x;
-  int wm_delta_y;
-  
+
+  Drawable drawable;
   Visual *visual;
   int depth;
   Colormap colormap;
@@ -69,8 +66,8 @@ struct Options {
   
   struct timeval multiply_delay;
   struct timeval lock_bounce_delay;
-  struct timeval top_delay;
-    
+  double flash_rate_ratio;
+  
   unsigned never_iconify: 1;
   unsigned top: 1;
   unsigned clock: 1;
@@ -80,11 +77,15 @@ struct Options {
   unsigned appear_iconified: 1;
   unsigned lock: 1;
   int max_hands;
-
-  Slideshow *slideshow;
+  
+  Gif_Stream *slideshow;
+  char *slideshow_text;
+  Gif_Stream *icon_slideshow;
+  char *icon_slideshow_text;
   
   struct timeval next_delay;
   Options *next;
+  Options *prev;
   
 };
 
@@ -99,40 +100,32 @@ extern char *lock_password;
 
 
 /*****************************************************************************/
-/*  States and current state						     */
-
-#define Warning		0
-#define Resting		1
-#define Ready		2
-#define Locked		3
-#define MaxState	4
-
-
-/*****************************************************************************/
 /*  Clocks								     */
 
 extern struct timeval clock_zero_time;
 extern struct timeval clock_tick;
 
 void init_clock(Drawable);
-void draw_clock(struct timeval *);
-void erase_clock(void);
+void draw_clock(Hand *, struct timeval *);
+void draw_all_clocks(struct timeval *);
+void erase_clock(Hand *);
+void erase_all_clocks(void);
 
 
 /*****************************************************************************/
 /*  Alarms								     */
 
 #define A_FLASH			0x0001
-#define A_RAISE			0x0002
-#define A_AWAKE			0x0004
-#define A_CLOCK			0x0008
-#define A_MULTIPLY		0x0010
-#define A_NEXT_OPTIONS		0x0020
-#define A_LOCK_BOUNCE		0x0040
-#define A_LOCK_CLOCK		0x0080
-#define A_LOCK_MESS_ERASE	0x0100
-#define A_IDLE_SELECT		0x0200
-#define A_IDLE_CHECK		0x0400
+#define A_AWAKE			0x0002
+#define A_CLOCK			0x0004
+#define A_MULTIPLY		0x0008
+#define A_NEXT_OPTIONS		0x0010
+#define A_LOCK_BOUNCE		0x0020
+#define A_LOCK_CLOCK		0x0040
+#define A_LOCK_MESS_ERASE	0x0080
+#define A_IDLE_SELECT		0x0100
+#define A_IDLE_CHECK		0x0200
+#define A_MOUSE			0x0400
 
 struct Alarm {
   
@@ -146,7 +139,7 @@ struct Alarm {
 };
 
 typedef int (*Alarmloopfunc)(Alarm *, struct timeval *);
-typedef int (*Xloopfunc)(XEvent *);
+typedef int (*Xloopfunc)(XEvent *, struct timeval *);
 
 extern Alarm *alarms;
 
@@ -166,17 +159,13 @@ int loopmaster(Alarmloopfunc, Xloopfunc);
 /*****************************************************************************/
 /*  Hands								     */
 
-#define WindowWidth	300
-#define WindowHeight	300
-#define IconWidth	50
-#define IconHeight	50
-
 #define MaxHands	137
 
 struct Hand {
   
   Hand *next;
   Hand *prev;
+  Hand *icon;
   
   Window w;
   int x;
@@ -184,76 +173,58 @@ struct Hand {
   int width;
   int height;
   
-  Window iconw;
+  Window root_child;
   
-  Slideshow *slideshow;
+  Gif_Stream *slideshow;
   int slide;
+  int loopcount;
   
+  unsigned is_icon: 1;
   unsigned mapped: 1;
   unsigned configured: 1;
-  unsigned iconified: 1;
   unsigned obscured: 1;
+  unsigned clock: 1;
   
 };
 
 
 extern Hand *hands;
-extern int active_hands;
+extern Hand *icon_hands;
+int active_hands(void);
 
 #define NHCenter	0x8000
 #define NHRandom	0x7FFF
 Hand *new_hand(int x, int y);
 void destroy_hand(Hand *);
 
-Hand *window_to_hand(Window);
-Hand *icon_window_to_hand(Window);
+Hand *window_to_hand(Window, int allow_icon);
 
-void set_picture(Hand *, Slideshow *, int);
-void refresh_hands(void);
+void draw_slide(Hand *);
 
 
 /*****************************************************************************/
 /*  Slideshow								     */
 
-struct Slideshow {
-  
-  int nslides;
-  Picture **picture;
-  struct timeval *delay;
-  
-};
+extern Gif_Stream *current_slideshow;
+extern Gif_Stream *resting_slideshow, *resting_icon_slideshow;
+extern Gif_Stream *ready_slideshow, *ready_icon_slideshow;
+#define DEFAULT_FLASH_DELAY_SEC 2
 
-
-extern Slideshow *current_slideshow;
-extern Slideshow *slideshow[MaxState];
-
-Slideshow *parse_slideshow(char *, struct timeval *);
-void blend_slideshow(Slideshow *);
+Gif_Image *get_built_in_image(const char *, int mono);
+Gif_Stream *parse_slideshow(const char *, double, int mono);
+void set_slideshow(Hand *, Gif_Stream *, struct timeval *);
+void set_all_slideshows(Hand *, Gif_Stream *);
 
 
 /*****************************************************************************/
 /*  Pictures								     */
 
 struct Picture {
-  
-  char *name;
-  Picture *next;
-  
-  int offset;
-  
-  Pixmap large;
-  Pixmap icon;
-  Pixmap background;
-  
+  Pixmap pix;
   int clock_x_off;
   int clock_y_off;
-
-  unsigned used: 1;
-  unsigned clock: 1;
-  
 };
 
-extern Picture *pictures;
 extern Pixmap bars_pixmap;
 extern Pixmap lock_pixmap;
 
@@ -266,10 +237,15 @@ void load_needed_pictures(Window, int, int force_mono);
 
 extern struct timeval register_keystrokes_delay;
 extern struct timeval register_keystrokes_gap;
-extern struct timeval idle_time;
-extern int check_idle;
 
+extern int check_idle;
+extern struct timeval idle_time;
 extern struct timeval last_key_time;
+
+extern int check_mouse;
+extern struct timeval check_mouse_time;
+extern int last_mouse_x, last_mouse_y;
+extern Window last_mouse_root;
 
 void watch_keystrokes(Window, struct timeval *);
 void register_keystrokes(Window);
@@ -278,7 +254,7 @@ void register_keystrokes(Window);
 /*****************************************************************************/
 /*  The high-level procedures						     */
 
-void error(char *);
+void error(const char *, ...);
 
 void wait_for_break(void);
 
@@ -288,6 +264,8 @@ void wait_for_break(void);
 #define TRAN_REST	4
 #define TRAN_LOCK	5
 #define TRAN_AWAKE	6
+
+extern struct timeval first_warning_time;
 
 int warning(int was_lock);
 int rest(void);
@@ -347,5 +325,19 @@ EXTERNFUNCTION int gettimeofday(struct timeval *, struct timezone *);
 
 #define xwGETTIME(a) do { xwGETTIMEOFDAY(&(a)); xwSUBTIME((a), (a), genesis_time); } while (0)
 extern struct timeval genesis_time;
+
+#define xwADDDELAY(result, a, d) do { \
+	(result).tv_sec = (a).tv_sec + ((d)/100); \
+	if (((result).tv_usec = (a).tv_usec + ((d)%100)*10000) >= MICRO_PER_SEC) { \
+		(result).tv_sec++; \
+		(result).tv_usec -= MICRO_PER_SEC; \
+	} } while (0)
+
+#define xwSUBDELAY(result, a, d) do { \
+	(result).tv_sec = (a).tv_sec - ((d)/100); \
+	if (((result).tv_usec = (a).tv_usec - ((d)%100)*10000) < 0) { \
+		(result).tv_sec--; \
+		(result).tv_usec += MICRO_PER_SEC; \
+	} } while (0)
 
 #endif

@@ -4,13 +4,15 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
+#include <assert.h>
+#include "gifx.h"
 
-#define DEFAULT_SLIDESHOW		"clench;spread"
-#define DEFAULT_SLIDESHOW_FINGER	"clench;spread;korean"
+#define DEFAULT_SLIDESHOW		"&clench;&spread"
+#define DEFAULT_ICON_SLIDESHOW		"&clenchicon;&spreadicon"
+#define FINGER_SLIDESHOW		"&clench;&spread;&finger"
+#define FINGER_ICON_SLIDESHOW		"&clenchicon;&spreadicon;&fingericon"
 
 #define SET_TIME(timeval, sec, usec) do { (timeval).tv_sec = (sec); (timeval).tv_usec = (usec); } while (0)
-
-#define NODELTAS	-0x8000
 
 static Options onormal;
 Options *ocurrent;
@@ -18,45 +20,40 @@ Options *ocurrent;
 struct timeval genesis_time;
 struct timeval type_delay;
 struct timeval break_delay;
-struct timeval idle_time;
 static struct timeval zero = {0, 0};
+struct timeval first_warning_time;
 struct timeval last_key_time;
 
-static struct timeval flash_delay;
-
 Hand *hands;
-int active_hands = 0;
+Hand *icon_hands;
 
-Slideshow *slideshow[MaxState];
+Gif_Stream *resting_slideshow, *resting_icon_slideshow;
+static const char *resting_slideshow_text = "&resting";
+static const char *resting_icon_slideshow_text = "&resting";
+
+Gif_Stream *ready_slideshow, *ready_icon_slideshow;
+static const char *ready_slideshow_text = "&ready";
+static const char *ready_icon_slideshow_text = "&ready";
 
 Display *display;
 Port port;
+static Gif_XContext *gfx;
 
 static char *display_name = 0;
+
+int check_idle;
+struct timeval idle_time;
+
+int check_mouse;
+struct timeval check_mouse_time;
+int last_mouse_x;
+int last_mouse_y;
+Window last_mouse_root;
 
 static int icon_width;
 static int icon_height;
 
 static int force_mono = 0;
-
-
-static void
-determine_wm_deltas(Hand *h)
-{
-  Window root, parent, pparent, *children;
-  XWindowAttributes attr;
-  unsigned int nchildren;
-  root = None;
-  parent = h->w;
-  do {
-    pparent = parent;
-    XQueryTree(display, pparent, &root, &parent, &children, &nchildren);
-    XFree(children);
-  } while (parent != root);
-  XGetWindowAttributes(display, pparent, &attr);
-  port.wm_delta_x = attr.width - h->width;
-  port.wm_delta_y = attr.height - h->height;
-}
 
 
 static void
@@ -87,7 +84,8 @@ General options:\n\
   --help                Print this message and exit.\n\
   --version             Print version number and exit.\n\
   --mono                Use monochrome pictures.\n\
-  +/-idle               Pay attention to your typing patterns (on by default).\n\
+  +/-idle               Monitor your typing (on by default).\n\
+  +/-mouse              Monitor your mouse movements (off by default).\n\
 \n");
   printf("\
 Break characteristics:\n\
@@ -99,6 +97,8 @@ Break characteristics:\n\
 Appearance options:\n\
   +/-finger             Be rude.\n\
   --flashtime=RATE      Flash the warning window at RATE.\n\
+  --warning-picture=GIF-FILE, --wp=GIF-FILE   Use an arbitrary GIF animation\n\
+                        as the warning window picture.\n\
   +/-beep               Beep when the warning window appears.\n\
   +/-clock              Show how long you have ignored the warning window.\n\
   +/-multiply=PERIOD    Make a new warning window every PERIOD,\n\
@@ -109,26 +109,24 @@ Appearance options:\n\
   --after=TIME          Change behavior if warning window is ignored for TIME;\n\
                         options following `--after' give new behavior.\n\
   +/-breakclock         Show how much time remains during the break.\n\
+  --rest-picture=GIF-FILE, --rp=GIF-FILE   Use an arbitrary GIF animation\n\
+                        as the resting window picture.\n\
+  --ready-picture=GIF-FILE, --okp=GIF-FILE   Use an arbitrary GIF animation\n\
+                        as the `OK' window picture.\n\
 \n\
 Report bugs to <eddietwo@lcs.mit.edu>.\n");
 }
 
 
-
 void
-error(char *x)
+error(const char *format, ...)
 {
-  fprintf(stderr, "xwrits: %s.\n", x);
-  exit(1);
-}
-
-
-static void
-optionerror(char *x, char *option)
-{
+  va_list val;
+  va_start(val, format);
   fprintf(stderr, "xwrits: ");
-  fprintf(stderr, x, option);
-  fprintf(stderr, ".\n");
+  vfprintf(stderr, format, val);
+  fprintf(stderr, "\n");
+  va_end(val);
   exit(1);
 }
 
@@ -138,8 +136,8 @@ get_icon_size()
 {
   XIconSize *ic;
   int nic;
-  icon_width = IconWidth;
-  icon_height = IconHeight;
+  icon_width = onormal.icon_slideshow->screen_width;
+  icon_height = onormal.icon_slideshow->screen_height;
   if (XGetIconSizes(display, port.root_window, &ic, &nic) == 0)
     return;
   if (nic != 0) {
@@ -202,16 +200,19 @@ new_hand(int x, int y)
   static XTextProperty window_name, icon_name;
   static u_int32_t *mwm_hints;
   Hand *nh = xwNEW(Hand);
+  Hand *nh_icon = xwNEW(Hand);
+  int width = onormal.slideshow->screen_width;
+  int height = onormal.slideshow->screen_height;
   
   if (x == NHCenter)
-    x = (port.width - WindowWidth) / 2;
+    x = (port.width - width) / 2;
   if (y == NHCenter)
-    y = (port.height - WindowHeight) / 2;
+    y = (port.height - height) / 2;
   
   if (x == NHRandom || y == NHRandom) {
     int xs[NHTries], ys[NHTries], i;
-    int xdist = port.width - WindowWidth;
-    int ydist = port.height - WindowHeight;
+    int xdist = port.width - width;
+    int ydist = port.height - height;
     int xrand = x == NHRandom;
     int yrand = y == NHRandom;
     for (i = 0; i < NHTries; i++) {
@@ -220,7 +221,7 @@ new_hand(int x, int y)
       if (yrand) ys[i] = (rand() >> 4) % ydist;
       else ys[i] = y;
     }
-    get_best_position(xs, ys, NHTries, WindowWidth, WindowHeight, &x, &y);
+    get_best_position(xs, ys, NHTries, width, height, &x, &y);
   }
   
   if (!xsh) {
@@ -234,8 +235,8 @@ new_hand(int x, int y)
     
     xsh = XAllocSizeHints();
     xsh->flags = USPosition | PMinSize | PMaxSize;
-    xsh->min_width = xsh->max_width = WindowWidth;
-    xsh->min_height = xsh->max_height = WindowHeight;
+    xsh->min_width = xsh->max_width = width;
+    xsh->min_height = xsh->max_height = height;
     
     xwmh = XAllocWMHints();
     xwmh->flags = InputHint | StateHint | IconWindowHint;
@@ -254,13 +255,24 @@ new_hand(int x, int y)
     mwm_hints = xwNEWARR(u_int32_t, 4);
     mwm_hints[0] = (1L << 0) | (1L << 1);
     /* flags = MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS */
-    mwm_hints[1] = (1L << 2) | (1L << 3) | (1L << 5);
-    /* functions = MWM_FUNC_MOVE | MWM_FUNC_MINIMIZE | MWM_FUNC_CLOSE */
-    mwm_hints[2] = (1L << 1) | (1L << 3) | (1L << 4) | (1L << 5);
-    /* decorations = MWM_DECOR_BORDER | MWM_DECOR_TITLE | MWM_DECOR_MENU
-       | MWM_DECOR_MINIMIZE */
+    mwm_hints[1] = (1L << 2) | (1L << 5);
+    /* functions = MWM_FUNC_MOVE | MWM_FUNC_CLOSE */
+    mwm_hints[2] = (1L << 1) | (1L << 3) | (1L << 4);
+    /* decorations = MWM_DECOR_BORDER | MWM_DECOR_TITLE | MWM_DECOR_MENU */
     mwm_hints[3] = ~(0L);
-    
+
+    /* Add MINIMIZE options only if the window might be iconifiable */
+    {
+      Options *o;
+      int ever_iconifiable = 0;
+      for (o = &onormal; o; o = o->next)
+	if (!o->never_iconify)
+	  ever_iconifiable = 1;
+      if (ever_iconifiable) {
+	mwm_hints[1] |= (1L << 3); /* MWM_FUNC_MINIMIZE */
+	mwm_hints[2] |= (1L << 5); /* MWM_DECOR_MINIMIZE */
+      }
+    }
   }
   
   {
@@ -276,24 +288,16 @@ new_hand(int x, int y)
     
     nh->w = XCreateWindow
       (display, port.root_window,
-       x, y, WindowWidth, WindowHeight, 0,
+       x, y, width, height, 0,
        port.depth, InputOutput, port.visual, setattr_mask, &setattr);
     
-    xwmh->icon_window = nh->iconw = XCreateWindow
+    xwmh->icon_window = nh_icon->w = XCreateWindow
       (display, port.root_window,
        x, y, icon_width, icon_height, 0,
        port.depth, InputOutput, port.visual, setattr_mask, &setattr);
   }
-#if 0
-  nh->w = XCreateSimpleWindow
-    (display, root_window,
-     x, y, WindowWidth, WindowHeight, 0, 1, 0);
-  xwmh->icon_window = nh->iconw = XCreateSimpleWindow
-    (display, root_window,
-     x, y, icon_width, icon_height, 0, 1, 0);
-#endif
   
-  XSelectInput(display, nh->iconw, StructureNotifyMask);
+  XSelectInput(display, nh_icon->w, StructureNotifyMask);
   
   xsh->x = x;
   xsh->y = y;
@@ -304,89 +308,154 @@ new_hand(int x, int y)
   XChangeProperty(display, nh->w, mwm_hints_atom, mwm_hints_atom, 32,
 		  PropModeReplace, (unsigned char *)mwm_hints, 4);
   
-  XSelectInput(display, nh->w, ButtonPressMask | StructureNotifyMask |
-	       (check_idle ? KeyPressMask : 0) | VisibilityChangeMask);
+  XSelectInput(display, nh->w, ButtonPressMask | StructureNotifyMask
+	       | (check_idle ? KeyPressMask : 0) | VisibilityChangeMask
+	       | ExposureMask);
   
+  nh->icon = nh_icon;
+  nh->width = width;		/* will be reset correctly by */
+  nh->height = height;		/* next ConfigureNotify */
+  nh->root_child = nh->w;
+  nh->is_icon = 0;
   nh->mapped = 0;
-  nh->iconified = 0;
-  nh->next = hands;
-  nh->prev = 0;
   nh->configured = 0;
   nh->slideshow = 0;
-  
+  nh->clock = 0;
   if (hands) hands->prev = nh;
+  nh->next = hands;
+  nh->prev = 0;
   hands = nh;
-  active_hands++;
+  
+  nh_icon->icon = nh;
+  nh_icon->root_child = nh->w;
+  nh_icon->is_icon = 1;
+  nh_icon->mapped = 0;
+  nh_icon->configured = 0;
+  nh_icon->slideshow = 0;
+  nh_icon->clock = 0;
+  if (icon_hands) icon_hands->prev = nh_icon;
+  nh_icon->next = icon_hands;
+  nh_icon->prev = 0;
+  icon_hands = nh_icon;
   
   return nh;
 }
 
-
 void
 destroy_hand(Hand *h)
 {
-  XDestroyWindow(display, h->w);
-  XDestroyWindow(display, h->iconw);
-  if (h->prev) h->prev->next = h->next;
-  else hands = h->next;
-  if (h->next) h->next->prev = h->prev;
-  active_hands--;
-  unschedule_data(A_FLASH | A_RAISE, h);
-  xfree(h);
-}
-
-
-void
-set_picture(Hand *h, Slideshow *ss, int n)
-{
-  Picture *p = ss->picture[n];
-  
-  if (p->large) XSetWindowBackgroundPixmap(display, h->w, p->large);
-  else XSetWindowBackground(display, h->w, p->background);
-  XClearWindow(display, h->w);
-  
-  if (h->iconw) {
-    if (p->icon) XSetWindowBackgroundPixmap(display, h->iconw, p->icon);
-    else if (p->large) XSetWindowBackgroundPixmap(display, h->iconw, p->large);
-    else XSetWindowBackground(display, h->iconw, p->background);
-    if (h->iconified) XClearWindow(display, h->iconw);
+  assert(!h->is_icon);
+  unschedule_data(A_FLASH, h);
+  if (h == hands && !h->next) {
+    XEvent event;
+    /* last remaining hand; don't destroy it, unmap it */
+    XUnmapWindow(display, h->w);
+    /* Synthetic UnmapNotify required by ICCCM to withdraw the window */
+    event.type = UnmapNotify;
+    event.xunmap.event = port.root_window;
+    event.xunmap.window = h->w;
+    event.xunmap.from_configure = False;
+    XSendEvent(display, port.root_window, False,
+	       SubstructureRedirectMask | SubstructureNotifyMask, &event);
+    /* mark hand as unmapped now */
+    h->mapped = h->icon->mapped = 0;
+  } else {
+    Hand *ih = h->icon;
+    XDestroyWindow(display, ih->w);
+    if (ih->prev) ih->prev->next = ih->next;
+    else icon_hands = ih->next;
+    if (ih->next) ih->next->prev = ih->prev;
+    xfree(ih);
+    XDestroyWindow(display, h->w);
+    if (h->prev) h->prev->next = h->next;
+    else hands = h->next;
+    if (h->next) h->next->prev = h->prev;
+    xfree(h);
   }
-  
-  h->slideshow = ss;
-  h->slide = n;
 }
 
-
-void
-refresh_hands(void)
+int
+active_hands(void)
 {
   Hand *h;
+  int n = 0;
   for (h = hands; h; h = h->next)
-    XClearWindow(display, h->w);
-  XFlush(display);
+    if (h->mapped || h->icon->mapped)
+      n++;
+  return n;
+}
+
+
+void
+ensure_picture(Gif_Stream *gfs, int n)
+{
+  Picture *p, *last_p, *last_last_p;
+  int i;
+  
+  for (i = 0; i < n; i++) {
+    p = (Picture *)gfs->images[i]->user_data;
+    if (!p->pix)		/* no picture cached for earlier image */
+      ensure_picture(gfs, i);
+  }
+  
+  p = (Picture *)gfs->images[n]->user_data;
+  last_p = (n > 0 ? (Picture *)gfs->images[n-1]->user_data : 0);
+  last_last_p = (n > 1 ? (Picture *)gfs->images[n-2]->user_data : 0);
+
+  p->pix = Gif_XNextImage(gfx, (last_last_p ? last_last_p->pix : None),
+			  (last_p ? last_p->pix : None),
+			  gfs, n);
+}
+
+void
+draw_slide(Hand *h)
+{
+  Gif_Stream *gfs = h->slideshow;
+  Gif_Image *gfi = gfs->images[h->slide];
+  Picture *p = (Picture *)gfi->user_data;
+  
+  if (!p->pix)
+    ensure_picture(gfs, h->slide);
+  
+  XSetWindowBackgroundPixmap(display, h->w, p->pix);
+  XClearWindow(display, h->w);
+  
+  if (h->clock)
+    draw_clock(h, 0);
 }
 
 
 Hand *
-window_to_hand(Window w)
+window_to_hand(Window w, int allow_icons)
 {
   Hand *h;
   for (h = hands; h; h = h->next)
     if (h->w == w)
-      break;
-  return h;
+      return h;
+  if (allow_icons)
+    for (h = icon_hands; h; h = h->next)
+      if (h->w == w)
+	return h;
+  return 0;
 }
 
-Hand *
-icon_window_to_hand(Window w)
+
+static void
+find_root_child(Hand *h)
 {
-  Hand *h;
-  for (h = hands; h; h = h->next)
-    if (h->iconw == w)
+  Window w = h->w;
+  Window root, parent, *children;
+  unsigned nchildren;
+  h->root_child = None;
+  while (XQueryTree(display, w, &root, &parent, &children, &nchildren)) {
+    if (children) XFree(children);
+    if (parent == root) {
+      h->root_child = w;
       break;
-  return h;
+    } else
+      w = parent;
+  }
 }
-
 
 int
 default_x_processing(XEvent *e)
@@ -396,32 +465,35 @@ default_x_processing(XEvent *e)
   switch (e->type) {
     
    case ConfigureNotify:
-    h = window_to_hand(e->xconfigure.window);
+    h = window_to_hand(e->xconfigure.window, 1);
     if (!h) break;
     h->configured = 1;
     h->x = e->xconfigure.x;
     h->y = e->xconfigure.y;
     h->width = e->xconfigure.width;
     h->height = e->xconfigure.height;
-    if (port.wm_delta_x == NODELTAS) determine_wm_deltas(h);
+    find_root_child(h);
+    break;
+    
+   case ReparentNotify:
+    if ((h = window_to_hand(e->xreparent.window, 1)))
+      find_root_child(h);
     break;
     
    case MapNotify:
-    if ((h = window_to_hand(e->xmap.window)))
+    if ((h = window_to_hand(e->xmap.window, 1))) {
+      draw_slide(h);
       h->mapped = 1;
-    else if ((h = icon_window_to_hand(e->xmap.window)))
-      h->iconified = 1;
+    }
     break;
     
    case UnmapNotify:
-    if ((h = window_to_hand(e->xmap.window)))
+    if ((h = window_to_hand(e->xmap.window, 1)))
       h->mapped = 0;
-    else if ((h = icon_window_to_hand(e->xmap.window)))
-      h->iconified = 0;
     break;
     
    case VisibilityNotify:
-    if ((h = window_to_hand(e->xvisibility.window))) {
+    if ((h = window_to_hand(e->xvisibility.window, 0))) {
       if (e->xvisibility.state == VisibilityUnobscured)
 	h->obscured = 0;
       else
@@ -429,17 +501,21 @@ default_x_processing(XEvent *e)
     }
     break;
     
+   case Expose:
+    h = window_to_hand(e->xexpose.window, 0);
+    if (e->xexpose.count == 0 && h && h->clock)
+      draw_clock(h, 0);
+    break;
+    
    case ClientMessage:
+    /* Leave e->type == ClientMessage only if it was a DELETE_WINDOW. */
     if (e->xclient.message_type != wm_protocols_atom ||
 	(Atom)(e->xclient.data.l[0]) != wm_delete_window_atom)
       e->type = 0;
-    else if (active_hands > 1) {
-      h = window_to_hand(e->xclient.window);
+    else {
+      h = window_to_hand(e->xclient.window, 0);
       if (h) destroy_hand(h);
-      e->type = 0;
     }
-    /* We leave e->type == ClientMessage only if it was a DELETE_WINDOW which
-       was trying to delete the last remaining xwrits window. */
     break;
     
     /* for idle processing */
@@ -542,7 +618,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
   if (*arg == '=') {
     arg++;
     separate = 0;
-    if (!*format) optionerror("too many arguments to %s", option);
+    if (!*format) error("too many arguments to %s", option);
   }
   
   if (separate && *format) {
@@ -557,7 +633,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
    case 'T': /* optional time */
     timeptr = va_arg(val, struct timeval *);
     if (!strtointerval(arg, &arg, timeptr))
-      optionerror("incorrect time format in %s argument", option);
+      error("incorrect time format in %s argument", option);
     break;
     
    case 's': /* string */
@@ -569,7 +645,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     intptr = va_arg(val, int *);
     *intptr = (int)strtol(arg, &arg, 10);
     if (*arg)
-      optionerror("argument to %s must be integer", option);
+      error("argument to %s must be integer", option);
     break;
     
   }
@@ -580,7 +656,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     switch (*format++) {
      case 't':
      case 's':
-      optionerror("%s not given enough arguments", option);
+      error("%s not given enough arguments", option);
     }
   va_end(val);
   return 1;
@@ -591,10 +667,9 @@ static void
 parse_options(int pargc, char **pargv)
 {
   char *s;
-  char *slideshow_text = DEFAULT_SLIDESHOW;
-  Slideshow *slideshow = 0;
   Options *o = &onormal;
   Options *p;
+  struct timeval flash_delay;
   
   argc = pargc;
   argv = pargv;
@@ -604,12 +679,10 @@ parse_options(int pargc, char **pargv)
     s = argv[0];
     
     if (optparse(s, "after", 1, "sT", &o->next_delay)) {
-      if (!slideshow)
-	slideshow = parse_slideshow(slideshow_text, &flash_delay);
-      o->slideshow = slideshow;
       p = xwNEW(Options);
       *p = *o;
       o->next = p;
+      p->prev = o;
       o = p;
       
     } else if (optparse(s, "breaktime", 1, "st", &break_delay))
@@ -627,17 +700,16 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "display", 1, "ss", &display_name))
       ;
     
-    else if (optparse(s, "finger", 1, "t")) {
-      slideshow_text =
-	optparse_yesno ? DEFAULT_SLIDESHOW_FINGER : DEFAULT_SLIDESHOW;
-      slideshow = 0;
-    } else if (optparse(s, "flashtime", 3, "st", &flash_delay))
-      slideshow = 0;
-    else if (optparse(s, "flipoff", 1, "t")) {
-      slideshow_text =
-	optparse_yesno ? DEFAULT_SLIDESHOW_FINGER : DEFAULT_SLIDESHOW;
-      slideshow = 0;
-      
+    else if (optparse(s, "finger", 1, "t")
+	     || optparse(s, "flipoff", 1, "t")) {
+      o->slideshow_text =
+	(optparse_yesno ? FINGER_SLIDESHOW : DEFAULT_SLIDESHOW);
+      o->icon_slideshow_text =
+	(optparse_yesno ? FINGER_ICON_SLIDESHOW : DEFAULT_ICON_SLIDESHOW);
+    } else if (optparse(s, "flashtime", 3, "st", &flash_delay)) {
+      double f = flash_delay.tv_sec*MICRO_PER_SEC + flash_delay.tv_usec;
+      o->flash_rate_ratio = f / (DEFAULT_FLASH_DELAY_SEC*MICRO_PER_SEC);
+    
     } else if (optparse(s, "help", 1, "s")) {
       usage();
       exit(0);
@@ -649,9 +721,11 @@ parse_options(int pargc, char **pargv)
     
     else if (optparse(s, "lock", 1, "tT", &o->lock_bounce_delay))
       o->lock = optparse_yesno;
-
-    else if (optparse(s, "mono", 2, "t"))
+    
+    else if (optparse(s, "mono", 3, "t"))
       force_mono = optparse_yesno;
+    else if (optparse(s, "mouse", 3, "tT", &check_mouse_time))
+      check_mouse = optparse_yesno;
     else if (optparse(s, "multiply", 1, "tT", &o->multiply_delay))
       o->multiply = optparse_yesno;
     else if (optparse(s, "maxhands", 2, "si", &o->max_hands))
@@ -664,16 +738,25 @@ parse_options(int pargc, char **pargv)
 	 useful, and screwed over virtual desktop users. To resupport it,
 	 change the flash() and switchoptions() subroutines and add a clause
 	 on ConfigureNotify to warningxloop(). Use constraintoscreen(). */
-      error("The nooffscreen option is no longer supported");
+      error("the nooffscreen option is no longer supported");
+
+    else if (optparse(s, "okp", 1, "ss", &ready_slideshow_text))
+      ;
     
     else if (optparse(s, "password", 1, "ss", &lock_password))
+      ;
+
+    else if (optparse(s, "rest-picture", 3, "ss", &resting_slideshow_text)
+	     || optparse(s, "rp", 2, "ss", &resting_slideshow_text))
+      ;
+    else if (optparse(s, "ready-picture", 3, "ss", &ready_slideshow_text))
       ;
     
     else if (optparse(s, "typetime", 1, "st", &type_delay))
       ;
-    else if (optparse(s, "top", 2, "tT", &o->top_delay))
+    else if (optparse(s, "top", 2, "t"))
       o->top = optparse_yesno;
-
+    
     else if (optparse(s, "version", 1, "s")) {
       printf("LCDF Xwrits %s\n", VERSION);
       printf("\
@@ -683,22 +766,22 @@ There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");
       exit(0);
       
-    } else
+    } else if (optparse(s, "warning-picture", 1, "ss", &o->slideshow_text))
+      ;
+    else if (optparse(s, "wp", 2, "ss", &o->slideshow_text))
+      ;
+    
+    else
       short_usage();
   }
-  
-  /* Set up the slideshow for the last set of options. */
-  if (!slideshow)
-    slideshow = parse_slideshow(slideshow_text, &flash_delay);
-  o->slideshow = slideshow;
 }
 
 
 static void
 check_options(Options *o)
 {
+  Options *prev = o->prev;
   if (xwTIMELEQ0(o->multiply_delay)) o->multiply_delay = zero;
-  if (xwTIMELEQ0(o->top_delay)) o->top_delay = zero;
   
   if (o->max_hands < 1) o->max_hands = 1;
   if (o->max_hands > MaxHands) o->max_hands = MaxHands;
@@ -708,8 +791,27 @@ check_options(Options *o)
     /* If the next set of options is supposed to appear before this one,
        replace this one with the next set. Iterate. */
     *o = *p;
+    o->prev = prev;
+    if (o->next) o->next->prev = o;
     xfree(p);
   }
+  
+  /* create the slideshows */
+  if (prev && strcmp(o->slideshow_text, prev->slideshow_text) == 0
+      && o->flash_rate_ratio == prev->flash_rate_ratio) {
+    o->slideshow = prev->slideshow;
+    o->slideshow->refcount++;
+  } else
+    o->slideshow = parse_slideshow(o->slideshow_text,
+				   o->flash_rate_ratio, force_mono);
+  
+  if (prev && strcmp(o->icon_slideshow_text, prev->icon_slideshow_text) == 0
+      && o->flash_rate_ratio == prev->flash_rate_ratio) {
+    o->icon_slideshow = prev->icon_slideshow;
+    o->icon_slideshow->refcount++;
+  } else
+    o->icon_slideshow = parse_slideshow(o->icon_slideshow_text,
+					o->flash_rate_ratio, force_mono);
 }
 
 
@@ -727,7 +829,7 @@ initialize_port(Display *display, int screen_number)
   XVisualInfo *v;
   XVisualInfo *best_v = 0;
   VisualID default_visualid;
-
+  
   /* initialize Port fields */
   port.display = display;
   port.x_socket = ConnectionNumber(display);
@@ -735,9 +837,7 @@ initialize_port(Display *display, int screen_number)
   port.root_window = RootWindow(display, screen_number);
   port.width = DisplayWidth(display, screen_number);
   port.height = DisplayHeight(display, screen_number);
-  port.wm_delta_x = NODELTAS;
-  port.wm_delta_y = NODELTAS;
-
+  
   /* choose the Visual */
   default_visualid = DefaultVisual(display, screen_number)->visualid;
   visi_template.screen = screen_number;
@@ -786,6 +886,8 @@ initialize_port(Display *display, int screen_number)
   
   /* choose the font */
   port.font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
+  
+  /* don't set port.drawable until after we create the first hand */
 }
 
 
@@ -795,9 +897,7 @@ default_settings(void)
   /* Global default settings */
   SET_TIME(type_delay, 55 * SEC_PER_MIN, 0);
   SET_TIME(break_delay, 5 * SEC_PER_MIN, 0);
-  SET_TIME(flash_delay, 2, 0);
-  
-  SET_TIME(onormal.top_delay, 2, 0);
+  onormal.flash_rate_ratio = 1;
   
   SET_TIME(onormal.multiply_delay, 2, 300000);
   onormal.max_hands = 25;
@@ -806,23 +906,30 @@ default_settings(void)
   SET_TIME(onormal.lock_bounce_delay, 4, 0);
   SET_TIME(lock_message_delay, 10, 0);
   lock_password = "quit";
-
+  
   /* Keystroke registration functions */
-  SET_TIME(register_keystrokes_delay, 1, 0);
-  SET_TIME(register_keystrokes_gap, 0, 10000);
-  SET_TIME(idle_time, 0, 0);
   check_idle = 1;
-
+  SET_TIME(idle_time, 0, 0);
+  SET_TIME(register_keystrokes_delay, 1, 0);
+  
+  /* Mouse tracking functions */
+  check_mouse = 0;
+  SET_TIME(check_mouse_time, 3, 0);
+  last_mouse_x = last_mouse_y = 0;
+  
+  /* Slideshows */
+  onormal.slideshow_text = DEFAULT_SLIDESHOW;
+  onormal.icon_slideshow_text = DEFAULT_ICON_SLIDESHOW;
+  
   /* Clock tick time functions */
-  /* 15 seconds seems like a reasonable clock tick time, even though it'll
-     redraw the same hands 4 times. */
-  SET_TIME(clock_tick, 15, 0);
-
-  /* Next opiton set */
+  /* 20 seconds seems like a reasonable clock tick time, even though it'll
+     redraw the same hands 3 times. */
+  SET_TIME(clock_tick, 20, 0);
+  
+  /* Next option set */
   SET_TIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
   onormal.next = 0;
-
-  /* For slideshow defaults, see the two #defines at the top of this file */
+  onormal.prev = 0;
 }
 
 
@@ -836,9 +943,8 @@ main(int argc, char *argv[])
   xwGETTIMEOFDAY(&genesis_time);
   
   srand((getpid() + 1) * time(0));
-
+  
   default_settings();
-  default_pictures();
   
   /* remove first argument = program name */
   parse_options(argc - 1, argv + 1);
@@ -851,7 +957,7 @@ main(int argc, char *argv[])
   }
   
   if (strlen(lock_password) >= MaxPasswordSize)
-    optionerror("%s argument too long", "password");
+    error("password too long");
   
   display = XOpenDisplay(display_name);
   if (!display) error("cannot open display");
@@ -859,14 +965,27 @@ main(int argc, char *argv[])
   
   ocurrent = &onormal;
   
-  slideshow[Warning] = onormal.slideshow;
-  slideshow[Resting] = parse_slideshow("resting", 0);
-  slideshow[Ready] = parse_slideshow("ready", 0);
-  if (lock_possible) slideshow[Locked] = parse_slideshow("locked", 0);
+  resting_slideshow =
+    parse_slideshow(resting_slideshow_text, 1, force_mono);
+  resting_icon_slideshow =
+    parse_slideshow(resting_icon_slideshow_text, 1, force_mono);
+  ready_slideshow =
+    parse_slideshow(ready_slideshow_text, 1, force_mono);
+  ready_icon_slideshow =
+    parse_slideshow(ready_icon_slideshow_text, 1, force_mono);
   
   hand = new_hand(NHCenter, NHCenter);
-  load_needed_pictures(hand->w, lock_possible, force_mono);
+  gfx = Gif_NewXContext(display, hand->w);
+  port.drawable = hand->w;
   init_clock(hand->w);
+  if (lock_possible) {
+    Gif_Image *gfi = get_built_in_image("&locked", force_mono);
+    lock_pixmap = Gif_XImage(gfx, 0, gfi);
+    Gif_DeleteImage(gfi);
+    gfi = get_built_in_image("&bars", force_mono);
+    bars_pixmap = Gif_XImage(gfx, 0, gfi);
+    Gif_DeleteImage(gfi);
+  }
   
   if (check_idle && xwTIMELEQ0(idle_time)) {
     double time = 0.3 * (break_delay.tv_sec +
@@ -889,6 +1008,7 @@ main(int argc, char *argv[])
     ocurrent = &onormal;
     wait_for_break();
     
+    xwGETTIME(first_warning_time);
     while (tran != TRAN_AWAKE && tran != TRAN_CANCEL) {
       
       tran = warning(was_lock);

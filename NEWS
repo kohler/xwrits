@@ -1,5 +1,31 @@
 Xwrits NEWS
 
+Version 2.8b2   4.Aug.1999
+
+* Xwrits can finally monitor your mouse movements with the `+mouse' option.
+
+* You can specify your own GIF pictures or animations for the warning,
+  resting, and ready windows with the `--warning-picture',
+  `--rest-picture', and `--ready-picture' options.
+
+* Various code cleanups and some bug fixes.
+
+
+Version 2.8b1   3.Aug.1999
+
+* Fixed bugs related to the count of how many hands were actively visible.
+  This surfaced in several ways: too few multiplied windows, deleting
+  xwrits windows could cause a segmentation fault, and so forth. Bug found
+  by Darko Marinov <marinov@lcs.mit.edu>.
+
+* Different `+top' behavior: now warning windows look at the window
+  stacking order and try to keep themselves on top.
+
+* Simplified clock drawing mechanism.
+
+* Updated GIF library to 0.9999.
+
+
 Version 2.7.3   28.Dec.1998
 
 * Updated GIF library to 0.99; moved to config.h-based configuration.
