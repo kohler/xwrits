@@ -1,5 +1,11 @@
 Xwrits NEWS
 
+Version 2.16   23.Aug.2001
+
+* Choose font more carefully, to avoid null pointer dereferences. Problem
+  reported by Sharif Nassar <sharif@mrwacky.com>.
+
+
 Version 2.15   18.Apr.2001
 
 * Xwrits processes play nicely with one another. For example, two xwrits

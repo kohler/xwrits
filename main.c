@@ -866,7 +866,7 @@ initialize_port(Port *port, Display *display, int screen_number)
   }
   
   /* choose the font */
-  port->font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-75-75-*");
+  port->font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-75-75-*-iso8859-1");
   if (!port->font)
       port->font = XLoadQueryFont(display, "fixed");
   
