@@ -1,6 +1,8 @@
-Version 2.6
+Version 2.6b8
 
 * Added support for --longoptions and --version.
+
+* Fixed race condition in schedule.c.
 
 
 Version 2.6b7
