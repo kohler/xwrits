@@ -1,5 +1,10 @@
 Xwrits NEWS
 
+Version 2.6.4   26.Sep.1998
+
+* Added `--help' (well, `help') to conform to GNU program behavior standards.
+
+
 Version 2.6.3   7.Sep.1998
 
 * No user-visible changes (fixed configuration bugs and renamed some

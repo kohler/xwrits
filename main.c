@@ -58,15 +58,28 @@ determine_wm_deltas(Hand *h)
 
 
 static void
+short_usage(void)
+{
+  fprintf(stderr, "Usage: xwrits [options]\n\
+Type xwrits --help for more information.\n");
+  exit(1);
+}
+
+
+static void
 usage(void)
 {
-  fprintf(stderr, "\
-usage: xwrits [display=d] [typetime=time] [breaktime=time] [after=time]\n\
+  printf("\
+`Xwrits' reminds you to take wrist breaks, which should help you prevent or\n\
+manage a repetitive stress injury. It runs on X.\n\
+\n\
+Usage: xwrits [display=d] [typetime=time] [breaktime=time] [after=time]\n\
               [+/-beep] [+/-breakclock] [+/-clock] [+/-finger] [flashtime=time]\n\
-              [+/-flipoff] [+/-iconified] [-/+idle[=time]] [+/-lock[=time]]\n\
-              [maxhands=#] [mono] [+/-multiply[=time]] [+/-noiconify]\n\
-              [password=password] [+/-top] [version]\n");
-  exit(1);
+              [+/-flipoff] [help] [+/-iconified] [-/+idle[=time]]\n\
+              [+/-lock[=time]] [maxhands=#] [mono] [+/-multiply[=time]]\n\
+              [+/-noiconify] [password=password] [+/-top] [version]\n\
+\n\
+Report bugs to <eddietwo@lcs.mit.edu>.\n");
 }
 
 
@@ -594,6 +607,10 @@ parse_options(int pargc, char **pargv)
 	optparse_yesno ? DEFAULT_SLIDESHOW_FINGER : DEFAULT_SLIDESHOW;
       slideshow = 0;
       
+    } else if (optparse(s, "help", 1, "s")) {
+      usage();
+      exit(0);
+      
     } else if (optparse(s, "iconified", 2, "t"))
       o->appear_iconified = optparse_yesno;
     else if (optparse(s, "idle", 1, "tT", &idle_time))
@@ -636,7 +653,7 @@ particular purpose.\n");
       exit(0);
       
     } else
-      usage();
+      short_usage();
   }
   
   /* Set up the slideshow for the last set of options. */
