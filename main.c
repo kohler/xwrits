@@ -62,8 +62,8 @@ determine_wm_deltas(Hand *h)
 static void
 short_usage(void)
 {
-  fprintf(stderr, "Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [options...]\n\
-Type xwrits --help for more information.\n");
+  fprintf(stderr, "Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [OPTION]...\n\
+Try `xwrits --help' for more information.\n");
   exit(1);
 }
 
@@ -75,7 +75,7 @@ usage(void)
 `Xwrits' reminds you to take wrist breaks, which should help you prevent or\n\
 manage a repetitive stress injury. It runs on X.\n\
 \n\
-Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [options...]\n\
+Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [OPTION]...\n\
 \n\
 All options may be abbreviated to their unique prefixes. You can type\n\
 `--OPTION', `OPTION', or `+OPTION': they act equivalently. Some options can be\n\
@@ -677,7 +677,7 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "version", 1, "s")) {
       printf("Xwrits version %s\n", VERSION);
       printf("\
-Copyright (C) 1994-8 Eddie Kohler\n\
+Copyright (C) 1994-9 Eddie Kohler\n\
 This is free software; see the source for copying conditions.\n\
 There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");
