@@ -4,7 +4,7 @@
 
 #define ClockWidth 30
 #define ClockHeight 30
-#define ClockHour 7.3
+#define ClockHour 7
 #define ClockMin 11
 #define HandWidth 1.5
 #define HandOffset 1.5

@@ -32,7 +32,7 @@ A simple timing method is used to determine when you should next take
 a break, sort of like an alarm clock. The \fBtypetime\fP option
 changes the amount of time between breaks. Default is 55 minutes.
 \fBXwrits\fP \fIdoes\fP notice when you leave your workstation idle,
-however. See \fB+idle\fP below.
+however (see \fB+idle\fP below).
 
 .SH ESCALATION
 It is easy to put the warning window aside ``for 5 minutes'' and
@@ -117,14 +117,14 @@ Synonym for \fB+finger\fP.
 The warning window will appear already iconified, not as a separate
 window.
 .TP 5
-\fB+idle\fP[=\fItime\fP] (\fB\-idle) [\fBi\fP]
+\fB+idle\fP (\fB\-idle) [\fBi\fP]
 When idle is on, xwrits
 will monitor your typing and adjust its actions accordingly. For
 instance, no warning window will appear if you leave your workstation
 unattended. Also, if you stop typing while a warning window is active,
 but forget to click the warning window, xwrits will automatically
-start your wrist break after waiting for \fItime\fP (default 2
-minutes). \fBidle\fP is on by default.
+start your wrist break after waiting for a third of the break's length.
+\fBidle\fP is on by default.
 .TP 5
 \fB+lock\fP[=\fIjump-time\fP] (\fB\-lock\fP)
 \fBXwrits\fP will lock your screen until your break is

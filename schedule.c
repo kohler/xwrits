@@ -45,10 +45,9 @@ void
 idle_create(Window w, struct timeval *now)
 {
   Window root, parent, *children;
-  unsigned int nchildren;
+  unsigned i, nchildren;
   static struct timeval next_idle_create;
   Alarm *a;
-  int i;
   
   if (window_to_hand(w) || icon_window_to_hand(w))
     return; /* don't need to worry about our own windows */

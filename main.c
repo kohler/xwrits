@@ -66,9 +66,9 @@ usage(void)
   fprintf(stderr, "\
 usage: xwrits [display=d] [typetime=time] [breaktime=time] [after=time]\n\
               [+/-beep] [+/-breakclock] [+/-clock] [+/-finger] [flashtime=time]\n\
-              [+/-flipoff] [+/-iconified] [-/+idle[=time]] [+/-lock[=time]]\n\
+              [+/-flipoff] [+/-iconified] [-/+idle] [+/-lock[=time]]\n\
               [maxhands=#] [+/-multiply[=time]] [+/-noiconify]\n\
-              [password=password] [+/-top]\n");
+              [password=password] [+/-top] [version]\n");
   exit(1);
 }
 
@@ -390,7 +390,7 @@ default_x_processing(XEvent *e)
     
    case ClientMessage:
     if (e->xclient.message_type != wm_protocols_atom ||
-	e->xclient.data.l[0] != wm_delete_window_atom)
+	(Atom)(e->xclient.data.l[0]) != wm_delete_window_atom)
       e->type = 0;
     else if (active_hands > 1) {
       h = window_to_hand(e->xclient.window);
@@ -427,6 +427,7 @@ strtointerval(char *s, char **stores, struct timeval *iv)
 {
   long min = 0;
   double sec = 0;
+  long integral_sec;
   int ok = 0;
   if (isdigit(*s)) min = strtol(s, &s, 10), ok = 1;
   if (*s == ':') {
@@ -439,8 +440,9 @@ strtointerval(char *s, char **stores, struct timeval *iv)
   }
   if (stores) *stores = s;
   if (!ok || *s != 0) return 0;
-  iv->tv_sec = min * SecPerMin + floor(sec);
-  iv->tv_usec = MicroPerSec * (sec - (long)floor(sec));
+  integral_sec = (long)(floor(sec));
+  iv->tv_sec = min * SecPerMin + integral_sec;
+  iv->tv_usec = (int)(MicroPerSec * (sec - integral_sec));
   return 1;
 }
 
@@ -673,7 +675,7 @@ choose_visual(void)
   int nv, i;
   XVisualInfo *v;
   XVisualInfo *best_v = 0;
-  int default_visualid = DefaultVisual(display, screen_number)->visualid;
+  VisualID default_visualid = DefaultVisual(display, screen_number)->visualid;
   visi_template.screen = screen_number;
   
   v = XGetVisualInfo(display, VisualScreenMask, &visi_template, &nv);
@@ -789,12 +791,12 @@ main(int argc, char *argv[])
   
   if (check_idle) {
     struct timeval now;
-    double icd;
+    double icd = 0.3 * (break_delay.tv_sec +
+			(break_delay.tv_usec / (double)MicroPerSec));
+    long integral_icd = (long)(floor(icd));
     
-    icd = 0.3 * (break_delay.tv_sec +
-		 (break_delay.tv_usec / (double)MicroPerSec));
-    idle_check_delay.tv_sec = floor(icd);
-    idle_check_delay.tv_usec = MicroPerSec * (icd - (long)floor(icd));
+    idle_check_delay.tv_sec = integral_icd;
+    idle_check_delay.tv_usec = (long)(MicroPerSec * (icd - integral_icd));
     
     xwGETTIME(now);
     XSetErrorHandler(x_error_handler);

@@ -27,6 +27,10 @@ elif test $ac_cv_gettimeofday = 0 ;
 then AC_DEFINE_UNQUOTED(NO_GETTIMEOFDAY_PROTO)
 fi
 
+dnl Don't do anything special with memory allocation for the GIF library.
+MEMORY_PREPROCESSOR=''
+AC_SUBST(MEMORY_PREPROCESSOR)dnl
+
 AC_CACHE_CHECK(for integer typedefs in sys/types.h, ac_cv_sys_types_int,
 [AC_EGREP_HEADER(u_int32_t, sys/types.h,
 ac_cv_sys_types_int=yes, ac_cv_sys_types_int=no)])

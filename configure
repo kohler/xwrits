@@ -1804,13 +1804,15 @@ EOF
 
 fi
 
+MEMORY_PREPROCESSOR=''
+
 echo $ac_n "checking for integer typedefs in sys/types.h""... $ac_c" 1>&6
-echo "configure:1809: checking for integer typedefs in sys/types.h" >&5
+echo "configure:1811: checking for integer typedefs in sys/types.h" >&5
 if eval "test \"`echo '$''{'ac_cv_sys_types_int'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 1814 "configure"
+#line 1816 "configure"
 #include "confdefs.h"
 #include <sys/types.h>
 EOF
@@ -1836,7 +1838,7 @@ then
 else
   # Define our own versions
   echo $ac_n "checking for a 16-bit value""... $ac_c" 1>&6
-echo "configure:1840: checking for a 16-bit value" >&5
+echo "configure:1842: checking for a 16-bit value" >&5
 if eval "test \"`echo '$''{'ac_cv_int16'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -1844,7 +1846,7 @@ else
   ac_cv_int16=short
 else
   cat > conftest.$ac_ext <<EOF
-#line 1848 "configure"
+#line 1850 "configure"
 #include "confdefs.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1857,7 +1859,7 @@ int main(int argc, char **argv) {
   exit(0);
 }
 EOF
-if { (eval echo configure:1861: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:1863: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest && (./conftest; exit) 2>/dev/null
 then
   ac_cv_int16=`cat conftestval`
 else
@@ -1874,7 +1876,7 @@ fi
 echo "$ac_t""$ac_cv_int16" 1>&6
 
   echo $ac_n "checking for a 32-bit value""... $ac_c" 1>&6
-echo "configure:1878: checking for a 32-bit value" >&5
+echo "configure:1880: checking for a 32-bit value" >&5
 if eval "test \"`echo '$''{'ac_cv_int32'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
@@ -1882,7 +1884,7 @@ else
   ac_cv_int32=int
 else
   cat > conftest.$ac_ext <<EOF
-#line 1886 "configure"
+#line 1888 "configure"
 #include "confdefs.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1896,7 +1898,7 @@ int main(int argc, char **argv) {
   exit(0);
 }
 EOF
-if { (eval echo configure:1900: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest && (./conftest; exit) 2>/dev/null
+if { (eval echo configure:1902: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest && (./conftest; exit) 2>/dev/null
 then
   ac_cv_int32=`cat conftestval`
 else
@@ -2068,6 +2070,7 @@ s%@X_CFLAGS@%$X_CFLAGS%g
 s%@X_PRE_LIBS@%$X_PRE_LIBS%g
 s%@X_LIBS@%$X_LIBS%g
 s%@X_EXTRA_LIBS@%$X_EXTRA_LIBS%g
+s%@MEMORY_PREPROCESSOR@%$MEMORY_PREPROCESSOR%g
 s%@INTEGER_TYPES@%$INTEGER_TYPES%g
 
 CEOF
