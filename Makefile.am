@@ -61,7 +61,7 @@ versionize:
 	perl -pi~ -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.1
 	perl -pi~ -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\w.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" rpm.spec
 
-rpm: $(PACKAGE)-$(VERSION).tar.gz
+rpm: dist
 	buildarch=`rpm --showrc | awk '/^build arch/ { print $$4; }'` ; \
 	mkdir -p /tmp/rpmb/SOURCES /tmp/rpmb/RPMS/$$buildarch \
 	/tmp/rpmb/BUILD ; \
