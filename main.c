@@ -45,6 +45,7 @@ int check_idle;
 struct timeval idle_time;
 
 int check_mouse;
+int mouse_sensitivity;
 struct timeval check_mouse_time;
 int last_mouse_x;
 int last_mouse_y;
@@ -642,6 +643,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     break;
     
    case 'i': /* integer */
+   case 'I': /* optional integer */
     intptr = va_arg(val, int *);
     *intptr = (int)strtol(arg, &arg, 10);
     if (*arg)
@@ -656,6 +658,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     switch (*format++) {
      case 't':
      case 's':
+     case 'i':
       error("%s not given enough arguments", option);
     }
   va_end(val);
@@ -724,7 +727,7 @@ parse_options(int pargc, char **pargv)
     
     else if (optparse(s, "mono", 3, "t"))
       force_mono = optparse_yesno;
-    else if (optparse(s, "mouse", 3, "tT", &check_mouse_time))
+    else if (optparse(s, "mouse", 3, "tI", &mouse_sensitivity))
       check_mouse = optparse_yesno;
     else if (optparse(s, "multiply", 1, "tT", &o->multiply_delay))
       o->multiply = optparse_yesno;
@@ -915,6 +918,7 @@ default_settings(void)
   /* Mouse tracking functions */
   check_mouse = 0;
   SET_TIME(check_mouse_time, 3, 0);
+  mouse_sensitivity = 15;
   last_mouse_x = last_mouse_y = 0;
   
   /* Slideshows */

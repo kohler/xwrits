@@ -244,6 +244,7 @@ extern struct timeval last_key_time;
 
 extern int check_mouse;
 extern struct timeval check_mouse_time;
+extern int mouse_sensitivity;
 extern int last_mouse_x, last_mouse_y;
 extern Window last_mouse_root;
 

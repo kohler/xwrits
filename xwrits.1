@@ -172,10 +172,11 @@ Xwrits will display its graphics in black and white. This may be useful if
 you live in a world with a limited colormap.
 '
 .TP 5
-\fBmouse\fP[=\fIcheck-time\fP]
-Xwrits will monitor your mouse movements. Every \fIcheck-time\fP, it checks
-whether the mouse has moved and treats any movement like a key press.
-Default for \fIcheck-time\fP is 3 seconds.
+\fB+mouse\fP[=\fIsensitivity\fP] (\fB\-mouse\fP)
+Xwrits will monitor your mouse movements. Every couple seconds, it checks
+whether the mouse has moved. Movements of more than \fIsensitivity\fP
+pixels in any direction are treated like key presses. Default for
+\fIsensitivity\fP is 15 pixels.
 '
 .TP 5
 \fB+multiply\fP[=\fIbreed-time\fP] (\fB\-multiply\fP) [\fBm\fP]

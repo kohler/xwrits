@@ -173,8 +173,6 @@ unschedule_data(int actions, void *data)
 }
 
 
-#define MOUSE_SENSITIVITY 5
-
 int
 loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 {
@@ -242,10 +240,10 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	 XQueryPointer(display, port.root_window, &root, &child,
 		       &root_x, &root_y, &win_x, &win_y, &mask);
 	 if (root != last_mouse_root
-	     || root_x < last_mouse_x - MOUSE_SENSITIVITY
-	     || root_x > last_mouse_x + MOUSE_SENSITIVITY
-	     || root_y < last_mouse_y - MOUSE_SENSITIVITY
-	     || root_y > last_mouse_y + MOUSE_SENSITIVITY) {
+	     || root_x < last_mouse_x - mouse_sensitivity
+	     || root_x > last_mouse_x + mouse_sensitivity
+	     || root_y < last_mouse_y - mouse_sensitivity
+	     || root_y > last_mouse_y + mouse_sensitivity) {
 	   XEvent event;
 	   event.type = MotionNotify; /* skeletal MotionNotify event */
 	   if (x_looper && last_mouse_root)
