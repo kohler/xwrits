@@ -1180,10 +1180,11 @@ main(int argc, char *argv[])
       if (xsi) {
 	  for (j = 0; j < nxsi; j++) {
 	      Port *q = (j == 0 ? p : add_port(p->display_name, p->display, p->screen_number, p));
-	      q->left = xsi[i].x_org;
-	      q->top = xsi[i].y_org;
-	      q->width = xsi[i].width;
-	      q->height = xsi[i].height;
+	      q->left = xsi[j].x_org;
+	      q->top = xsi[j].y_org;
+	      q->width = xsi[j].width;
+	      q->height = xsi[j].height;
+	      fprintf(stderr, "%d %d %d %d\n", xsi[j].x_org, xsi[j].y_org, xsi[j].width, xsi[j].height);
 	  }
 	  XFree(xsi);
       } else {

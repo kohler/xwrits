@@ -28,7 +28,7 @@ ensure_slave_port_hand(Port *p)
 	    pop_up_hand(h);
 	    return;
 	}
-    (void) new_hand(p, NEW_HAND_CENTER, NEW_HAND_CENTER);
+    pop_up_hand(new_hand(p, NEW_HAND_CENTER, NEW_HAND_CENTER));
 }
 
 
