@@ -21,6 +21,11 @@ BUILT_SOURCES = colorpic.c monopic.c
 xwrits_DEPENDENCIES = @STRERROR_O@
 giftoc_DEPENDENCIES = @STRERROR_O@
 
+giffunc.o: giffunc.c gif.h
+gifread.o: gifread.c gif.h
+giftoc.o: giftoc.c
+gifx.o: gifx.c gifx.h gif.h
+
 pictures.o: pictures.c colorpic.c monopic.c
 
 COLOR_PIC = color/bars.gif color/lock.gif \
