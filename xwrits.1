@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.14
+.ds V 2.15
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -42,10 +42,14 @@ option. With the \fB+mouse\fP option, it will also monitor your mouse
 movements\*Eyou won't be able to move the mouse during a break without
 aborting the break.
 .PP
-Each wrist break normally lasts the same amount of time even if you've
-taken small breaks while typing. This is what doctors suggest, but, if
-you'd like, the \fB+quota\fP option will reward you for taking small breaks
-by reducing the length of the next official break.
+Each wrist break normally lasts the same amount of time. This is what
+doctors suggest, but, if you'd like, the \fB+quota\fP option will reward
+you for taking small breaks by reducing the length of the next official
+break.
+.PP
+Some doctors recommend taking a short ``microbreak'' every five minutes, as
+well as a longer break every hour. To use xwrits this way, just run two
+xwrits processes, one for the microbreaks and one for the longer breaks.
 '
 .SH ESCALATION
 It is easy to put the warning window aside ``for 5 minutes'' and

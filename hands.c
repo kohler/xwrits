@@ -77,6 +77,14 @@ new_hand(Port *port, int x, int y)
   int width = ocurrent->slideshow->screen_width;
   int height = ocurrent->slideshow->screen_height;
   
+  /* is this the permanent hand? */
+  if (!port->permanent_hand) {
+    nh->permanent = 1;
+    port->permanent_hand = nh;
+  } else
+    nh->permanent = 0;
+  
+  /* set position and size */
   if (x == NEW_HAND_CENTER)
     x = (port->width - width) / 2;
   if (y == NEW_HAND_CENTER)
@@ -138,6 +146,7 @@ new_hand(Port *port, int x, int y)
     }
   }
   
+  /* create windows */
   {
     XSetWindowAttributes setattr;
     unsigned long setattr_mask;
@@ -160,8 +169,9 @@ new_hand(Port *port, int x, int y)
        port->depth, InputOutput, port->visual, setattr_mask, &setattr);
   }
   
-  XSelectInput(port->display, nh_icon->w, StructureNotifyMask);
-  
+  /* set XWRITS_WINDOW property early to minimize races */
+  mark_xwrits_window(port, nh->w);
+    
   xsh->x = x;
   xsh->y = y;
   xwmh->initial_state = ocurrent->appear_iconified ? IconicState : NormalState;
@@ -169,12 +179,13 @@ new_hand(Port *port, int x, int y)
 		   NULL, 0, xsh, xwmh, &classh);
   XSetWMProtocols(port->display, nh->w, &port->wm_delete_window_atom, 1);
   XChangeProperty(port->display, nh->w, port->mwm_hints_atom,
-		  port->mwm_hints_atom, 32,
-		  PropModeReplace, (unsigned char *)mwm_hints, 4);
+		  port->mwm_hints_atom, 32, PropModeReplace,
+		  (unsigned char *)mwm_hints, 4);
   
   XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
-
+  XSelectInput(port->display, nh_icon->w, StructureNotifyMask);
+  
   nh->port = port;
   nh->icon = nh_icon;
   nh->x = x;			/* will be set correctly */
@@ -187,8 +198,8 @@ new_hand(Port *port, int x, int y)
   nh->configured = 0;
   nh->slideshow = 0;
   nh->clock = 0;
-  nh->permanent = 0;
   nh->toplevel = 1;
+
   if (port->hands) port->hands->prev = nh;
   nh->next = port->hands;
   nh->prev = 0;
@@ -245,10 +256,12 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
        x, y, width, height, 0,
        port->depth, InputOutput, port->visual, setattr_mask, &setattr);
   }
-  
+
+  mark_xwrits_window(port, nh->w);
+
   XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
-
+  
   nh->port = port;
   nh->icon = 0;
   nh->x = x;			/* will be set correctly */
@@ -270,6 +283,7 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
   
   return nh;
 }
+
 
 /* destroy a hand */
 

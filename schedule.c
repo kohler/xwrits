@@ -33,21 +33,22 @@ x_error_handler(Display *d, XErrorEvent *error)
   
   /* Maybe someone created a window then destroyed it immediately!
      I don't think there's any way of working around this. */
-  unschedule_data(A_IDLE_SELECT, (void *)error->display,
+  unschedule_data(A_IDLE_SELECT, (void *)find_port(error->display),
 		  (void *)((Window)error->resourceid));
   return 0;
 }
 
 
 void
-watch_keystrokes(Display *display, Window w, const struct timeval *now)
+watch_keystrokes(Port *port, Window w, const struct timeval *now)
 {
+  Display *display = port->display;
   Window root, parent, *children;
   unsigned i, nchildren;
   Alarm *a;
   
   /* Don't pay attention to our own windows */
-  if (window_to_hand(find_port(display), w, 1))
+  if (window_to_hand(port, w, 1))
     return;
   
   if (XQueryTree(display, w, &root, &parent, &children, &nchildren) == 0)
@@ -59,18 +60,18 @@ watch_keystrokes(Display *display, Window w, const struct timeval *now)
   /* This code ensures that at least register_keystrokes_delay elapses before
      we listen for KeyPress events on the window. We want to wait so we can
      make sure the window selects them first. */
-  a = new_alarm_data(A_IDLE_SELECT, (void *)display, (void *)w);
+  a = new_alarm_data(A_IDLE_SELECT, (void *)port, (void *)w);
   xwADDTIME(a->timer, *now, register_keystrokes_delay);
   schedule(a);
   
   for (i = 0; i < nchildren; i++)
-    watch_keystrokes(display, children[i], now);
+    watch_keystrokes(port, children[i], now);
   
   if (children) XFree(children);
 }
 
 void
-register_keystrokes(Display *display, Window w)
+register_keystrokes(Port *port, Window w)
 {
   /* Before I only selected KeyPress if someone else had selected KeyPress on
      the window (indicated by the `or' of all_event_masks and
@@ -85,13 +86,21 @@ register_keystrokes(Display *display, Window w)
      and not selecting events on 'em would seem to help performance. */
   
   XWindowAttributes attr;
-  if (XGetWindowAttributes(display, w, &attr) == 0)
+  Window peer;
+  
+  if (XGetWindowAttributes(port->display, w, &attr) == 0)
     return;
+
+  /* check if this is an xwrits window */
+  peer = check_xwrits_window(port, w);
+  if (peer)
+    add_peer(port, peer);
+  
   if (attr.root == w
       || ((attr.all_event_masks | attr.do_not_propagate_mask)
 	  & KeyPressMask)) {
     key_press_selected_count++;
-    XSelectInput(display, w, SubstructureNotifyMask | KeyPressMask);
+    XSelectInput(port->display, w, SubstructureNotifyMask | KeyPressMask);
   }
 }
 
@@ -237,7 +246,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	break;
 	
        case A_IDLE_SELECT:
-	register_keystrokes((Display *)a->data1, (Window)a->data2);
+	register_keystrokes((Port *)a->data1, (Window)a->data2);
 	break;
 	
        case A_MOUSE: {

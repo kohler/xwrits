@@ -2,6 +2,7 @@
 #include "xwrits.h"
 #include <math.h>
 #include <assert.h>
+#include <X11/Xatom.h>
 
 static int clock_displaying = 0;
 
@@ -138,12 +139,16 @@ check_raise_window(Hand *h)
     if (ox > hx + hwidth || oy > hy + hheight
 	|| ox + owidth < hx || oy + oheight < hy)
       goto overlap_ok;
+    /* check to see if it belongs to another xwrits process */
+    if (check_xwrits_window(port, children[i]))
+      goto overlap_ok;
     /* if we get here, we found an illegal overlap */
     bad_overlap = 1;
    overlap_ok: ;
   }
   
-  if (children) XFree(children);
+  if (children)
+    XFree(children);
   return bad_overlap;
 }
 
@@ -161,8 +166,8 @@ warn_x_loop(XEvent *e, const struct timeval *now)
        XMapRaised(port->display, h->icon->w);
      break;
    }
-    
-   case ClientMessage:
+   
+   case Xw_DeleteWindow:
     /* Check for window manager deleting last xwrits window */
     if (active_hands() == 0)
       return TRAN_CANCEL;
@@ -171,6 +176,13 @@ warn_x_loop(XEvent *e, const struct timeval *now)
    case ButtonPress:
     /* OK; we can rest now. */
     /* 10.Aug.1999 - treat the mouse click as a keypress */
+    last_key_time = *now;
+    /* 18.Apr.2001 - explicitly inform peers */
+    notify_peers_rest();
+    return TRAN_REST;
+
+   case Xw_TakeBreak:
+    /* informed that a peer is resting */
     last_key_time = *now;
     return TRAN_REST;
     

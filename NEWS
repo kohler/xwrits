@@ -1,5 +1,15 @@
 Xwrits NEWS
 
+Version 2.15   18.Apr.2001
+
+* Xwrits processes play nicely with one another. For example, two xwrits
+  processes with `+top' no longer fight each other to get to the top of the
+  window stack; and xwrits processes inform one another when you click on a
+  window to take a break. Requested by Thomer M. Gil <thomer@gil.com>, who
+  runs two xwrits processes at once: one for microbreaks, one for longer
+  breaks.
+
+
 Version 2.14   15.Feb.2001
 
 * Fixed new crash when `+lock' and `+breakclock' were both supplied.

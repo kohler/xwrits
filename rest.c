@@ -140,7 +140,7 @@ rest_x_loop(XEvent *e, const struct timeval *now)
   if (xwTIMEGEQ(*now, break_over_time))
     return TRAN_AWAKE;
   
-  if (e->type == ClientMessage && active_hands() == 0)
+  if (e->type == Xw_DeleteWindow && active_hands() == 0)
     /* Window manager deleted last xwrits window. Consider break over. */
     return TRAN_CANCEL;
   else if (e->type == KeyPress || e->type == MotionNotify

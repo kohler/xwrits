@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <X11/Xatom.h>
 
 static Options onormal;
 Options *ocurrent;
@@ -159,6 +160,93 @@ message(const char *format, ...)
 
 
 
+/* ports and peers */
+
+Port *
+find_port(Display *display)
+{
+  int i;
+  for (i = 0; i < nports; i++)
+    if (ports[i].display == display)
+      return &ports[i];
+  return 0;
+}
+
+void
+add_peer(Port *port, Window peer)
+{
+  XEvent e;
+  int i;
+  if (peer == port->permanent_hand->w)
+    return;
+  for (i = 0; i < port->npeers; i++)
+    if (peer == port->peers[i])
+      return;
+  if (port->npeers == port->peers_capacity) {
+    port->peers_capacity *= 2;
+    xwREARRAY(port->peers, Window, port->peers_capacity);
+  }
+  port->peers[port->npeers++] = peer;
+  /* send peering message to the peer */
+  e.xclient.type = ClientMessage;
+  e.xclient.window = peer;
+  e.xclient.message_type = port->xwrits_notify_peer_atom;
+  e.xclient.format = 32;
+  e.xclient.data.l[0] = port->permanent_hand->w;
+  XSendEvent(port->display, peer, True, 0, &e);
+}
+
+void
+notify_peers_rest(void)
+{
+  int i, j;
+  for (i = 0; i < nports; i++)
+    for (j = 0; j < ports[i].npeers; j++)
+      if (check_xwrits_window(&ports[i], ports[i].peers[j])) {
+	XEvent e;
+	e.xclient.type = ClientMessage;
+	e.xclient.window = ports[i].peers[j];
+	e.xclient.message_type = ports[i].xwrits_break_atom;
+	e.xclient.format = 32;
+	e.xclient.data.l[0] = 1;
+	XSendEvent(ports[i].display, ports[i].peers[j], True, 0, &e);
+      } else {
+	/* remove peer */
+	ports[i].peers[j] = ports[i].peers[ ports[i].npeers - 1 ];
+	ports[i].npeers--;
+	j--;
+      }
+}
+
+void
+mark_xwrits_window(Port *port, Window w)
+{
+  int scrap = port->permanent_hand->w;
+  assert(scrap);
+  XChangeProperty(port->display, w, port->xwrits_window_atom,
+		  XA_INTEGER, 32, PropModeReplace,
+		  (unsigned char *)&scrap, 1);
+}
+
+Window
+check_xwrits_window(Port *port, Window w)
+{
+  Atom actual_type;
+  int actual_format;
+  unsigned long nitems, bytes_after;
+  long *prop;
+  if (XGetWindowProperty(port->display, w, port->xwrits_window_atom,
+			 0, 1, False, XA_INTEGER,
+			 &actual_type, &actual_format, &nitems, &bytes_after,
+			 (unsigned char **)&prop) == Success) {
+    Window xwrits_window = (actual_format ? *prop : None);
+    XFree((unsigned char *)prop);
+    return xwrits_window;
+  } else
+    return None;
+}
+
+
 /* default X processing */
 
 static void
@@ -173,6 +261,8 @@ find_root_child(Hand *h)
     if (children) XFree(children);
     if (parent == root) {
       h->root_child = w;
+      /* set XWRITS_WINDOW property on child of root */
+      mark_xwrits_window(h->port, w);
       break;
     } else
       w = parent;
@@ -232,13 +322,20 @@ default_x_processing(XEvent *e)
     break;
     
    case ClientMessage:
-    /* Leave e->type == ClientMessage only if it was a DELETE_WINDOW. */
-    if (e->xclient.message_type != port->wm_protocols_atom ||
-	(Atom)(e->xclient.data.l[0]) != port->wm_delete_window_atom)
-      e->type = 0;
-    else {
-      h = window_to_hand(port, e->xclient.window, 0);
-      if (h) destroy_hand(h);
+    /* change e->type depending on the message */
+    h = window_to_hand(port, e->xclient.window, 0);
+    if (h) {
+      if (e->xclient.message_type == port->wm_protocols_atom
+	  && (Atom)(e->xclient.data.l[0]) == port->wm_delete_window_atom) {
+	e->type = Xw_DeleteWindow;
+	destroy_hand(h);
+      } else if (e->xclient.message_type == port->xwrits_break_atom
+		 && e->xclient.data.l[0] != 0)
+	e->type = Xw_TakeBreak;
+      else if (e->xclient.message_type == port->xwrits_notify_peer_atom) {
+	Window w = (Window)e->xclient.data.l[0];
+	add_peer(port, w);
+      }
     }
     break;
     
@@ -246,15 +343,15 @@ default_x_processing(XEvent *e)
    case CreateNotify: {
      struct timeval now;
      xwGETTIME(now);
-     watch_keystrokes(display, e->xcreatewindow.window, &now);
+     watch_keystrokes(port, e->xcreatewindow.window, &now);
      break;
    }
    
    case DestroyNotify:
-    /* We must unschedule any IdleSelect events for fear of selecting input
-       on a destroyed window. There is a race condition here because of the
-       asynchronicity of X communication. */
-    unschedule_data(A_IDLE_SELECT, (void *)e->xdestroywindow.display,
+    /* We must unschedule any IdleSelect events for fear of selecting input on
+       a destroyed window. There is a race condition here because X
+       communication is asynchronous. */
+    unschedule_data(A_IDLE_SELECT, (void *)port,
 		    (void *)e->xdestroywindow.window);
     break;
     
@@ -779,13 +876,14 @@ initialize_port(Port *port, Display *display, int screen_number)
   port->wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
   port->wm_protocols_atom = XInternAtom(display, "WM_PROTOCOLS", False);
   port->mwm_hints_atom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+  port->xwrits_window_atom = XInternAtom(display, "XWRITS_WINDOW", False);
+  port->xwrits_notify_peer_atom = XInternAtom(display, "XWRITS_NOTIFY_PEER", False);
+  port->xwrits_break_atom = XInternAtom(display, "XWRITS_BREAK", False);
 
   /* create first hand for this port, set drawable */
-  {
-    Hand *hand = new_hand(port, NEW_HAND_CENTER, NEW_HAND_CENTER);
-    port->drawable = hand->w;
-    hand->permanent = 1;
-  }
+  port->hands = port->icon_hands = port->permanent_hand = 0;
+  (void) new_hand(port, NEW_HAND_CENTER, NEW_HAND_CENTER);
+  port->drawable = port->permanent_hand->w;
 
   /* initialize GCs */
   {
@@ -810,21 +908,16 @@ initialize_port(Port *port, Display *display, int screen_number)
       (port->display, port->drawable,
        GCForeground | GCFont | GCSubwindowMode, &gcv);
   }
+
+  /* xwrits peers */
+  port->peers = xwNEWARR(Window, 4);
+  port->npeers = 0;
+  port->peers_capacity = 4;
   
   /* initialize other stuff */
   port->icon_width = port->icon_height = 0;
   port->last_mouse_root = None;
   port->bars_pixmap = None;
-}
-
-Port *
-find_port(Display *display)
-{
-  int i;
-  for (i = 0; i < nports; i++)
-    if (ports[i].display == display)
-      return &ports[i];
-  return 0;
 }
 
 
@@ -916,7 +1009,7 @@ main(int argc, char *argv[])
   xwGETTIME(now);
   XSetErrorHandler(x_error_handler);
   for (i = 0; i < nports; i++)
-    watch_keystrokes(ports[i].display, ports[i].root_window, &now);
+    watch_keystrokes(&ports[i], ports[i].root_window, &now);
   
   /* start mouse checking */
   if (check_mouse) {

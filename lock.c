@@ -248,6 +248,7 @@ lock(void)
     XSelectInput(ports[i].display, covers[i],
 		 ButtonPressMask | ButtonReleaseMask | KeyPressMask
 		 | VisibilityChangeMask | ExposureMask);
+    mark_xwrits_window(&ports[i], covers[i]);
     XMapRaised(ports[i].display, covers[i]);
     XSync(ports[i].display, False);
   }

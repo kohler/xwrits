@@ -62,9 +62,13 @@ struct Port {
   Atom wm_delete_window_atom;	/* atoms for window manager communication */
   Atom wm_protocols_atom;
   Atom mwm_hints_atom;
+  Atom xwrits_window_atom;	/* atoms for communication with other xwrits */
+  Atom xwrits_notify_peer_atom;
+  Atom xwrits_break_atom;
 
   Hand *hands;			/* list of main hands */
   Hand *icon_hands;		/* list of icon hands */
+  Hand *permanent_hand;		/* hand that will never be destroyed */
   
   int icon_width;		/* preferred icon width */
   int icon_height;		/* preferred icon height */
@@ -74,6 +78,10 @@ struct Port {
   int last_mouse_y;		/* last Y position of mouse */
 
   Pixmap bars_pixmap;		/* bars background for lock screen */
+
+  Window *peers;		/* list of peer windows */
+  int npeers;
+  int peers_capacity;
   
 };
 
@@ -85,8 +93,17 @@ extern int max_x_socket;
 
 Port *find_port(Display *);
 
+void mark_xwrits_window(Port *, Window);
+Window check_xwrits_window(Port *, Window);
+
+/* fake X event types */
+#define Xw_DeleteWindow		(LASTEvent + 100)
+#define Xw_TakeBreak		(LASTEvent + 101)
 int default_x_processing(XEvent *);
 int x_error_handler(Display *, XErrorEvent *);
+
+void add_peer(Port *, Window);
+void notify_peers_rest(void);
 
 
 /*****************************************************************************/
@@ -291,8 +308,8 @@ extern struct timeval quota_allotment;	/* counted towards break */
 extern int max_cheats;			/* allow this many cheat events before
 					   cancelling break */
 
-void watch_keystrokes(Display *, Window, const struct timeval *);
-void register_keystrokes(Display *, Window);
+void watch_keystrokes(Port *, Window, const struct timeval *);
+void register_keystrokes(Port *, Window);
 
 
 /*****************************************************************************/
