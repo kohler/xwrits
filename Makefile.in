@@ -1,0 +1,98 @@
+.SUFFIXES:
+.SUFFIXES: .c .o
+
+.c.o:
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
+
+VERSION		= @VERSION@
+
+SHELL		= /bin/sh
+prefix		= @prefix@
+exec_prefix	= @exec_prefix@
+VPATH		= @srcdir@
+srcdir		= @srcdir@
+# Directory to install xwrits in.
+bindir		= @bindir@
+# Directory to install man pages in.
+mandir		= @mandir@/man$(manext)
+# Number to put on the man page filename.
+manext		= 1
+
+CC		= @CC@ $(PROFILING)
+CCLINKER	= @CC@ $(PROFILING)
+CFLAGS		= @CFLAGS@
+CPPFLAGS	= @X_CFLAGS@ @DEFS@
+PROFILING	= 
+LDFLAGS		= @LDFLAGS@
+LIBS		= @X_LIBS@ @X_PRE_LIBS@ -lX11 -lm @X_EXTRA_LIBS@
+RM		= /bin/rm -f
+MV		= /bin/mv
+
+INSTALL		= @INSTALL@
+INSTALL_PROGRAM	= @INSTALL_PROGRAM@
+INSTALL_DATA	= @INSTALL_DATA@
+
+PACKAGE		= xwrits
+
+PROGRAMS	= xwrits
+OBJS		= giffunc.o gifread.o gifx.o pictures.o schedule.o warning.o \
+		rest.o lock.o clock.o main.o
+
+all: $(PROGRAMS)
+
+xwrits: $(OBJS)
+	$(CCLINKER) $(CFLAGS) -o xwrits $(OBJS) $(LDFLAGS) $(LIBS)
+
+install: $(PROGRAMS)
+	$(INSTALL_PROGRAM) xwrits $(bindir)/xwrits
+	$(INSTALL_DATA) xwrits.man $(mandir)/xwrits.$(manext)
+
+main.o: main.c defaults.h
+
+#####
+# Making pictures
+
+pictures.o: pictures.c large/gifs.c icon/gifs.c other/gifs.c
+LARGEPIX = large/clenchl.gif large/spreadl.gif large/fingerl.gif \
+	large/restl.gif large/okl.gif
+ICONPIX = icon/clenchi.gif icon/spreadi.gif icon/fingeri.gif \
+	icon/resti.gif icon/oki.gif
+OTHERPIX = other/lock.gif other/bars.gif
+
+large/gifs.c: giftoc $(LARGEPIX)
+	cd large ; ../giftoc clenchl.gif clenchl_gif spreadl.gif spreadl_gif \
+	fingerl.gif fingerl_gif restl.gif restingl_gif okl.gif okl_gif > gifs.c
+icon/gifs.c: giftoc $(ICONPIX)
+	cd icon ; ../giftoc clenchi.gif clenchi_gif spreadi.gif spreadi_gif \
+	fingeri.gif fingeri_gif resti.gif restingi_gif oki.gif oki_gif > gifs.c
+other/gifs.c: giftoc $(OTHERPIX)
+	cd other ; ../giftoc lock.gif lock_gif bars.gif bars_gif > gifs.c
+
+giftoc: giftoc.c
+	$(CC) $(CFLAGS) -o giftoc giftoc.c
+
+srclinks:
+	for i in gif.h.in giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
+	ln -s ../giflib/$$i $$i ; done
+
+#####
+# Cleaning and distribution
+
+clean:
+	rm -f $(PROGRAMS) *.o core
+mostlyclean: clean
+distclean: mostlyclean
+	rm -f Makefile config.status config.log config.cache
+realclean: distclean
+
+dist: mostlyclean
+	rm -rf $(PACKAGE)-$(VERSION)
+	mkdir $(PACKAGE)-$(VERSION) && chmod 0777 $(PACKAGE)-$(VERSION)
+	cp -r Makefile.in README NEWS configure configure.in install-sh \
+	gif.h.in giffunc.c gifread.c gifx.h gifx.c giftoc.c \
+	defaults.h xwrits.h xwrits.man \
+	pictures.c icon large other \
+	clock.c lock.c rest.c schedule.c warning.c rest.c main.c \
+	$(PACKAGE)-$(VERSION)
+	gtar czf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION)
+	rm -r $(PACKAGE)-$(VERSION)

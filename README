@@ -1,0 +1,66 @@
+XWRITS VERSION 2.5
+==================
+
+ABOUT XWRITS
+------------
+Xwrits was written when my wrists really hurt. They don't any more --
+most of the time.
+
+Please see the man page (xwrits.man) for more information.
+
+MAKING XWRITS
+-------------
+All you need is an ANSI C compiler, such as gcc, and X11R4/5/(6?) libraries
+and includes.
+
+Just type ./configure, then make. You can no longer build xwrits using imake.
+
+If configure cannot find your X includes and libraries, you need to
+tell it where they are. You do this with the --x-includes=DIRECTORY
+and --x-libraries=DIRECTORY options. For instance, on a certain
+machine at MIT, I need to say
+% ./configure --x-includes=/mit/x11/include --x-libraries=/mit/x11/decmipslib
+
+If configure cannot find your C compiler, set the CC environment variable to
+the right compiler before running configure.
+
+COPYRIGHT
+---------
+Source and pictures copyright 1994/5 Eddie Kohler:
+eddietwo@lcs.mit.edu and http://www.pdos.lcs.mit.edu/~eddietwo/
+
+You may copy, distribute, or alter xwrits freely, in whole or in part,
+as long as the above notice is kept intact. However, commercial
+distributors -- those who will profit monetarily -- must contact me
+before doing so. My email address is eddietwo@lcs.mit.edu. I'd also
+appreciate being informed of any neat changes or bug fixes anyone
+makes.
+
+However, the `configure' script is copyright 1995 the Free Software
+Foundation, and is distributed under the terms of the GNU General
+Public License.
+
+CHANGES FROM VERSION 1
+---------------------- 
+Many, many more options have been added. The code has been cleaned up
+a great deal, and also expanded a great deal. Comments should still be
+added to the code.
+
+Xwrits no longer uses XPM files. Instead, it uses GIF files, with some
+proprietary extensions. The GIF files are compiled into C files, then
+object files, and read from memory. This makes xwrits a much, much
+smaller executable, faster, and more portable.
+
+CHANGES FROM VERSION 2
+----------------------
+The most important change is the +idle option, on by default, which makes
+xwrits slightly smarter than an alarm clock. The code has also been completely
+reorganized around the Alarm concept, which makes it much cleaner.
+
+Now that I am in grad school I can stick stuff on an FTP server. So uudecode
+is gone.
+
+BUGS, SUGGESTIONS, ETC.
+-----------------------
+Please write me if you have trouble building or running xwrits, or if you have
+any suggestions. Again that email address is: eddietwo@lcs.mit.edu

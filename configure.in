@@ -1,0 +1,76 @@
+AC_INIT(xwrits.h)
+
+VERSION=2.6b4
+AC_SUBST(VERSION)
+GIF_MAJOR_VERSION=0
+GIF_MINOR_VERSION=9
+AC_SUBST(GIF_MAJOR_VERSION)
+AC_SUBST(GIF_MINOR_VERSION)
+
+AC_PROG_CC
+AC_PROG_INSTALL
+
+AC_PATH_XTRA
+AC_HEADER_STDC
+
+AC_C_CONST
+
+AC_MSG_CHECKING(for gettimeofday prototype)
+AC_CACHE_VAL(ac_cv_gettimeofday,
+[AC_TRY_COMPILE([#include <time.h>
+#include <sys/time.h>],
+[gettimeofday((void *)0, (void *)0);],
+[AC_TRY_COMPILE([#include <time.h>
+#include <sys/time.h>],
+[gettimeofday((void *)0);],
+ac_cv_gettimeofday=0,
+ac_cv_gettimeofday=2)],
+ac_cv_gettimeofday=1)])dnl
+if test $ac_cv_gettimeofday = 1 ;
+then AC_DEFINE_UNQUOTED(SYSV_GETTIMEOFDAY)
+AC_MSG_RESULT(1)
+elif test $ac_cv_gettimeofday ;
+then AC_MSG_RESULT(2)
+else
+AC_DEFINE_UNQUOTED(NO_GETTIMEOFDAY_PROTO)
+AC_MSG_RESULT(no)
+fi
+
+AC_MSG_CHECKING(for a 16-bit value)
+AC_CACHE_VAL(ac_cv_int16,
+[AC_TRY_RUN([#include <stdio.h>
+#include <stdlib.h>
+int main(int argc, char **argv) {
+  FILE *f = fopen("conftestval", "w");
+  if (!f) exit(1);
+  if (sizeof(short) == 2) fprintf(f, "short\n");
+  else exit(1);
+  fclose(f);
+  exit(0);
+}], ac_cv_int16=`cat conftestval`,
+AC_MSG_ERROR(no 16-bit value found),
+ac_cv_int16=short)])dnl
+INT16=$ac_cv_int16
+AC_SUBST(INT16)
+AC_MSG_RESULT($ac_cv_int16)
+
+AC_MSG_CHECKING(for a 32-bit value)
+AC_CACHE_VAL(ac_cv_int32,
+[AC_TRY_RUN([#include <stdio.h>
+#include <stdlib.h>
+int main(int argc, char **argv) {
+  FILE *f = fopen("conftestval", "w");
+  if (!f) exit(1);
+  if (sizeof(int) == 4) fprintf(f, "int\n");
+  else if (sizeof(long) == 4) fprintf(f, "long\n");
+  else exit(1);
+  fclose(f);
+  exit(0);
+}], ac_cv_int32=`cat conftestval`, 
+AC_MSG_ERROR(no 32-bit value found),
+ac_cv_int32=int)])dnl
+INT32=$ac_cv_int32
+AC_SUBST(INT32)
+AC_MSG_RESULT($ac_cv_int32)
+
+AC_OUTPUT(Makefile gif.h)

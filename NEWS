@@ -1,0 +1,10 @@
+
+Version 2.6b4
+
+* Updated GIF library to 0.9, the version used in Gifsicle. This has
+  temporarily broken support for monochrome displays, but will hopefully
+  fix other bugs some people have experienced.
+
+Version 2.6b3
+
+* Fixed bug with freeing memory multiple times. Works better on Linux now.
