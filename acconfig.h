@@ -5,13 +5,17 @@
 /* How many arguments does gettimeofday() take? */
 #undef GETTIMEOFDAY_PROTO
 
-/* Get the [u_]int*_t typedefs */
+/* Get the [u]int*_t typedefs */
 #undef NEED_SYS_TYPES_H
 #ifdef NEED_SYS_TYPES_H
 # include <sys/types.h>
 #endif
-#undef u_int16_t
-#undef u_int32_t
+#undef HAVE_INTTYPES_H
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#undef uint16_t
+#undef uint32_t
 #undef int32_t
 
 @TOP@

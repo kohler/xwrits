@@ -71,7 +71,7 @@ new_hand(Port *port, int x, int y)
   static XSizeHints *xsh;
   static XWMHints *xwmh;
   static XTextProperty window_name, icon_name;
-  static u_int32_t *mwm_hints;
+  static uint32_t *mwm_hints;
   Hand *nh = xwNEW(Hand);
   Hand *nh_icon = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
@@ -130,7 +130,7 @@ new_hand(Port *port, int x, int y)
        handles or maximize button, no Resize or Maximize entries in window
        menu. The constitution of the property itself was inferred from data
        in <Xm/MwmUtil.h> and output of xprop. */
-    mwm_hints = xwNEWARR(u_int32_t, 4);
+    mwm_hints = xwNEWARR(uint32_t, 4);
     mwm_hints[0] = (1L << 0) | (1L << 1);
     /* flags = MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS */
     mwm_hints[1] = (1L << 2) | (1L << 5);

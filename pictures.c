@@ -190,7 +190,7 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
     if (d < 0 || d >= 0xFFFF)
       gfi->delay = 0xFFFF;
     else
-      gfi->delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
+      gfi->delay = (d < MIN_DELAY ? MIN_DELAY : (uint16_t)d);
     /* add image */
     Gif_AddImage(gfs, gfi);
   }

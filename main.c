@@ -866,7 +866,9 @@ initialize_port(Port *port, Display *display, int screen_number)
   }
   
   /* choose the font */
-  port->font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
+  port->font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-75-75-*");
+  if (!port->font)
+      port->font = XLoadQueryFont(display, "fixed");
   
   /* set gfx */
   port->gfx = Gif_NewXContextFromVisual
