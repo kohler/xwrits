@@ -115,11 +115,11 @@ new_hand(Port *port, int x, int y)
     get_icon_size(port);
   
   if (!xwmh) {
-    char *stringlist[2];
-    stringlist[0] = "xwrits";
+    const char *stringlist[2];
+    stringlist[0] = ocurrent->window_title;
     stringlist[1] = NULL;
-    XStringListToTextProperty(stringlist, 1, &window_name);
-    XStringListToTextProperty(stringlist, 1, &icon_name);
+    XStringListToTextProperty((char **)stringlist, 1, &window_name);
+    XStringListToTextProperty((char **)stringlist, 1, &icon_name);
     classh.res_name = "xwrits";
     classh.res_class = "XWrits";
     

@@ -117,8 +117,9 @@ struct Options {
   
   Gif_Stream *slideshow;		/* warn window animation  */
   Gif_Stream *icon_slideshow;		/* warn icon window animation */
-  char *slideshow_text;
-  char *icon_slideshow_text;
+  const char *slideshow_text;
+  const char *icon_slideshow_text;
+  const char *window_title;
   
   double flash_rate_ratio;		/* <1, flash fast; >1, flash slow */
   struct timeval multiply_delay;	/* time between window multiplies */

@@ -123,6 +123,7 @@ Appearance:\n\
   +noiconify          Don't let anyone iconify the warning window.\n\
   ready-picture=GIF-FILE, okp=GIF-FILE   Show GIF animation on the `OK' window.\n\
   rest-picture=GIF-FILE, rp=GIF-FILE     Show GIF animation on resting window.\n\
+  title=TITLE         Set xwrits window title to TITLE.\n\
   +top                Keep the warning windows on top of the window stack.\n\
   warning-picture=GIF-FILE, wp=GIF-FILE  Show GIF animation on the warning\n\
                       window.\n\
@@ -666,7 +667,9 @@ parse_options(int pargc, char **pargv)
       ;
     else if (optparse(s, "ready-picture", 3, "ss", &ready_slideshow_text))
       ;
-    
+
+    else if (optparse(s, "title", 2, "ss", &o->window_title))
+      ;
     else if (optparse(s, "typetime", 1, "st", &normal_type_time))
       ;
     else if (optparse(s, "top", 2, "t"))
@@ -807,6 +810,9 @@ default_settings(void)
   onormal.slideshow_text = onormal.icon_slideshow_text = 0;
   slideshow_text_append_built_in(&onormal, "clench");
   slideshow_text_append_built_in(&onormal, "spread");
+
+  /* window title */
+  onormal.window_title = "xwrits";
   
   /* clock tick time functions */
   /* 20 seconds seems like a reasonable clock tick time, even though it'll

@@ -1,5 +1,11 @@
 Xwrits NEWS
 
+Version 2.20
+
+* Add `title' option. Suggested, and patch provided, by Dale Thatcher
+  <xwrits@dalethatcher.com>.
+
+
 Version 2.19   8.Feb.2002
 
 * The escalation "clock" corresponding to `after=TIME' options proceeds
