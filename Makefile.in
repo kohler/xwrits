@@ -83,7 +83,7 @@ realclean: distclean
 
 dist: mostlyclean
 	rm -rf $(PACKAGE)-$(VERSION)
-	mkdir $(PACKAGE)-$(VERSION) && chmod 0777 $(PACKAGE)-$(VERSION)
+	mkdir -m 0777 $(PACKAGE)-$(VERSION)
 	cp -r Makefile.in README NEWS configure configure.in install-sh \
 	gif.h.in giffunc.c gifread.c gifx.h gifx.c giftoc.c \
 	defaults.h xwrits.h xwrits.man \
