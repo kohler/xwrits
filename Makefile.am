@@ -55,7 +55,7 @@ dist-hook:
 
 srclinks:
 	for i in gif.h.in giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
-	ln ../giflib/$$i $$i ; done
+	ln -f ../giflib/$$i $$i ; done
 
 versionize:
 	perl -pi~ -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.1
