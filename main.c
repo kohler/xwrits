@@ -19,6 +19,7 @@ struct timeval type_delay;
 struct timeval break_delay;
 struct timeval idle_time;
 static struct timeval zero = {0, 0};
+struct timeval last_key_time;
 
 static struct timeval flash_delay;
 

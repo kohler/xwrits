@@ -269,6 +269,8 @@ extern struct timeval register_keystrokes_gap;
 extern struct timeval idle_time;
 extern int check_idle;
 
+extern struct timeval last_key_time;
+
 void watch_keystrokes(Window, struct timeval *);
 void register_keystrokes(Window);
 

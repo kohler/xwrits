@@ -2,7 +2,6 @@
 #include <math.h>
 
 static int clock_displaying = 0;
-static struct timeval last_key_time;
 
 
 static void
@@ -158,7 +157,6 @@ warning(int lockfailed)
   int val;
   
   xwGETTIME(clock_zero_time);
-  last_key_time = clock_zero_time;
   val = switch_options(ocurrent, clock_zero_time, lockfailed);
   if (val == WarnLock) return val;
   pop_up_hand(hands);

@@ -1,7 +1,6 @@
 #include "xwrits.h"
 #include <stdlib.h>
 
-static struct timeval last_key_time;
 static struct timeval wait_over_time;
 
 
@@ -51,7 +50,7 @@ wait_for_break(void)
     xwADDTIME(wait_over_time, wait_over_time, type_delay);
     val = loopmaster(0, wait_x_loop);
   } while (val == WarnRest);
-  
+
   unschedule(Return);
 }
 
@@ -75,9 +74,10 @@ rest_x_loop(XEvent *e)
   if (e->type == ClientMessage)
     /* Window manager deleted only xwrits window. Consider break over. */
     return RestCancelled;
-  else if (e->type == KeyPress)
+  else if (e->type == KeyPress) {
+    xwGETTIME(last_key_time);
     return RestFailed;
-  else
+  } else
     return 0;
 }
 
@@ -129,10 +129,11 @@ ready_x_loop(XEvent *e)
   else if (e->type == ClientMessage)
     /* last xwrits window deleted by window manager */
     return 1;
-  else if (e->type == KeyPress)
+  else if (e->type == KeyPress) {
     /* if they typed, disappear automatically */
+    xwGETTIME(last_key_time);
     return 1;
-  else
+  } else
     return 0;
 }
 
