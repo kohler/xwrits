@@ -8,7 +8,7 @@ Source: http://www.lcdf.org/xwrits/xwrits-2.6.3.tar.gz
 Icon: logo.gif
 URL: http://www.lcdf.org/xwrits/
 
-Group: X11/Miscellaneous
+Group: X11/Utilities
 Vendor: Little Cambridgeport Design Factory
 Packager: Eddie Kohler <eddietwo@lcs.mit.edu>
 Copyright: GPL
