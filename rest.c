@@ -83,7 +83,7 @@ adjust_wait_time(struct timeval *wait_began_time, struct timeval *type_time)
 int
 wait_for_break(struct timeval *type_time)
 {
-  int val;
+  int val, i;
   struct timeval wait_began_time;
 
   /* Schedule wait_over_time */
@@ -94,6 +94,13 @@ wait_for_break(struct timeval *type_time)
 
   /* Pretend there's been a keystroke */
   last_key_time = wait_began_time;
+
+  /* Clear slideshows */
+  /* Do this now so later set_slideshows start from scratch. */
+  for (i = 0; i < nports; i++) {
+    set_all_slideshows(ports[i].hands, 0);
+    set_all_slideshows(ports[i].icon_hands, 0);
+  }
   
   val = 0;
   while (val != TRAN_WARN && val != TRAN_REST) {
@@ -116,7 +123,7 @@ wait_for_break(struct timeval *type_time)
       val = adjust_wait_time(&wait_began_time, type_time);
   }
   
-  unschedule(A_AWAKE);
+  unschedule(A_FLASH | A_AWAKE);
   return val;
 }
 
@@ -145,13 +152,10 @@ rest_x_loop(XEvent *e, struct timeval *now)
     return 0;
 }
 
-int
-rest(void)
+void
+calculate_break_time(struct timeval *break_over_time, struct timeval *now)
 {
-  struct timeval now;
   struct timeval this_break_time;
-  Alarm *a;
-  int tran, i;
   
   /* determine length of this break. usually break_time; can be different if
      check_quota is on */
@@ -163,26 +167,40 @@ rest(void)
   }
   
   /* determine when to end the break */
-  xwGETTIME(now);
   if (!check_idle)
-    xwADDTIME(break_over_time, now, this_break_time);
+    xwADDTIME(*break_over_time, *now, this_break_time);
   else
-    xwADDTIME(break_over_time, last_key_time, this_break_time);
-  
-  /* if break already over, return */
-  if (xwTIMEGEQ(now, break_over_time))
-    return TRAN_AWAKE;
-  a = new_alarm(A_AWAKE);
-  a->timer = break_over_time;
-  schedule(a);
-  
+    xwADDTIME(*break_over_time, last_key_time, this_break_time);
+}
+
+int
+rest(void)
+{
+  struct timeval now;
+  Alarm *a;
+  int tran, i;
+
   /* set up pictures */
+  /* Do this first so later set_slideshows start from scratch. */
   for (i = 0; i < nports; i++) {
     set_all_slideshows(ports[i].hands, resting_slideshow);
     set_all_slideshows(ports[i].icon_hands, resting_icon_slideshow);
     ensure_one_hand(&ports[i]);
   }
   current_cheats = 0;
+  
+  /* calculate time when break is over */
+  xwGETTIME(now);
+  calculate_break_time(&break_over_time, &now);
+  
+  /* if break already over, return */
+  if (xwTIMEGEQ(now, break_over_time))
+    return TRAN_AWAKE;
+
+  /* schedule wakeup */
+  a = new_alarm(A_AWAKE);
+  a->timer = break_over_time;
+  schedule(a);
   
   /* reschedule mouse position query timing: allow 5 seconds for people to
      jiggle the mouse before we save its position */
@@ -196,7 +214,7 @@ rest(void)
   }
   
   if (ocurrent->break_clock) {
-    clock_zero_time = a->timer;
+    clock_zero_time = break_over_time;
     draw_all_clocks(&now);
     a = new_alarm(A_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
@@ -207,7 +225,7 @@ rest(void)
     XFlush(ports[i].display);
   tran = loopmaster(0, rest_x_loop);
   
-  unschedule(A_AWAKE | A_CLOCK);
+  unschedule(A_FLASH | A_AWAKE | A_CLOCK);
   erase_all_clocks();
   return tran;
 }

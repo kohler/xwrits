@@ -7,6 +7,7 @@
 #define ClockHeight 30
 #define ClockHour 7
 #define ClockMin 11
+#define ClockSec 12
 #define HandWidth 1.5
 #define HandOffset 1.5
 
@@ -16,12 +17,13 @@ struct timeval clock_tick;
 
 static void
 draw_hand(Port *port, Drawable drawable, int xin, int yin, int hand_length,
-	  int value, int value_cycle)
+	  int value, int value_cycle, int thin)
 {
   double sinv = sin(value * 2 * M_PI / value_cycle);
   double cosv = cos(value * 2 * M_PI / value_cycle);
 
-  XDrawLine(port->display, drawable, port->clock_hand_gc, xin, yin,
+  GC gc = (thin ? port->clock_hand_gc : port->clock_fore_gc);
+  XDrawLine(port->display, drawable, gc, xin, yin,
 	    (int)(xin + hand_length * sinv), (int)(yin - hand_length * cosv));
   
 #if 0
@@ -30,8 +32,8 @@ draw_hand(Port *port, Drawable drawable, int xin, int yin, int hand_length,
   XPoint points[4];
   points[0].x = (int)(x + HandWidth * cosv);
   points[0].y = (int)(y + HandWidth * sinv);
-  points[1].x = (int)(x + handlength * sinv);
-  points[1].y = (int)(y - handlength * cosv);
+  points[1].x = (int)(x + hand_length * sinv);
+  points[1].y = (int)(y - hand_length * cosv);
   points[2].x = (int)(x - HandWidth * cosv);
   points[2].y = (int)(y - HandWidth * sinv);
   points[4] = points[0];
@@ -61,10 +63,12 @@ draw_1_clock(Hand *hand, int seconds)
   min = (seconds + 5) / SEC_PER_MIN;
   hour = min / MIN_PER_HOUR;
   min %= MIN_PER_HOUR;
+  seconds %= SEC_PER_MIN;
   
   if (hour)
-    draw_hand(port, hand->w, x, y, ClockHour, hour, HOUR_PER_CYCLE);
-  draw_hand(port, hand->w, x, y, ClockMin, min, MIN_PER_HOUR);
+    draw_hand(port, hand->w, x, y, ClockHour, hour, HOUR_PER_CYCLE, 0);
+  draw_hand(port, hand->w, x, y, ClockMin, min, MIN_PER_HOUR, 0);
+  /* draw_hand(port, hand->w, x, y, ClockSec, seconds, SEC_PER_MIN, 1); */
 }
 
 
@@ -73,17 +77,18 @@ now_to_clock_sec(struct timeval *now_ptr)
 {
   struct timeval now;
   struct timeval diff;
-  int sec;
   
   if (!now_ptr)
     xwGETTIME(now);
   else
     now = *now_ptr;
+
+  if (xwTIMEGEQ(now, clock_zero_time))
+    xwSUBTIME(diff, now, clock_zero_time);
+  else
+    xwSUBTIME(diff, clock_zero_time, now);
   
-  xwSUBTIME(diff, now, clock_zero_time);
-  sec = diff.tv_sec < 0 ? -diff.tv_sec : diff.tv_sec;
-  if (diff.tv_usec >= 500000) sec++;
-  return sec;
+  return diff.tv_sec + (diff.tv_usec >= 500000 ? 1 : 0);
 }
 
 void
@@ -97,13 +102,16 @@ void
 draw_all_clocks(struct timeval *now)
 {
   Hand *h;
-  int i, sec = now_to_clock_sec(now);
-  for (i = 0; i < nports; i++)
+  int i;
+  int sec = now_to_clock_sec(now);
+  for (i = 0; i < nports; i++) {
     for (h = ports[i].hands; h; h = h->next) {
       if (h->mapped)
 	draw_1_clock(h, sec);
       h->clock = 1;
     }
+    XFlush(ports[i].display);
+  }
 }
 
 

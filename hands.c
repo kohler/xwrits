@@ -177,8 +177,10 @@ new_hand(Port *port, int x, int y)
 
   nh->port = port;
   nh->icon = nh_icon;
-  nh->width = width;		/* will be reset correctly by */
-  nh->height = height;		/* next ConfigureNotify */
+  nh->x = x;			/* will be set correctly */
+  nh->y = y;			/* by next ConfigureNotify */
+  nh->width = width;
+  nh->height = height;
   nh->root_child = nh->w;
   nh->is_icon = 0;
   nh->mapped = 0;
@@ -249,8 +251,10 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
 
   nh->port = port;
   nh->icon = 0;
-  nh->width = width;		/* will be reset correctly by */
-  nh->height = height;		/* next ConfigureNotify */
+  nh->x = x;			/* will be set correctly */
+  nh->y = y;			/* by next ConfigureNotify */
+  nh->width = width;
+  nh->height = height;
   nh->root_child = nh->w;
   nh->is_icon = 0;
   nh->mapped = 0;

@@ -294,14 +294,18 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 void
 set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
 {
-  int i = 0;
+  int which_im = 0;
   Alarm *a;
   struct timeval t;
   Port *port = h->port;
   
-  assert(gfs);
   if (h->slideshow == gfs)
     return;
+  else if (!gfs) {
+    h->slideshow = 0;
+    unschedule_data(A_FLASH, h, 0);
+    return;
+  }
   
   if (now)
     t = *now;
@@ -312,20 +316,24 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
   
   if (h->slideshow) {
     Gif_Image *cur_im = h->slideshow->images[h->slide];
-    if (a) xwSUBDELAY(t, a->timer, cur_im->delay);
-    /* Leave i with a picture that matches the old one, or 0 if no
+    if (a)
+      xwSUBDELAY(t, a->timer, cur_im->delay);
+    /* Leave which_im with a picture that matches the old one, or 0 if no
        picture matches the old one. */
-    for (i = gfs->nimages - 1; i > 0; i--)
-      if (gfs->images[i] == cur_im)
+    for (which_im = gfs->nimages - 1; which_im > 0; which_im--)
+      if (gfs->images[which_im] == cur_im)
 	break;
   }
   
+  /* fprintf(stderr, "%p %p %d\n", h, gfs, which_im); */
   if (gfs->nimages > 1) {
-    if (!a) a = new_alarm_data(A_FLASH, h, 0);
-    xwADDDELAY(a->timer, t, gfs->images[i]->delay);
+    if (!a)
+      a = new_alarm_data(A_FLASH, h, 0);
+    xwADDDELAY(a->timer, t, gfs->images[which_im]->delay);
     schedule(a);
   } else {
-    if (a) destroy_alarm(a);
+    if (a)
+      destroy_alarm(a);
   }
   
   h->slideshow = gfs;
@@ -346,7 +354,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
   }
   
   h->loopcount = 0;
-  h->slide = i;
+  h->slide = which_im;
   draw_slide(h);
 }
 

@@ -268,7 +268,8 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
        }
        
        default:
-	ret_val = alarm_looper(a, &now);
+	if (alarm_looper)
+	  ret_val = alarm_looper(a, &now);
 	break;
 	
       }

@@ -19,7 +19,8 @@ pop_up_hand(Hand *h)
 
 
 static int
-switch_options(Options *opt, struct timeval now)
+switch_options(Options *opt, struct timeval *option_switch_time,
+	       struct timeval *now)
 {
   Hand *h;
   Alarm *a;
@@ -34,14 +35,15 @@ switch_options(Options *opt, struct timeval now)
   
   if (opt->multiply) {
     a = new_alarm(A_MULTIPLY);
-    xwADDTIME(a->timer, now, opt->multiply_delay);
+    xwADDTIME(a->timer, *now, opt->multiply_delay);
     schedule(a);
-  } else unschedule(A_MULTIPLY);
+  } else
+    unschedule(A_MULTIPLY);
   
   if (opt->clock && !clock_displaying) {
-    draw_all_clocks(&now);
+    draw_all_clocks(now);
     a = new_alarm(A_CLOCK);
-    xwADDTIME(a->timer, now, clock_tick);
+    xwADDTIME(a->timer, *now, clock_tick);
     schedule(a);
     clock_displaying = 1;
   } else if (!opt->clock && clock_displaying) {
@@ -62,7 +64,7 @@ switch_options(Options *opt, struct timeval now)
   
   if (opt->next) {
     a = new_alarm(A_NEXT_OPTIONS);
-    xwADDTIME(a->timer, now, opt->next_delay);
+    xwADDTIME(a->timer, *option_switch_time, opt->next_delay);
     schedule(a);
   }
   
@@ -86,7 +88,7 @@ warn_alarm_loop(Alarm *a, struct timeval *now)
     break;
     
    case A_NEXT_OPTIONS:
-    return switch_options(ocurrent->next, *now);
+    return switch_options(ocurrent->next, now, now);
     
    case A_IDLE_CHECK:
     return TRAN_REST;
@@ -189,25 +191,42 @@ warn_x_loop(XEvent *e, struct timeval *now)
 	 XRaiseWindow(port->display, h->w);
      break;
    }
-    
+   
   }
   return 0;
 }
 
 
 int
-warn(int was_lock)
+warn(int was_lock, Options *onormal)
 {
-  struct timeval now;
+  struct timeval now, option_switch_time;
   int i, val;
   
   clock_displaying = 0;
   clock_zero_time = first_warn_time;
-  
+
+  /* find correct options based on elapsed time since first_warn_time */
   xwGETTIME(now);
-  val = switch_options(ocurrent, now);
+  ocurrent = onormal;
+  option_switch_time = first_warn_time;
+  while (ocurrent->next) {
+    struct timeval next;
+    xwADDTIME(next, option_switch_time, ocurrent->next_delay);
+    if (xwTIMEGT(next, now))
+      break;
+    option_switch_time = next;
+    ocurrent = ocurrent->next;
+  }
+
+  /* switch to those options */
+  /* This will always set_slideshows: good -- later set_slideshows will start
+     from scratch. */
+  val = switch_options(ocurrent, &option_switch_time, &now);
+
+  /* lock now if we should */
   if (val == TRAN_LOCK && !was_lock)
-    return TRAN_LOCK;
+    goto done;
 
   for (i = 0; i < nports; i++)
     pop_up_hand(ports[i].hands);
@@ -219,8 +238,9 @@ warn(int was_lock)
   }
   
   val = loopmaster(warn_alarm_loop, warn_x_loop);
+
+ done:
   unschedule(A_FLASH | A_MULTIPLY | A_CLOCK | A_NEXT_OPTIONS | A_IDLE_CHECK);
-  
   erase_all_clocks();
   return val;
 }

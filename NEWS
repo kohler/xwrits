@@ -1,6 +1,36 @@
 Xwrits NEWS
 
-Version 2.12
+Version 2.13   11.Feb.2001
+
+* Documented multiple `breaktime' specifications. This lets you, for
+  example, make a break longer depending on how long you waited to take it.
+  See the ESCALATION section of the manual page. These were added in an
+  earlier version, but never documented.
+
+* The escalation "clock" corresponding to `after=TIME' options proceeds
+  even while xwrits thinks you're resting. Therefore, you can no longer
+  prevent escalation by clicking on the xwrits window (making it think
+  you're resting) and then typing some more. Requested by Conrad Hughes
+  <conrad@eireann.org>.
+
+* Bug fix: The `breakclock' always counts down from the end of the break.
+  Previously, it counted back from a random time when `+mouse' was true.
+  Reported by Tijn Porcelijn <taine@3niat.myweb.nl>.
+
+* Hopefully fixed bugs that were causing xwrits to crash on Chris Keane
+  <chris@chris-keane.co.uk>.
+
+* Bug fix: Erasing messages on the lock screen didn't completely work if
+  the hand picture was in the way. This resulted in unreadable displays.
+  Fixed.
+
+* Hopefully fixed bugs that caused animation to stop sometimes.
+
+* The lock screen now shows how many characters of your unlock password
+  you've typed.
+
+
+Version 2.12   14.Nov.2000
 
 * Changed Alarm structure into a doubly linked list. May improve
   performance when there are many xwrits windows.

@@ -127,7 +127,7 @@ extern Options *ocurrent;
 
 extern struct timeval type_delay;
 
-#define MaxPasswordSize 256
+#define MAX_PASSWORD_SIZE 256
 extern struct timeval lock_message_delay;
 extern char *lock_password;
 
@@ -312,7 +312,8 @@ void message(const char *, ...);
 extern struct timeval first_warn_time;
 
 int wait_for_break(struct timeval *type_time);
-int warn(int was_lock);
+int warn(int was_lock, Options *first_options);
+void calculate_break_time(struct timeval *break_over_time, struct timeval *now);
 int rest(void);
 int lock(void);
 

@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.11
+.ds V 2.13
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -69,8 +69,17 @@ example:
 	xwrits +finger after=10 -finger
 .fi
 .PP
-You may have more than one \fBafter\fP option. This creates a series
-of escalations.
+You may have more than one \fBafter\fP option. This creates a
+series of escalations.
+.PP
+One interesting use for \fBafter\fP is to make a break longer depending on
+how long you waited to take it. For example:
+.nf
+	xwrits break=5 after=10 break=7
+.fi
+Here, a wrist break normally takes 5 minutes. However, if you ignore the
+warning window for 10 minutes or more before taking a break, the wrist
+break will last 7 minutes.
 '
 .SH OPTIONS
 All options may be abbreviated to their unique prefixes. Some may be
@@ -106,7 +115,10 @@ Allow typing for \fItime\fP between breaks. Default is 55 minutes.
 '
 .TP 5
 \fBbreaktime\fP=\fItime\fP [\fBb\fP]
-The amount of time a break lasts. Default is 5 minutes.
+The amount of time a break lasts. Default is 5 minutes. This option can be
+supplied multiple times; see 
+.SB ESCALATION
+above.
 '
 .TP 5
 \fBafter\fP=\fIdelay-time\fP

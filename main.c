@@ -457,7 +457,8 @@ parse_options(int pargc, char **pargv)
 	message("if you ignore xwrits for a while. In previous versions, there was");
 	message("one global `breaktime'.)");
 	breaktime_warn_context = 1;
-      }
+      } else
+	breaktime_warn_context = 1;
     } else if (optparse(s, "beep", 2, "t"))
       o->beep = optparse_yesno;
     else if (optparse(s, "breakclock", 6, "t"))
@@ -554,7 +555,7 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "version", 1, "s")) {
       printf("LCDF Xwrits %s\n", VERSION);
       printf("\
-Copyright (C) 1994-2000 Eddie Kohler\n\
+Copyright (C) 1994-2001 Eddie Kohler\n\
 This is free software; see the source for copying conditions.\n\
 There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");
@@ -687,7 +688,7 @@ default_settings(void)
   /* clock tick time functions */
   /* 20 seconds seems like a reasonable clock tick time, even though it'll
      redraw the same hands 3 times. */
-  xwSETTIME(clock_tick, 20, 0);
+  xwSETTIME(clock_tick, 1, 0);
   
   /* next option set */
   xwSETTIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
@@ -796,8 +797,11 @@ initialize_port(Port *port, Display *display, int screen_number)
     port->clock_fore_gc = XCreateGC
       (port->display, port->drawable,
        GCForeground | GCLineWidth | GCCapStyle, &gcv);
-    
-    port->clock_hand_gc = port->clock_fore_gc;
+
+    gcv.line_width = 1;
+    port->clock_hand_gc = XCreateGC
+      (port->display, port->drawable,
+       GCForeground | GCLineWidth | GCCapStyle, &gcv);
     
     gcv.foreground = port->white;
     gcv.font = port->font->fid;
@@ -848,7 +852,7 @@ main(int argc, char *argv[])
   parse_options(argc - 1, argv + 1);
   
   /* check global options */
-  if (strlen(lock_password) >= MaxPasswordSize)
+  if (strlen(lock_password) >= MAX_PASSWORD_SIZE)
     error("password too long");
   
   /* default for idle_time and warn_idle_time is based on break_delay;
@@ -926,24 +930,25 @@ main(int argc, char *argv[])
   type_time = normal_type_time;
   
   while (1) {
-    int tran = 0;
-    int was_lock = 0;
+    int tran, was_lock;
     
     /* wait for break */
     tran = wait_for_break(&type_time);
     if (tran == TRAN_REST) {
-      ocurrent = &onormal;	/* reset to normal options */
-      type_time = normal_type_time;
+      type_time = normal_type_time; /* reset to normal type time */
       continue;
     }
     
     /* warn */
     xwGETTIME(first_warn_time);
+    tran = was_lock = 0;
     while (tran != TRAN_AWAKE && tran != TRAN_CANCEL) {
-      tran = warn(was_lock);
-      if (tran == TRAN_REST)
+      /* warn() will figure out current options by time */
+      tran = warn(was_lock, &onormal);
+      if (tran == TRAN_REST) {
+	was_lock = 0;
 	tran = rest();
-      else if (tran == TRAN_LOCK) {
+      } else if (tran == TRAN_LOCK) {
 	was_lock = 1;
 	tran = lock();
       }
@@ -952,8 +957,7 @@ main(int argc, char *argv[])
     /* done with break? */
     if (tran == TRAN_AWAKE) {
       ready();
-      ocurrent = &onormal;	/* reset to normal options */
-      type_time = normal_type_time;
+      type_time = normal_type_time; /* reset to normal type time */
     } else			/* tran == TRAN_CANCEL */
       type_time = ocurrent->cancel_type_time;
     
