@@ -2,10 +2,9 @@
 #include "xwrits.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 
-
-Alarm *alarms;
-
+static Alarm alarm_sentinel;
 
 /*****************************************************************************/
 /*  Idle functions							     */
@@ -107,68 +106,71 @@ new_alarm_data(int action, void *data1, void *data2)
   a->action = action;
   a->data1 = data1;
   a->data2 = data2;
+  a->scheduled = 0;
   return a;
 }
 
 Alarm *
 grab_alarm_data(int action, void *data1, void *data2)
 {
-  Alarm *prev = 0, *a;
-  for (a = alarms; a; prev = a, a = a->next)
+  Alarm *a;
+  for (a = alarm_sentinel.next; a != &alarm_sentinel; a = a->next)
     if (a->action == action && a->data1 == data1 && a->data2 == data2) {
-      if (prev)	prev->next = a->next;
-      else alarms = a->next;
+      a->prev->next = a->next;
+      a->next->prev = a->prev;
+      a->scheduled = 0;
       return a;
     }
   return 0;
 }
 
 void
-destroy_alarm(Alarm *adestroy)
+destroy_alarm(Alarm *a)
 {
-  Alarm *a;
-  if (alarms == adestroy) alarms = adestroy->next;
-  for (a = alarms; a; a = a->next)
-    if (a->next == adestroy)
-      a->next = adestroy->next;
-  xfree(adestroy);
+  if (a->scheduled) {
+    a->prev->next = a->next;
+    a->next->prev = a->prev;
+  }
+  xfree(a);
 }
 
+
+void
+init_scheduler(void)
+{
+  alarm_sentinel.next = alarm_sentinel.prev = &alarm_sentinel;
+}
 
 void
 schedule(Alarm *newalarm)
 {
-  Alarm *prev = 0, *a = alarms;
-  while (a && xwTIMEGEQ(newalarm->timer, a->timer)) {
-    prev = a;
-    a = a->next;
-  }
-  if (prev) prev->next = newalarm;
-  else alarms = newalarm;
-  newalarm->next = a;
+  Alarm *a = alarm_sentinel.prev;
+  assert(!newalarm->scheduled);
+  while (a != &alarm_sentinel && xwTIMEGT(a->timer, newalarm->timer))
+    a = a->prev;
+  newalarm->prev = a;
+  newalarm->next = a->next;
+  a->next->prev = newalarm;
+  a->next = newalarm;
   newalarm->scheduled = 1;
 }
-
 
 void
 unschedule_data(int actions, void *data1, void *data2)
 {
-  Alarm *prev = 0, *a = alarms;
-  while (a) {
+  Alarm *a = alarm_sentinel.next;
+  while (a != &alarm_sentinel) {
+    Alarm *n = a->next;
     
     if ((a->action & actions) != 0
 	&& (a->data1 == data1 || data1 == 0)
 	&& (a->data2 == data2 || data2 == 0)) {
-      Alarm *n = a->next;
-      if (prev) prev->next = n;
-      else alarms = n;
+      a->prev->next = n;
+      n->prev = a->prev;
       xfree(a);
-      a = n;
-      continue;
     }
     
-    prev = a;
-    a = a->next;
+    a = n;
   }
 }
 
@@ -191,13 +193,18 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
   FD_ZERO(&xfds);
   
   while (1) {
-    while (alarms && xwTIMEGEQ(now, alarms->timer)) {
-      Alarm *a = alarms;
-      Hand *h = (Hand *)a->data1;
+    while (1) {
+      Alarm *a = alarm_sentinel.next;
+      Hand *h;
       Gif_Stream *gfs;
-      
+
+      if (a == &alarm_sentinel || xwTIMEGT(a->timer, now))
+	break;
+
+      h = (Hand *)a->data1;
+      alarm_sentinel.next = a->next;
+      a->next->prev = &alarm_sentinel;
       a->scheduled = 0;
-      alarms = a->next;
       
       switch (a->action) {
 	
@@ -270,9 +277,9 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       if (ret_val != 0) return ret_val;
     }
     
-    if (alarms) {
+    if (alarm_sentinel.next != &alarm_sentinel) {
       timeoutptr = &timeout;
-      xwSUBTIME(timeout, alarms->timer, now);
+      xwSUBTIME(timeout, alarm_sentinel.next->timer, now);
     } else
       timeoutptr = 0;
 

@@ -836,6 +836,7 @@ main(int argc, char *argv[])
   struct timeval type_time;
   
   xwGETTIMEOFDAY(&genesis_time);
+  init_scheduler();
   
   srand((getpid() + 1) * time(0));
   

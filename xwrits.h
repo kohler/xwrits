@@ -162,6 +162,7 @@ void erase_all_clocks(void);
 struct Alarm {
   
   Alarm *next;
+  Alarm *prev;
   struct timeval timer;
   int action;
   void *data1;
@@ -174,14 +175,13 @@ struct Alarm {
 typedef int (*Alarmloopfunc)(Alarm *, struct timeval *);
 typedef int (*Xloopfunc)(XEvent *, struct timeval *);
 
-extern Alarm *alarms;
-
 #define new_alarm(i)	new_alarm_data((i), 0, 0)
 Alarm *new_alarm_data(int, void *, void *);
 #define grab_alarm(i)	grab_alarm_data((i), 0, 0)
 Alarm *grab_alarm_data(int, void *, void *);
 void destroy_alarm(Alarm *);
 
+void init_scheduler(void);
 void schedule(Alarm *);
 #define unschedule(i)	unschedule_data((i), 0, 0)
 void unschedule_data(int, void *, void *);
