@@ -36,7 +36,7 @@ x_error_handler(Display *d, XErrorEvent *error)
   
   /* Maybe someone created a window then destroyed it immediately!
      I don't think there's any way of working around this. */
-  unschedule_data(IdleSelect, (void *)((Window)error->resourceid));
+  unschedule_data(A_IDLE_SELECT, (void *)((Window)error->resourceid));
   return 0;
 }
 
@@ -67,7 +67,7 @@ watch_keystrokes(Window w, struct timeval *now)
        selects for KeyPress events.
      - at least register_keystrokes_gap elapses between selection on any
        2 windows. */
-  a = new_alarm_data(IdleSelect, (void *)w);
+  a = new_alarm_data(A_IDLE_SELECT, (void *)w);
   xwADDTIME(a->timer, *now, register_keystrokes_delay);
   if (xwTIMEGT(a->timer, next_watch_keystrokes))
     next_watch_keystrokes = a->timer;
@@ -215,7 +215,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       
       switch (a->action) {
 	
-       case Raise:
+       case A_RAISE:
 	if (h->mapped && h->obscured) {
 	  XMapRaised(display, h->w);
 	  h->obscured = 0;
@@ -225,7 +225,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	schedule(a);
 	break;
 	
-       case Flash:
+       case A_FLASH:
 	ss = h->slideshow;
 	while (xwTIMEGEQ(now, a->timer)) {
 	  h->slide = (h->slide + 1) % ss->nslides;
@@ -235,18 +235,18 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	schedule(a);
 	break;
 	
-       case Clock:
+       case A_CLOCK:
 	draw_clock(&now);
 	refresh_hands();
 	xwADDTIME(a->timer, a->timer, clock_tick);
 	schedule(a);
 	break;
 	
-       case Return:
-	ret_val = Return;
+       case A_AWAKE:
+	ret_val = TRAN_AWAKE;
 	break;
 	
-       case IdleSelect:
+       case A_IDLE_SELECT:
 	register_keystrokes((Window)a->data);
 	break;
 	

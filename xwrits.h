@@ -122,17 +122,17 @@ void erase_clock(void);
 /*****************************************************************************/
 /*  Alarms								     */
 
-#define Flash		0x001
-#define Raise		0x002
-#define Return		0x004
-#define Clock		0x008
-#define Multiply	0x010
-#define NextOptions	0x020
-#define LockBounce	0x040
-#define LockClock	0x080
-#define LockMessErase	0x100
-#define IdleSelect	0x200
-#define IdleCheck	0x400
+#define A_FLASH			0x0001
+#define A_RAISE			0x0002
+#define A_AWAKE			0x0004
+#define A_CLOCK			0x0008
+#define A_MULTIPLY		0x0010
+#define A_NEXT_OPTIONS		0x0020
+#define A_LOCK_BOUNCE		0x0040
+#define A_LOCK_CLOCK		0x0080
+#define A_LOCK_MESS_ERASE	0x0100
+#define A_IDLE_SELECT		0x0200
+#define A_IDLE_CHECK		0x0400
 
 struct Alarm {
   
@@ -282,19 +282,15 @@ void error(char *);
 
 void wait_for_break(void);
 
-#define WarnRest	1
-#define WarnLock	2
-#define WarnCancelled	3
-int warning(int lockfailed);
+#define TRAN_WARN	1
+#define TRAN_CANCEL	2
+#define TRAN_FAIL	3
+#define TRAN_REST	4
+#define TRAN_LOCK	5
+#define TRAN_AWAKE	6
 
-#define RestOK		4
-#define RestCancelled	5
-#define RestFailed	6
+int warning(int was_lock);
 int rest(void);
-
-#define LockOK		RestOK
-#define LockCancelled	7
-#define LockFailed	8
 int lock(void);
 
 void ready(void);

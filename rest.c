@@ -16,9 +16,9 @@ wait_x_loop(XEvent *e)
     last_key_time = now;
     
     if (xwTIMEGEQ(diff, break_delay))
-      return WarnRest;
+      return TRAN_REST;
     else if (xwTIMEGEQ(now, wait_over_time))
-      return Return;
+      return TRAN_WARN;
     else
       return 0;
     
@@ -40,7 +40,7 @@ wait_for_break(void)
   if (!check_idle) {
     /* Oops! Bug fix (8/17/98): If check_idle is off, we won't get keypresses;
        so schedule an alarm for exactly type_delay in the future. */
-    Alarm *a = new_alarm(Return);
+    Alarm *a = new_alarm(A_AWAKE);
     xwADDTIME(a->timer, last_key_time, type_delay);
     schedule(a);
   }
@@ -49,9 +49,9 @@ wait_for_break(void)
     xwGETTIME(wait_over_time);
     xwADDTIME(wait_over_time, wait_over_time, type_delay);
     val = loopmaster(0, wait_x_loop);
-  } while (val == WarnRest);
+  } while (val == TRAN_REST);
 
-  unschedule(Return);
+  unschedule(A_AWAKE);
 }
 
 
@@ -73,10 +73,10 @@ rest_x_loop(XEvent *e)
 {
   if (e->type == ClientMessage)
     /* Window manager deleted only xwrits window. Consider break over. */
-    return RestCancelled;
+    return TRAN_CANCEL;
   else if (e->type == KeyPress) {
     xwGETTIME(last_key_time);
-    return RestFailed;
+    return TRAN_FAIL;
   } else
     return 0;
 }
@@ -87,7 +87,7 @@ rest(void)
 {
   struct timeval now, finish;
   Alarm *a;
-  int val;
+  int tran;
   
   blend_slideshow(slideshow[Resting]);
   ensure_one_hand();
@@ -98,9 +98,9 @@ rest(void)
   else
     xwADDTIME(finish, last_key_time, break_delay);
   if (xwTIMEGEQ(now, finish))
-    return RestOK;
+    return TRAN_AWAKE;
   
-  a = new_alarm(Return);
+  a = new_alarm(A_AWAKE);
   a->timer = finish;
   schedule(a);
   
@@ -108,16 +108,16 @@ rest(void)
     clock_zero_time = a->timer;
     draw_clock(&now);
     refresh_hands();
-    a = new_alarm(Clock);
+    a = new_alarm(A_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
   }
   
   XFlush(display);
-  val = loopmaster(0, rest_x_loop);
+  tran = loopmaster(0, rest_x_loop);
   
-  unschedule(Return | Clock);
-  return val == Return ? RestOK : val;
+  unschedule(A_AWAKE | A_CLOCK);
+  return tran;
 }
 
 

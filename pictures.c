@@ -201,7 +201,7 @@ blend_slideshow(Slideshow *ss)
     if (h->slideshow) {
       p = h->slideshow->picture[h->slide];
       if (h->slideshow->nslides > 1) {
-	a = grab_alarm_data(Flash, h);
+	a = grab_alarm_data(A_FLASH, h);
 	if (a)
 	  xwSUBTIME(t, a->timer, h->slideshow->delay[h->slide]);
       }
@@ -213,7 +213,7 @@ blend_slideshow(Slideshow *ss)
     }
     
     if (ss->nslides > 1) {
-      if (!a) a = new_alarm_data(Flash, h);
+      if (!a) a = new_alarm_data(A_FLASH, h);
       xwADDTIME(a->timer, t, ss->delay[i]);
       schedule(a);
     } else {

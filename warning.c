@@ -11,15 +11,15 @@ pop_up_hand(Hand *h)
   XMapRaised(display, h->w);
   XFlush(display);
   if (h->slideshow->nslides > 1) {
-    Alarm *a = new_alarm(Flash);
-    unschedule_data(Flash, h);
+    Alarm *a = new_alarm(A_FLASH);
+    unschedule_data(A_FLASH, h);
     a->data = h;
     xwGETTIME(a->timer);
     xwADDTIME(a->timer, a->timer, h->slideshow->delay[h->slide]);
     schedule(a);
   }
   if (ocurrent->top) {
-    Alarm *a = new_alarm(Raise);
+    Alarm *a = new_alarm(A_RAISE);
     a->data = h;
     xwGETTIME(a->timer);
     xwADDTIME(a->timer, a->timer, ocurrent->top_delay);
@@ -29,7 +29,7 @@ pop_up_hand(Hand *h)
 
 
 static int
-switch_options(Options *opt, struct timeval now, int lockfailed)
+switch_options(Options *opt, struct timeval now)
 {
   Hand *h;
   Alarm *a;
@@ -40,20 +40,20 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
   blend_slideshow(opt->slideshow);
   
   if (opt->multiply) {
-    a = new_alarm(Multiply);
+    a = new_alarm(A_MULTIPLY);
     xwADDTIME(a->timer, now, opt->multiply_delay);
     schedule(a);
-  } else unschedule(Multiply);
+  } else unschedule(A_MULTIPLY);
   
   if (opt->clock && !clock_displaying) {
     draw_clock(&now);
-    a = new_alarm(Clock);
+    a = new_alarm(A_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
     clock_displaying = 1;
     need_refresh = 1;
   } else if (!opt->clock && clock_displaying) {
-    unschedule(Clock);
+    unschedule(A_CLOCK);
     erase_clock();
     clock_displaying = 0;
     need_refresh = 1;
@@ -67,12 +67,12 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
 	(!opt->appear_iconified && h->iconified))
       XMapRaised(display, h->w);
   
-  if (!opt->top) unschedule(Raise);
+  if (!opt->top) unschedule(A_RAISE);
   /* for (a = alarms; a; a = a->next)
-    if (a->action == Flash && opt->neverobscured)
-      a->action = FlashRaise;
-    else if (a->action == FlashRaise && !opt->neverobscured)
-      a->action = Flash; */
+    if (a->action == A_FLASH && opt->neverobscured)
+      a->action = A_FLASH_RAISE;
+    else if (a->action == A_FLASH_RAISE && !opt->neverobscured)
+      a->action = A_FLASH; */
   
   if (opt->beep)
     XBell(display, 0);
@@ -83,13 +83,13 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
   XFlush(display);
   
   if (opt->next) {
-    a = new_alarm(NextOptions);
+    a = new_alarm(A_NEXT_OPTIONS);
     xwADDTIME(a->timer, now, opt->next_delay);
     schedule(a);
   }
   
-  if (opt->lock && !lockfailed)
-    return WarnLock;
+  if (opt->lock)
+    return TRAN_LOCK;
   else
     return 0;
 }
@@ -100,18 +100,18 @@ warning_alarm_loop(Alarm *a, struct timeval *now)
 {
   switch (a->action) {
     
-   case Multiply:
+   case A_MULTIPLY:
     if (active_hands < ocurrent->max_hands)
       pop_up_hand(new_hand(NHRandom, NHRandom));
     xwADDTIME(a->timer, a->timer, ocurrent->multiply_delay);
     schedule(a);
     break;
     
-   case NextOptions:
-    return switch_options(ocurrent->next, *now, 0);
+   case A_NEXT_OPTIONS:
+    return switch_options(ocurrent->next, *now);
     
-   case IdleCheck:
-    return WarnRest;
+   case A_IDLE_CHECK:
+    return TRAN_REST;
     
   }
   return 0;
@@ -131,15 +131,15 @@ warning_x_loop(XEvent *e)
     
    case ButtonPress:
     /* OK; we can rest now. */
-    return WarnRest;
+    return TRAN_REST;
     
    case ClientMessage:
     /* Window manager deleted the only xwrits window. Disappear, but
        come back later. */
-    return WarnCancelled;
+    return TRAN_CANCEL;
     
    case KeyPress:
-    if ((a = grab_alarm(IdleCheck))) {
+    if ((a = grab_alarm(A_IDLE_CHECK))) {
       xwGETTIME(last_key_time);
       xwADDTIME(a->timer, last_key_time, idle_time);
       schedule(a);
@@ -152,23 +152,25 @@ warning_x_loop(XEvent *e)
 
 
 int
-warning(int lockfailed)
+warning(int was_lock)
 {
   int val;
   
   xwGETTIME(clock_zero_time);
-  val = switch_options(ocurrent, clock_zero_time, lockfailed);
-  if (val == WarnLock) return val;
+  val = switch_options(ocurrent, clock_zero_time);
+  if (val == TRAN_LOCK && !was_lock)
+    return TRAN_LOCK;
   pop_up_hand(hands);
   
   if (check_idle && !xwTIMELEQ0(idle_time)) {
-    Alarm *a = new_alarm(IdleCheck);
+    Alarm *a = new_alarm(A_IDLE_CHECK);
     xwADDTIME(a->timer, last_key_time, idle_time);
     schedule(a);
   }
   
   val = loopmaster(warning_alarm_loop, warning_x_loop);
-  unschedule(Flash | Raise | Multiply | Clock | NextOptions | IdleCheck);
+  unschedule(A_FLASH | A_RAISE | A_MULTIPLY | A_CLOCK | A_NEXT_OPTIONS
+	     | A_IDLE_CHECK);
   
   return val;
 }

@@ -300,7 +300,7 @@ destroy_hand(Hand *h)
   else hands = h->next;
   if (h->next) h->next->prev = h->prev;
   active_hands--;
-  unschedule_data(Flash | Raise, h);
+  unschedule_data(A_FLASH | A_RAISE, h);
   free(h);
 }
 
@@ -424,7 +424,7 @@ default_x_processing(XEvent *e)
    case DestroyNotify:
     /* We must unschedule any IdleSelect events for fear of selecting input
        on a destroyed window. There may be a race condition here... */
-    unschedule_data(IdleSelect, (void *)e->xdestroywindow.window);
+    unschedule_data(A_IDLE_SELECT, (void *)e->xdestroywindow.window);
     break;
     
    case MappingNotify:
@@ -854,22 +854,25 @@ main(int argc, char *argv[])
   }
   
   while (1) {
-    int val = 0;
+    int tran = 0;
+    int was_lock = 0;
     ocurrent = &onormal;
     wait_for_break();
     
-    while (val != RestOK && val != RestCancelled && val != WarnCancelled) {
+    while (tran != TRAN_AWAKE && tran != TRAN_CANCEL) {
       
-      val = warning(val == LockFailed || val == LockCancelled);
+      tran = warning(was_lock);
       
-      if (val == WarnRest)
-	val = rest();
-      else if (val == WarnLock)
-	val = lock();
+      if (tran == TRAN_REST)
+	tran = rest();
+      else if (tran == TRAN_LOCK) {
+	was_lock = 1;
+	tran = lock();
+      }
       
     }
     
-    if (val == RestOK)
+    if (tran == TRAN_AWAKE)
       ready();
     
     unmap_all();

@@ -87,14 +87,14 @@ lockalarmloop(Alarm *a, struct timeval *now)
 {
   switch (a->action) {
     
-   case LockBounce:
+   case A_LOCK_BOUNCE:
     move_lock(1);
     draw_message(RedrawMessage);
     xwADDTIME(a->timer, a->timer, ocurrent->lock_bounce_delay);
     schedule(a);
     break;
     
-   case LockClock:
+   case A_LOCK_CLOCK:
     draw_clock(now);
     move_lock(0);
     draw_message(0);
@@ -102,7 +102,7 @@ lockalarmloop(Alarm *a, struct timeval *now)
     schedule(a);
     break;
     
-   case LockMessErase:
+   case A_LOCK_MESS_ERASE:
     draw_message(0);
     move_lock(0);
     passwordpos = -1;
@@ -127,8 +127,8 @@ lockxloop(XEvent *e)
       passwordpos = 0;
     }
     if (checkpassword(&e->xkey))
-      return LockCancelled;
-    a = new_alarm(LockMessErase);
+      return TRAN_FAIL;
+    a = new_alarm(A_LOCK_MESS_ERASE);
     xwGETTIME(a->timer);
     xwADDTIME(a->timer, a->timer, lock_message_delay);
     schedule(a);
@@ -153,9 +153,9 @@ lock(void)
 {
   struct timeval now;
   Alarm *a;
-
+  
   XEvent event;
-  int val = LockFailed;
+  int tran = TRAN_FAIL;
   
   blend_slideshow(slideshow[Locked]);
   
@@ -199,18 +199,18 @@ lock(void)
   
   xwGETTIME(now);
   
-  a = new_alarm(Return);
+  a = new_alarm(A_AWAKE);
   xwADDTIME(a->timer, break_delay, now);
   clock_zero_time = a->timer;
   schedule(a);
   
-  a = new_alarm(LockBounce);
+  a = new_alarm(A_LOCK_BOUNCE);
   xwADDTIME(a->timer, ocurrent->lock_bounce_delay, now);
   schedule(a);
   
   if (ocurrent->break_clock) {
     draw_clock(&now);
-    a = new_alarm(LockClock);
+    a = new_alarm(A_LOCK_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
   }
@@ -219,17 +219,16 @@ lock(void)
   move_lock(1);
   passwordpos = -1;
   
-  val = loopmaster(lockalarmloop, lockxloop);
-  if (val == Return) val = LockOK;
+  tran = loopmaster(lockalarmloop, lockxloop);
   
   XUngrabKeyboard(display, CurrentTime);
   
  no_keyboard_grab:
-
-  unschedule(LockClock | LockBounce | Return | LockMessErase);
+  
+  unschedule(A_LOCK_CLOCK | A_LOCK_BOUNCE | A_AWAKE | A_LOCK_MESS_ERASE);
   if (ocurrent->break_clock) erase_clock();
   XDestroyWindow(display, cover);
   XFlush(display);
   
-  return val;
+  return tran;
 }
