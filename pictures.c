@@ -18,7 +18,7 @@ Gif_Stream *current_slideshow = 0;
 
 struct named_record {
   const char *name;
-  Gif_Record *record;
+  const Gif_Record *record;
   Gif_Stream *gfs;
   const char *synonym;
 };
@@ -98,7 +98,9 @@ get_built_in_image(const char *name)
     return nr->gfs;
   }
   
-  nr->gfs = gfs = Gif_FullReadRecord(nr->record, GIF_READ_COMPRESSED, 0, 0);
+  nr->gfs = gfs =
+    Gif_FullReadRecord(nr->record, GIF_READ_COMPRESSED | GIF_READ_CONST_RECORD,
+		       0, 0);
   if (!gfs)
     return 0;
   

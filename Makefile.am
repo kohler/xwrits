@@ -12,7 +12,7 @@ xwrits_LDADD = $(LDADD) @X_LIBS@ @X_PRE_LIBS@ -lX11 @X_EXTRA_LIBS@ -lm
 
 xwrits_SOURCES = fmalloc.c \
 		gif.h giffunc.c gifread.c gifx.h gifx.c \
-		xwrits.h clock.c lock.c main.c pictures.c rest.c \
+		xwrits.h clock.c hands.c lock.c main.c pictures.c rest.c \
 		schedule.c warning.c
 
 giftoc_SOURCES = giftoc.c

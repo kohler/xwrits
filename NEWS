@@ -5,6 +5,19 @@ Version 2.9
 * `german' is now its own beast: an animated gesture suggested by Andreas
   Stenger <Andreas.Stenger@smallworld.de>.
 
+* `+quota' lengthens your typing time by the amount that it shortens your
+  break time. Now a break cycle -- the time from when one break is over,
+  until when the next break is over -- is the same length of time (typetime
+  plus breaktime) whether or not `+quota' is in use. Suggested by Justin
+  Wells <justin@fever.semiotek.com>.
+
+* Added `minbreaktime' for use with `+quota'. It defaults to half the break
+  length or the quota time, whichever is longer.
+
+* Made GIF records read-only. This should result in slightly better memory
+  performance in all cases, and especially for people running more than one
+  xwrits at once.
+
 
 Version 2.9b1   10.Aug.1999
 

@@ -201,7 +201,7 @@ lock(void)
   xwGETTIME(now);
   
   a = new_alarm(A_AWAKE);
-  xwADDTIME(a->timer, break_delay, now);
+  xwADDTIME(a->timer, ocurrent->break_time, now);
   clock_zero_time = a->timer;
   schedule(a);
   

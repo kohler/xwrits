@@ -181,6 +181,13 @@ see \fB+multiply\fP below. \fINum\fP cannot be less than 1, or more
 than 137. Default is 25.
 '
 .TP 5
+\fBminbreaktime\fP=\fItime\fP
+Sets the minimum break length to \fItime\fP. This option is meaningful
+when \fB+quota\fP is on (see below); no matter how many short breaks you
+take, the break length will not be shortened below \fItime\fP. It defaults
+to half the break time or the quota time, whichever is larger.
+'
+.TP 5
 \fBmono\fP (\fB\-mono\fP)
 Xwrits will display its graphics in black and white. This may be useful if
 you live in a world with a limited colormap.
@@ -215,7 +222,7 @@ is deducted from the length of your next break. This option turns the break
 length into a break quota\*Einstead of resting for \fIbreaktime\fP
 consecutive minutes every \fItypetime\fP, you must rest for a total of
 \fIbreaktime\fP minutes per \fItypetime\fP. Default for \fItime\fP is 1
-minute.
+minute. See also \fBminbreaktime\fP.
 '
 .TP 5
 \fBready-picture\fP=\fIfile\fP [\fBokp\fP=\fIfile\fP]

@@ -10,6 +10,7 @@
 #include <sys/select.h>
 #endif
 #include "gif.h"
+#include "gifx.h"
 
 typedef struct Port Port;
 typedef struct Options Options;
@@ -50,6 +51,12 @@ struct Port {
   
   XFontStruct *font;
   
+  Gif_XContext *gfx;
+  
+  Atom wm_delete_window_atom;
+  Atom wm_protocols_atom;
+  Atom mwm_hints_atom;
+  
 };
 
 extern Display *display;
@@ -64,35 +71,37 @@ int x_error_handler(Display *, XErrorEvent *);
 
 struct Options {
   
-  struct timeval multiply_delay;
-  struct timeval lock_bounce_delay;
-  double flash_rate_ratio;
+  struct timeval break_time;		/* length of break */
+  struct timeval min_break_time;	/* minimum length of break (+quota) */
   
-  unsigned never_iconify: 1;
-  unsigned top: 1;
-  unsigned clock: 1;
-  unsigned break_clock: 1;
-  unsigned multiply: 1;
-  unsigned beep: 1;
-  unsigned appear_iconified: 1;
-  unsigned lock: 1;
-  int max_hands;
-  
-  Gif_Stream *slideshow;
+  Gif_Stream *slideshow;		/* warn window animation  */
+  Gif_Stream *icon_slideshow;		/* warn icon window animation */
   char *slideshow_text;
-  Gif_Stream *icon_slideshow;
   char *icon_slideshow_text;
   
-  struct timeval next_delay;
-  Options *next;
-  Options *prev;
+  double flash_rate_ratio;		/* <1, flash fast; >1, flash slow */
+  struct timeval multiply_delay;	/* time between window multiplies */
+  struct timeval lock_bounce_delay;	/* time between lock bounces */
+  
+  unsigned beep: 1;			/* beep when bringing up a warn? */
+  unsigned clock: 1;			/* show clock for time since warn? */
+  unsigned appear_iconified: 1;		/* show warns as icons? */
+  unsigned never_iconify: 1;		/* don't let warns be iconified? */
+  unsigned top: 1;			/* keep warn windows on top? */
+  unsigned multiply: 1;			/* multiply warn windows? */
+  unsigned lock: 1;			/* lock screen? */
+  unsigned break_clock: 1;		/* show clock time left in break? */
+  int max_hands;			/* max number of hands (+multiply) */
+  
+  struct timeval next_delay;		/* delay till go to next options */
+  Options *next;			/* next options */
+  Options *prev;			/* previous options */
   
 };
 
 extern Options *ocurrent;
 
 extern struct timeval type_delay;
-extern struct timeval break_delay;
 
 #define MaxPasswordSize 256
 extern struct timeval lock_message_delay;
@@ -159,7 +168,7 @@ int loopmaster(Alarmloopfunc, Xloopfunc);
 /*****************************************************************************/
 /*  Hands								     */
 
-#define MaxHands	137
+#define MAX_HANDS	137
 
 struct Hand {
   
@@ -192,8 +201,8 @@ extern Hand *hands;
 extern Hand *icon_hands;
 int active_hands(void);
 
-#define NHCenter	0x8000
-#define NHRandom	0x7FFF
+#define NEW_HAND_CENTER	0x8000
+#define NEW_HAND_RANDOM	0x7FFF
 Hand *new_hand(int x, int y);
 void destroy_hand(Hand *);
 
@@ -268,8 +277,7 @@ void register_keystrokes(Window);
 
 void error(const char *, ...);
 void warning(const char *, ...);
-
-void wait_for_break(void);
+void message(const char *, ...);
 
 #define TRAN_WARN	1
 #define TRAN_CANCEL	2
@@ -280,6 +288,7 @@ void wait_for_break(void);
 
 extern struct timeval first_warn_time;
 
+int wait_for_break(void);
 int warn(int was_lock);
 int rest(void);
 int lock(void);
@@ -327,6 +336,7 @@ void unmap_all(void);
 	((a).tv_sec == (b).tv_sec && (a).tv_usec > (b).tv_usec))
 
 #define xwTIMELEQ0(a) ((a).tv_sec < 0 || ((a).tv_sec == 0 && (a).tv_usec <= 0))
+#define xwTIMELT0(a)  ((a).tv_sec < 0 || ((a).tv_sec == 0 && (a).tv_usec < 0))
 
 
 #ifdef X_GETTIMEOFDAY
