@@ -33,15 +33,15 @@ typedef struct Alarm Alarm;
 /*  Global X stuff							     */
 
 extern Display *display;
-extern int screennumber;
-extern Window rootwindow;
-extern int xsocket;
+extern int screen_number;
+extern Window root_window;
+extern int x_socket;
 extern int display_width, display_height;
-extern int wmdeltax, wmdeltay;
+extern int wm_delta_x, wm_delta_y;
 extern XFontStruct *font;
 
-int defaultxprocessing(XEvent *);
-int xerrorhandler(Display *, XErrorEvent *);
+int default_x_processing(XEvent *);
+int x_error_handler(Display *, XErrorEvent *);
 
 
 /*****************************************************************************/
@@ -49,36 +49,36 @@ int xerrorhandler(Display *, XErrorEvent *);
 
 struct Options {
   
-  struct timeval multiplydelay;
-  struct timeval lockbouncedelay;
-  struct timeval topdelay;
+  struct timeval multiply_delay;
+  struct timeval lock_bounce_delay;
+  struct timeval top_delay;
   
-  unsigned nevericonify: 1;
+  unsigned never_iconify: 1;
   unsigned top: 1;
   unsigned clock: 1;
-  unsigned breakclock: 1;
+  unsigned break_clock: 1;
   unsigned multiply: 1;
   unsigned beep: 1;
-  unsigned appeariconified: 1;
+  unsigned appear_iconified: 1;
   unsigned lock: 1;
-  int maxhands;
+  int max_hands;
   
   Slideshow *slideshow;
   
-  struct timeval nextdelay;
+  struct timeval next_delay;
   Options *next;
   
 };
 
 extern Options *ocurrent;
 
-extern struct timeval typedelay;
-extern struct timeval breakdelay;
-extern struct timeval idlecheckdelay;
+extern struct timeval type_delay;
+extern struct timeval break_delay;
+extern struct timeval idle_check_delay;
 
 #define MaxPasswordSize 256
-extern struct timeval lockmessagedelay;
-extern char *lockpassword;
+extern struct timeval lock_message_delay;
+extern char *lock_password;
 
 
 /*****************************************************************************/
@@ -94,12 +94,12 @@ extern char *lockpassword;
 /*****************************************************************************/
 /*  Clocks								     */
 
-extern struct timeval clockzerotime;
-extern struct timeval clocktick;
+extern struct timeval clock_zero_time;
+extern struct timeval clock_tick;
 
-void initclock(Drawable);
-void drawclock(struct timeval *);
-void eraseclock(void);
+void init_clock(Drawable);
+void draw_clock(struct timeval *);
+void erase_clock(void);
 
 
 /*****************************************************************************/
@@ -133,15 +133,15 @@ typedef int (*Xloopfunc)(XEvent *);
 
 extern Alarm *alarms;
 
-#define newalarm(i)	newalarmdata((i), 0)
-Alarm *newalarmdata(int, void *);
-#define grabalarm(i)	grabalarmdata((i), 0)
-Alarm *grabalarmdata(int, void *);
-void destroyalarm(Alarm *);
+#define new_alarm(i)	new_alarm_data((i), 0)
+Alarm *new_alarm_data(int, void *);
+#define grab_alarm(i)	grab_alarm_data((i), 0)
+Alarm *grab_alarm_data(int, void *);
+void destroy_alarm(Alarm *);
 
 void schedule(Alarm *);
-#define unschedule(i)	unscheduledata((i), 0)
-void unscheduledata(int, void *);
+#define unschedule(i)	unschedule_data((i), 0)
+void unschedule_data(int, void *);
 
 int loopmaster(Alarmloopfunc, Xloopfunc);
 
@@ -181,18 +181,18 @@ struct Hand {
 
 
 extern Hand *hands;
-extern int activehands;
+extern int active_hands;
 
 #define NHCenter	-0x8000
 #define NHRandom	-0x7FFF
-Hand *newhand(int x, int y);
-void destroyhand(Hand *);
+Hand *new_hand(int x, int y);
+void destroy_hand(Hand *);
 
-Hand *windowtohand(Window);
-Hand *iconwindowtohand(Window);
+Hand *window_to_hand(Window);
+Hand *icon_window_to_hand(Window);
 
-void setpicture(Hand *, Slideshow *, int);
-void refreshhands(void);
+void set_picture(Hand *, Slideshow *, int);
+void refresh_hands(void);
 
 
 /*****************************************************************************/
@@ -207,11 +207,11 @@ struct Slideshow {
 };
 
 
-extern Slideshow *currentslideshow;
+extern Slideshow *current_slideshow;
 extern Slideshow *slideshow[MaxState];
 
-Slideshow *parseslideshow(char *, struct timeval *);
-void blendslideshow(Slideshow *);
+Slideshow *parse_slideshow(char *, struct timeval *);
+void blend_slideshow(Slideshow *);
 
 
 /*****************************************************************************/
@@ -222,14 +222,14 @@ struct Picture {
   char *name;
   Picture *next;
   
-  Gif_Record *largerecord;
-  Gif_Record *iconrecord;
+  Gif_Record *large_record;
+  Gif_Record *icon_record;
   
   Pixmap large;
   Pixmap icon;
   
-  int clockxoff;
-  int clockyoff;
+  int clock_x_off;
+  int clock_y_off;
   unsigned long background;
 
   unsigned used: 1;
@@ -240,19 +240,19 @@ struct Picture {
 extern Picture *pictures;
 extern Pixmap barspix;
 
-void defaultpictures(void);
-void loadneededpictures(Window, int);
+void default_pictures(void);
+void load_needed_pictures(Window, int);
 
 
 /*****************************************************************************/
 /*  Idle processing							     */
 
-extern struct timeval idleselectdelay;
-extern struct timeval idlegapdelay;
-extern int checkidle;
+extern struct timeval idle_select_delay;
+extern struct timeval idle_gap_delay;
+extern int check_idle;
 
-void idlecreate(Window, struct timeval *);
-void idleselect(Window);
+void idle_create(Window, struct timeval *);
+void idle_select(Window);
 
 
 /*****************************************************************************/
@@ -260,7 +260,7 @@ void idleselect(Window);
 
 void error(char *);
 
-void waitforbreak(void);
+void wait_for_break(void);
 
 #define WarnRest	1
 #define WarnLock	2
@@ -278,7 +278,7 @@ int rest(void);
 int lock(void);
 
 void ready(void);
-void unmapall(void);
+void unmap_all(void);
 
 
 /*****************************************************************************/
@@ -329,7 +329,7 @@ EXTERNFUNCTION int gettimeofday(struct timeval *, struct timezone *);
 #define xwGETTIMEOFDAY(a) gettimeofday((a), 0)
 #endif
 
-#define xwGETTIME(a) do { xwGETTIMEOFDAY(&(a)); xwSUBTIME((a), (a), genesistime); } while (0)
-extern struct timeval genesistime;
+#define xwGETTIME(a) do { xwGETTIMEOFDAY(&(a)); xwSUBTIME((a), (a), genesis_time); } while (0)
+extern struct timeval genesis_time;
 
 #endif

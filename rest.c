@@ -1,24 +1,24 @@
 #include "xwrits.h"
 #include <stdlib.h>
 
-static struct timeval lastkeytime;
-static struct timeval waitovertime;
+static struct timeval last_key_time;
+static struct timeval wait_over_time;
 
 
 static int
-waitxloop(XEvent *e)
+wait_x_loop(XEvent *e)
 {
   struct timeval now;
   struct timeval diff;
   
   if (e->type == KeyPress) {
     xwGETTIME(now);
-    xwSUBTIME(diff, now, lastkeytime);
-    lastkeytime = now;
+    xwSUBTIME(diff, now, last_key_time);
+    last_key_time = now;
     
-    if (xwTIMEGEQ(diff, breakdelay))
+    if (xwTIMEGEQ(diff, break_delay))
       return WarnRest;
-    else if (xwTIMEGEQ(now, waitovertime))
+    else if (xwTIMEGEQ(now, wait_over_time))
       return Return;
     else
       return 0;
@@ -29,26 +29,26 @@ waitxloop(XEvent *e)
 
 
 void
-waitforbreak(void)
+wait_for_break(void)
 {
   int val;
   
   /* Hack to make "spectacular effects" work as expected.
      Without this code, xwrits t=0 would not do anything until a keypress. */
-  if (xwTIMELEQ0(typedelay)) return;
+  if (xwTIMELEQ0(type_delay)) return;
   
-  xwGETTIME(lastkeytime);
+  xwGETTIME(last_key_time);
   
   do {
-    xwGETTIME(waitovertime);
-    xwADDTIME(waitovertime, waitovertime, typedelay);
-    val = loopmaster(0, waitxloop);
+    xwGETTIME(wait_over_time);
+    xwADDTIME(wait_over_time, wait_over_time, type_delay);
+    val = loopmaster(0, wait_x_loop);
   } while (val == WarnRest);
 }
 
 
 static void
-ensureonehand(void)
+ensure_one_hand(void)
 {
   Hand *h;
   int nummapped = 0;
@@ -80,19 +80,19 @@ rest(void)
   Alarm *a;
   int val;
   
-  blendslideshow(slideshow[Resting]);
-  ensureonehand();
+  blend_slideshow(slideshow[Resting]);
+  ensure_one_hand();
   
   xwGETTIME(now);
-  a = newalarm(Return);
-  xwADDTIME(a->timer, now, breakdelay);
+  a = new_alarm(Return);
+  xwADDTIME(a->timer, now, break_delay);
   schedule(a);
   
-  if (ocurrent->breakclock) {
-    clockzerotime = a->timer;
-    drawclock(&now);
-    a = newalarm(Clock);
-    xwADDTIME(a->timer, now, clocktick);
+  if (ocurrent->break_clock) {
+    clock_zero_time = a->timer;
+    draw_clock(&now);
+    a = new_alarm(Clock);
+    xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
   }
   
@@ -123,8 +123,8 @@ readyxloop(XEvent *e)
 void
 ready(void)
 {
-  blendslideshow(slideshow[Ready]);
-  ensureonehand();
+  blend_slideshow(slideshow[Ready]);
+  ensure_one_hand();
   
   if (ocurrent->beep)
     XBell(display, 0);
@@ -135,29 +135,29 @@ ready(void)
 
 
 void
-unmapall(void)
+unmap_all(void)
 {
   XEvent event;
   Hand *h;
   
   while (hands->next)
-    destroyhand(hands);
+    destroy_hand(hands);
   h = hands;
   
   XUnmapWindow(display, h->w);
   /* Synthetic UnmapNotify required by ICCCM to withdraw the window */
   event.type = UnmapNotify;
-  event.xunmap.event = rootwindow;
+  event.xunmap.event = root_window;
   event.xunmap.window = h->w;
   event.xunmap.from_configure = False;
-  XSendEvent(display, rootwindow, False,
+  XSendEvent(display, root_window, False,
 	     SubstructureRedirectMask | SubstructureNotifyMask, &event);
   
-  blendslideshow(slideshow[Warning]);
+  blend_slideshow(slideshow[Warning]);
   
   XFlush(display);
   while (XPending(display)) {
     XNextEvent(display, &event);
-    defaultxprocessing(&event);
+    default_x_processing(&event);
   }
 }

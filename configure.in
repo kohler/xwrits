@@ -1,16 +1,15 @@
 AC_INIT(xwrits.h)
 
-VERSION=2.6b4
+VERSION=2.6b6
 AC_SUBST(VERSION)
 
 GIF_MAJOR_VERSION=0
-GIF_MINOR_VERSION=9
+GIF_MINOR_VERSION=91
 AC_SUBST(GIF_MAJOR_VERSION)
 AC_SUBST(GIF_MINOR_VERSION)
 
 AC_PROG_CC
 AC_C_CONST
-AC_HEADER_STDC
 if test -n "$GCC" ; then CC="$CC -Wall" ; fi
 
 AC_PROG_INSTALL
@@ -53,7 +52,6 @@ int main(int argc, char **argv) {
 AC_MSG_ERROR(no 16-bit value found),
 ac_cv_int16=short)])dnl
 INT16=$ac_cv_int16
-AC_SUBST(INT16)
 AC_MSG_RESULT($ac_cv_int16)
 
 AC_MSG_CHECKING(for a 32-bit value)
@@ -72,7 +70,16 @@ int main(int argc, char **argv) {
 AC_MSG_ERROR(no 32-bit value found),
 ac_cv_int32=int)])dnl
 INT32=$ac_cv_int32
-AC_SUBST(INT32)
 AC_MSG_RESULT($ac_cv_int32)
+
+AC_MSG_CHECKING(for u_int32_t in sys/types.h)
+AC_EGREP_HEADER(u_int32_t, sys/types.h,
+[GIF_TYPES='#include <sys/types.h>'
+AC_MSG_RESULT(yes)],
+[GIF_TYPES="typedef unsigned $INT16 u_int16_t;
+typedef unsigned $INT32 u_int32_t;
+"
+AC_MSG_RESULT(no)])
+AC_SUBST(GIF_TYPES)
 
 AC_OUTPUT(Makefile gif.h)

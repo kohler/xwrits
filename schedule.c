@@ -16,13 +16,13 @@ Alarm *alarms;
 
 /* Support for Xidle is *not* included. */
 
-struct timeval idleselectdelay;
-struct timeval idlegapdelay;
-int checkidle;
+struct timeval idle_select_delay;
+struct timeval idle_gap_delay;
+int check_idle;
 
 
 int
-xerrorhandler(Display *d, XErrorEvent *error)
+x_error_handler(Display *d, XErrorEvent *error)
 {
   if (d != display ||
       (error->error_code != BadWindow && error->error_code != BadDrawable)) {
@@ -34,21 +34,21 @@ xerrorhandler(Display *d, XErrorEvent *error)
   
   /* Maybe someone created a window then destroyed it immediately!
      I don't think there's any way of working around this. */
-  unscheduledata(IdleSelect, (void *)((Window)error->resourceid));
+  unschedule_data(IdleSelect, (void *)((Window)error->resourceid));
   return 0;
 }
 
 
 void
-idlecreate(Window w, struct timeval *now)
+idle_create(Window w, struct timeval *now)
 {
   Window root, parent, *children;
   unsigned int nchildren;
-  static struct timeval nextidlecreate;
+  static struct timeval next_idle_create;
   Alarm *a;
   int i;
   
-  if (windowtohand(w) || iconwindowtohand(w))
+  if (window_to_hand(w) || icon_window_to_hand(w))
     return; /* don't need to worry about our own windows */
   
   if (XQueryTree(display, w, &root, &parent, &children, &nchildren) == 0)
@@ -62,24 +62,24 @@ idlecreate(Window w, struct timeval *now)
      This code ensures that:
      - at least idleselectdelay elapses before selection is done on the window.
      - at least idlegapdelay elapses between selection on any 2 windows. */
-  a = newalarmdata(IdleSelect, (void *)w);
-  xwADDTIME(a->timer, *now, idleselectdelay);
-  if (xwTIMEGT(a->timer, nextidlecreate))
-    nextidlecreate = a->timer;
+  a = new_alarm_data(IdleSelect, (void *)w);
+  xwADDTIME(a->timer, *now, idle_select_delay);
+  if (xwTIMEGT(a->timer, next_idle_create))
+    next_idle_create = a->timer;
   else
-    a->timer = nextidlecreate;
+    a->timer = next_idle_create;
   schedule(a);
-  xwADDTIME(nextidlecreate, nextidlecreate, idlegapdelay);
+  xwADDTIME(next_idle_create, next_idle_create, idle_gap_delay);
   
   for (i = 0; i < nchildren; i++)
-    idlecreate(children[i], now);
+    idle_create(children[i], now);
   
   if (children) XFree(children);
 }
 
 
 void
-idleselect(Window w)
+idle_select(Window w)
 {
   XWindowAttributes attr;
   
@@ -99,7 +99,7 @@ idleselect(Window w)
 
 
 Alarm *
-newalarmdata(int action, void *data)
+new_alarm_data(int action, void *data)
 {
   Alarm *a = xwNEW(Alarm);
   a->action = action;
@@ -109,7 +109,7 @@ newalarmdata(int action, void *data)
 
 
 Alarm *
-grabalarmdata(int action, void *data)
+grab_alarm_data(int action, void *data)
 {
   Alarm *prev = 0, *a;
   for (a = alarms; a; prev = a, a = a->next)
@@ -123,7 +123,7 @@ grabalarmdata(int action, void *data)
 
 
 void
-destroyalarm(Alarm *adestroy)
+destroy_alarm(Alarm *adestroy)
 {
   Alarm *a;
   if (alarms == adestroy) alarms = adestroy->next;
@@ -150,7 +150,7 @@ schedule(Alarm *newalarm)
 
 
 void
-unscheduledata(int actions, void *data)
+unschedule_data(int actions, void *data)
 {
   Alarm *prev = 0, *a = alarms;
   while (a) {
@@ -182,7 +182,7 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
   FD_ZERO(&xfds);
   
   while (1) {
-    int flushneeded = 0;
+    int flush_needed = 0;
     
     while (alarms && xwTIMEGEQ(now, alarms->timer)) {
       Alarm *a = alarms;
@@ -200,9 +200,9 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	  h->obscured = 0;
 	}
 	while (xwTIMEGEQ(now, a->timer))
-	  xwADDTIME(a->timer, a->timer, ocurrent->topdelay);
+	  xwADDTIME(a->timer, a->timer, ocurrent->top_delay);
 	schedule(a);
-	flushneeded = 1;
+	flush_needed = 1;
 	break;
 	
        case Flash:
@@ -211,17 +211,17 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	  h->slide = (h->slide + 1) % ss->nslides;
 	  xwADDTIME(a->timer, a->timer, ss->delay[h->slide]);
 	}
-	setpicture(h, ss, h->slide);
+	set_picture(h, ss, h->slide);
 	schedule(a);
-	flushneeded = 1;
+	flush_needed = 1;
 	break;
 	
        case Clock:
-	drawclock(&now);
-	refreshhands();
-	xwADDTIME(a->timer, a->timer, clocktick);
+	draw_clock(&now);
+	refresh_hands();
+	xwADDTIME(a->timer, a->timer, clock_tick);
 	schedule(a);
-	flushneeded = 0;
+	flush_needed = 0;
 	break;
 	
        case Return:
@@ -229,7 +229,7 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
 	break;
 	
        case IdleSelect:
-	idleselect((Window)a->data);
+	idle_select((Window)a->data);
 	break;
 	
        default:
@@ -242,20 +242,20 @@ loopmaster(Alarmloopfunc alarmlooper, Xloopfunc xlooper)
       if (retval != 0) return retval;
     }
     
-    if (flushneeded) XFlush(display);
+    if (flush_needed) XFlush(display);
     
     if (alarms) {
       timeoutptr = &timeout;
       xwSUBTIME(timeout, alarms->timer, now);
     } else timeoutptr = 0;
     
-    FD_SET(xsocket, &xfds);
-    select(xsocket + 1, &xfds, 0, 0, timeoutptr);
+    FD_SET(x_socket, &xfds);
+    select(x_socket + 1, &xfds, 0, 0, timeoutptr);
     
-    if (FD_ISSET(xsocket, &xfds))
+    if (FD_ISSET(x_socket, &xfds))
       while (XPending(display)) {
 	XNextEvent(display, &event);
-	defaultxprocessing(&event);
+	default_x_processing(&event);
 	if (xlooper) retval = xlooper(&event);
 	if (retval != 0) return retval;
       }

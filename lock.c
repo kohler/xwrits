@@ -3,8 +3,8 @@
 #include <X11/keysym.h>
 
 
-struct timeval lockmessagedelay;
-char *lockpassword;
+struct timeval lock_message_delay;
+char *lock_password;
 
 #define RedrawMessage ((char *)1L)
 
@@ -15,7 +15,7 @@ static int passwordpos = -1;
 
 
 static void
-movelock(int domove)
+move_lock(int domove)
 {
   static int lockx, locky;
   if (domove) {
@@ -32,7 +32,7 @@ movelock(int domove)
 
 
 static void
-drawmessage(char *message)
+draw_message(char *message)
 {
   static int msgx, msgy, msgw, msgh;
   static char *oldmessage;
@@ -64,10 +64,10 @@ checkpassword(XKeyEvent *xkey)
       (nchars == 1 && (c == '\n' || c == '\r'))) {
     password[passwordpos] = 0;
     passwordpos = 0;
-    if (strcmp(lockpassword, password) == 0)
+    if (strcmp(lock_password, password) == 0)
       return 1;
     else 
-      drawmessage("Incorrect password! Try again");
+      draw_message("Incorrect password! Try again");
   } else if (keysym == XK_Delete || keysym == XK_BackSpace) {
     if (passwordpos > 0)
       passwordpos--;
@@ -86,23 +86,23 @@ lockalarmloop(Alarm *a, struct timeval *now)
   switch (a->action) {
     
    case LockBounce:
-    movelock(1);
-    drawmessage(RedrawMessage);
-    xwADDTIME(a->timer, a->timer, ocurrent->lockbouncedelay);
+    move_lock(1);
+    draw_message(RedrawMessage);
+    xwADDTIME(a->timer, a->timer, ocurrent->lock_bounce_delay);
     schedule(a);
     break;
     
    case LockClock:
-    drawclock(now);
-    movelock(0);
-    drawmessage(0);
-    xwADDTIME(a->timer, a->timer, clocktick);
+    draw_clock(now);
+    move_lock(0);
+    draw_message(0);
+    xwADDTIME(a->timer, a->timer, clock_tick);
     schedule(a);
     break;
     
    case LockMessErase:
-    drawmessage(0);
-    movelock(0);
+    draw_message(0);
+    move_lock(0);
     passwordpos = -1;
     break;
     
@@ -121,22 +121,22 @@ lockxloop(XEvent *e)
     
    case KeyPress:
     if (passwordpos == -1) {
-      drawmessage("Enter password to unlock screen");
+      draw_message("Enter password to unlock screen");
       passwordpos = 0;
     }
     if (checkpassword(&e->xkey))
       return LockCancelled;
-    a = newalarm(LockMessErase);
+    a = new_alarm(LockMessErase);
     xwGETTIME(a->timer);
-    xwADDTIME(a->timer, a->timer, lockmessagedelay);
+    xwADDTIME(a->timer, a->timer, lock_message_delay);
     schedule(a);
     break;
     
    case VisibilityNotify:
     if (e->xvisibility.state != VisibilityUnobscured) {
       XRaiseWindow(display, cover);
-      movelock(0);
-      drawmessage(RedrawMessage);
+      move_lock(0);
+      draw_message(RedrawMessage);
     }
     break;
     
@@ -155,13 +155,13 @@ lock(void)
   XEvent event;
   int val = LockFailed;
   
-  blendslideshow(slideshow[Locked]);
+  blend_slideshow(slideshow[Locked]);
   
   {
     XSetWindowAttributes setattr;
     unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect;
     if (!barspix) {
-      setattr.background_pixel = BlackPixel(display, screennumber);
+      setattr.background_pixel = BlackPixel(display, screen_number);
       cwmask |= CWBackPixel;
     } else {
       setattr.background_pixmap = barspix;
@@ -170,7 +170,7 @@ lock(void)
     setattr.backing_store = NotUseful;
     setattr.save_under = False;
     setattr.override_redirect = True;
-    cover = XCreateWindow(display, rootwindow,
+    cover = XCreateWindow(display, root_window,
 			  0, 0, display_width, display_height,
 			  0, CopyFromParent, InputOutput, CopyFromParent,
 			  cwmask, &setattr);
@@ -183,35 +183,35 @@ lock(void)
   XWindowEvent(display, cover, ExposureMask, &event);
   if (XGrabKeyboard(display, cover, True, GrabModeAsync, GrabModeAsync,
 		    CurrentTime) != GrabSuccess)
-    goto nokeyboardgrab;
+    goto no_keyboard_grab;
   
   if (!gc) {
     XGCValues gcv;
     gcv.font = font->fid;
-    gcv.foreground = WhitePixel(display, screennumber);
+    gcv.foreground = WhitePixel(display, screen_number);
     gc = XCreateGC(display, cover, GCFont | GCForeground, &gcv);
   }
   
   xwGETTIME(now);
   
-  a = newalarm(Return);
-  xwADDTIME(a->timer, breakdelay, now);
-  clockzerotime = a->timer;
+  a = new_alarm(Return);
+  xwADDTIME(a->timer, break_delay, now);
+  clock_zero_time = a->timer;
   schedule(a);
   
-  a = newalarm(LockBounce);
-  xwADDTIME(a->timer, ocurrent->lockbouncedelay, now);
+  a = new_alarm(LockBounce);
+  xwADDTIME(a->timer, ocurrent->lock_bounce_delay, now);
   schedule(a);
   
-  if (ocurrent->breakclock) {
-    drawclock(&now);
-    a = newalarm(LockClock);
-    xwADDTIME(a->timer, now, clocktick);
+  if (ocurrent->break_clock) {
+    draw_clock(&now);
+    a = new_alarm(LockClock);
+    xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
   }
   
-  drawmessage(0);
-  movelock(1);
+  draw_message(0);
+  move_lock(1);
   passwordpos = -1;
   
   val = loopmaster(lockalarmloop, lockxloop);
@@ -219,10 +219,10 @@ lock(void)
   
   XUngrabKeyboard(display, CurrentTime);
   
- nokeyboardgrab:
+ no_keyboard_grab:
 
   unschedule(LockClock | LockBounce | Return | LockMessErase);
-  if (ocurrent->breakclock) eraseclock();
+  if (ocurrent->break_clock) erase_clock();
   XDestroyWindow(display, cover);
   XFlush(display);
   

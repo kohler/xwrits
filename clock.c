@@ -13,12 +13,12 @@ static GC clockforegc;
 static GC clockbackgc;
 static GC clockhandgc;
 
-struct timeval clockzerotime;
-struct timeval clocktick;
+struct timeval clock_zero_time;
+struct timeval clock_tick;
 
 
 static void
-drawhand(Picture *p, int xin, int yin, int handlength,
+draw_hand(Picture *p, int xin, int yin, int handlength,
 	 int value, int valuecycle)
 {
   double sinv = sin(value * 2 * M_PI / valuecycle);
@@ -41,15 +41,15 @@ drawhand(Picture *p, int xin, int yin, int handlength,
 
 
 static void
-draw1clock(Picture *p, int seconds)
+draw_1_clock(Picture *p, int seconds)
 {
   int x, y;
   int hour, min;
   
   p->clock = 1;
   if (!p->large) return;
-  x = p->clockxoff;
-  y = p->clockyoff;
+  x = p->clock_x_off;
+  y = p->clock_y_off;
   
   XFillArc(display, p->large, clockbackgc, x, y, ClockWidth,
 	   ClockHeight, 0, 23040);
@@ -63,8 +63,8 @@ draw1clock(Picture *p, int seconds)
   min %= MinPerHr;
   
   if (hour)
-    drawhand(p, x, y, ClockHour, hour, HrPerCycle);
-  drawhand(p, x, y, ClockMin, min, MinPerHr);
+    draw_hand(p, x, y, ClockHour, hour, HrPerCycle);
+  draw_hand(p, x, y, ClockMin, min, MinPerHr);
 
   /*
     XDrawLine(display, p->large, clockforegc, x, y,
@@ -77,51 +77,51 @@ draw1clock(Picture *p, int seconds)
 
 
 void
-drawclock(struct timeval *now)
+draw_clock(struct timeval *now)
 {
   struct timeval diff;
   int sec, i;
-  xwSUBTIME(diff, *now, clockzerotime);
+  xwSUBTIME(diff, *now, clock_zero_time);
   sec = diff.tv_sec < 0 ? -diff.tv_sec : diff.tv_sec;
   if (diff.tv_usec >= 500000) sec++;
-  for (i = 0; i < currentslideshow->nslides; i++) {
-    Picture *p = currentslideshow->picture[i];
-    draw1clock(p, sec);
+  for (i = 0; i < current_slideshow->nslides; i++) {
+    Picture *p = current_slideshow->picture[i];
+    draw_1_clock(p, sec);
   }
 }
 
 
 static void
-erase1clock(Picture *p)
+erase_1_clock(Picture *p)
 {
   p->clock = 0;
   if (!p->large) return;
   XSetForeground(display, clockbackgc, p->background);
   XFillRectangle(display, p->large, clockbackgc,
-		 p->clockxoff - 1, p->clockyoff - 1,
+		 p->clock_x_off - 1, p->clock_y_off - 1,
 		 ClockWidth + 11, ClockHeight + 11);
 }
 
 
 void
-eraseclock(void)
+erase_clock(void)
 {
   int i;
-  for (i = 0; i < currentslideshow->nslides; i++) {
-    Picture *p = currentslideshow->picture[i];
-    if (p->clock) erase1clock(p);
+  for (i = 0; i < current_slideshow->nslides; i++) {
+    Picture *p = current_slideshow->picture[i];
+    if (p->clock) erase_1_clock(p);
   }
-  XSetForeground(display, clockbackgc, WhitePixel(display, screennumber));
+  XSetForeground(display, clockbackgc, WhitePixel(display, screen_number));
 }
 
 
 void
-initclock(Drawable drawable)
+init_clock(Drawable drawable)
 {
   XGCValues gcv;
   XFontStruct *font;
   
-  gcv.foreground = BlackPixel(display, screennumber);
+  gcv.foreground = BlackPixel(display, screen_number);
   gcv.line_width = 3;
   gcv.cap_style = CapRound;
   font = XLoadQueryFont(display,
@@ -136,6 +136,6 @@ initclock(Drawable drawable)
   clockhandgc = XCreateGC(display, drawable, GCForeground | GCLineWidth |
 			  GCCapStyle | GCFont, &gcv);
   
-  gcv.foreground = WhitePixel(display, screennumber);
+  gcv.foreground = WhitePixel(display, screen_number);
   clockbackgc = XCreateGC(display, drawable, GCForeground, &gcv);
 }

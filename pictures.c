@@ -14,14 +14,14 @@ Pixmap barspix;
 unsigned long lockpixbackground;
 
 Picture *pictures = 0;
-Slideshow *currentslideshow = 0;
+Slideshow *current_slideshow = 0;
 
 static Drawable drawable;
 static Gif_XContext *gfx;
 
 
 static Picture *
-registerpicture(char *name, Gif_Record *large, Gif_Record *icon)
+register_picture(char *name, Gif_Record *large, Gif_Record *icon)
 {
   Picture *p;
   
@@ -33,18 +33,18 @@ registerpicture(char *name, Gif_Record *large, Gif_Record *icon)
   p->clock = 0;
   pictures = p;
   
-  p->clockxoff = 10;
-  p->clockyoff = 10;
+  p->clock_x_off = 10;
+  p->clock_y_off = 10;
   
-  p->largerecord = large;
-  p->iconrecord = icon;
+  p->large_record = large;
+  p->icon_record = icon;
   
   return p;
 }
 
 
 static Picture *
-findpicture(char *name)
+find_picture(char *name)
 {
   Picture *p = pictures;
   while (p && strcmp(p->name, name) != 0) p = p->next;
@@ -53,21 +53,21 @@ findpicture(char *name)
 
 
 void
-defaultpictures(void)
+default_pictures(void)
 {
   Picture *p;
-  registerpicture("clench", &clenchl_gif, &clenchi_gif);
-  registerpicture("spread", &spreadl_gif, &spreadi_gif);
-  registerpicture("finger", &fingerl_gif, &fingeri_gif);
-  registerpicture("ready", &okl_gif, &oki_gif);
-  registerpicture("resting", &restingl_gif, &restingi_gif);
-  p = registerpicture("locked", &lock_gif, 0);
-  p->clockxoff = 65;
+  register_picture("clench", &clenchl_gif, &clenchi_gif);
+  register_picture("spread", &spreadl_gif, &spreadi_gif);
+  register_picture("finger", &fingerl_gif, &fingeri_gif);
+  register_picture("ready", &okl_gif, &oki_gif);
+  register_picture("resting", &restingl_gif, &restingi_gif);
+  p = register_picture("locked", &lock_gif, 0);
+  p->clock_x_off = 65;
 }
 
 
 void
-loadneededpictures(Window window, int haslock)
+load_needed_pictures(Window window, int haslock)
 {
   Picture *p;
   drawable = window;
@@ -76,8 +76,8 @@ loadneededpictures(Window window, int haslock)
   for (p = pictures; p; p = p->next)
     if (p->used) {
       
-      if (p->largerecord) {
-	Gif_Stream *gfs = Gif_ReadRecord(p->largerecord);
+      if (p->large_record) {
+	Gif_Stream *gfs = Gif_ReadRecord(p->large_record);
 	if (gfs) {
 	  Gif_Color *gfc;
 	  p->large = Gif_XImage(gfx, gfs, 0);
@@ -87,8 +87,8 @@ loadneededpictures(Window window, int haslock)
 	}
       }
       
-      if (p->iconrecord) {
-	Gif_Stream *gfs = Gif_ReadRecord(p->iconrecord);
+      if (p->icon_record) {
+	Gif_Stream *gfs = Gif_ReadRecord(p->icon_record);
 	if (gfs) {
 	  p->icon = Gif_XImage(gfx, gfs, 0);
 	  Gif_DeleteStream(gfs);
@@ -106,7 +106,7 @@ loadneededpictures(Window window, int haslock)
 
 
 Slideshow *
-parseslideshow(char *slideshowtext, struct timeval *delayinput)
+parse_slideshow(char *slideshowtext, struct timeval *delayinput)
 {
   char buf[BUFSIZ];
   char *s;
@@ -142,7 +142,7 @@ parseslideshow(char *slideshowtext, struct timeval *delayinput)
     save = *s;
     *s = 0;
     
-    picture = findpicture(n);
+    picture = find_picture(n);
     
     if (picture) {
       if (ss->nslides >= size) {
@@ -166,13 +166,13 @@ parseslideshow(char *slideshowtext, struct timeval *delayinput)
 
 
 void
-blendslideshow(Slideshow *ss)
+blend_slideshow(Slideshow *ss)
 {
   Hand *h;
   Picture *p;
   struct timeval t, now;
   
-  currentslideshow = ss;
+  current_slideshow = ss;
   
   xwGETTIME(now);
   for (h = hands; h; h = h->next) {
@@ -183,7 +183,7 @@ blendslideshow(Slideshow *ss)
     if (h->slideshow) {
       p = h->slideshow->picture[h->slide];
       if (h->slideshow->nslides > 1) {
-	a = grabalarmdata(Flash, h);
+	a = grab_alarm_data(Flash, h);
 	if (a)
 	  xwSUBTIME(t, a->timer, h->slideshow->delay[h->slide]);
       }
@@ -195,13 +195,13 @@ blendslideshow(Slideshow *ss)
     }
     
     if (ss->nslides > 1) {
-      if (!a) a = newalarmdata(Flash, h);
+      if (!a) a = new_alarm_data(Flash, h);
       xwADDTIME(a->timer, t, ss->delay[i]);
       schedule(a);
     } else {
-      if (a) destroyalarm(a);
+      if (a) destroy_alarm(a);
     }
     
-    setpicture(h, ss, i);
+    set_picture(h, ss, i);
   }
 }
