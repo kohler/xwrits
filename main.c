@@ -835,7 +835,7 @@ default_settings(void)
 #endif
 
 static void
-initialize_port(int portno, Display *display, int screen_number)
+initialize_port(int portno)
 {
   XVisualInfo visi_template;
   int nv, i;
@@ -843,11 +843,14 @@ initialize_port(int portno, Display *display, int screen_number)
   XVisualInfo *best_v = 0;
   VisualID default_visualid;
   Port *port = &ports[portno];
+  Display *display = port->display;
+  int screen_number = port->screen_number;
+
+  /* check that relevant fields have been initialized */
+  assert(display && screen_number >= 0 && screen_number < ScreenCount(display));
   
   /* initialize Port fields */
-  port->display = display;
   port->x_socket = ConnectionNumber(display);
-  port->screen_number = screen_number;
   port->root_window = RootWindow(display, screen_number);
   port->width = DisplayWidth(display, screen_number);
   port->height = DisplayHeight(display, screen_number);
@@ -1110,22 +1113,25 @@ main(int argc, char *argv[])
   max_x_socket = 0;
   orig_nports = nports;
   for (i = 0; i < orig_nports; i++) {
-    Display *display = XOpenDisplay(ports[i].display_name);
-    if (!display)
-	error("can't open display `%s'", ports[i].display_name);
-    if (!multiscreen)
-	initialize_port(i, display, DefaultScreen(display));
-    else
-	for (j = 0; j < ScreenCount(display); j++)
-	    if (j == 0)
-		initialize_port(i, display, j);
-	    else {
-		nports++;
-		ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
-		ports[nports-1].display_name = ports[i].display_name;
-		initialize_port(nports-1, display, j);
-	    }
+      Display *display = XOpenDisplay(ports[i].display_name);
+      if (!display)
+	  error("can't open display `%s'", ports[i].display_name);
+      ports[i].display = display;
+      if (!multiscreen)
+	  ports[i].screen_number = DefaultScreen(display);
+      else if (ScreenCount(display) > 0) {
+	  ports[i].screen_number = 0;
+	  nports += ScreenCount(display) - 1;
+	  ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
+	  for (j = 1; j < ScreenCount(display); j++) {
+	      ports[nports - j].display = display;
+	      ports[nports - j].display_name = ports[i].display_name;
+	      ports[nports - j].screen_number = j;
+	  }
+      }
   }
+  for (i = 0; i < nports; i++)
+      initialize_port(i);
 
   /* initialize pictures using first hand */
   if (lock_possible) {
