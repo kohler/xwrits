@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.6.3
+.ds V 2.6.5
 '
 .TH XWRITS 1 "28 May 1998" "Version \*V"
 .SH NAME
