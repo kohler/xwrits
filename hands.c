@@ -177,7 +177,7 @@ new_hand(Port *port, int x, int y)
   
   /* set XWRITS_WINDOW property early to minimize races */
   mark_xwrits_window(port, nh->w);
-    
+
   xsh->x = x;
   xsh->y = y;
   xwmh->initial_state = ocurrent->appear_iconified ? IconicState : NormalState;

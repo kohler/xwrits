@@ -171,12 +171,27 @@ message(const char *format, ...)
 /* ports and peers */
 
 Port *
-find_port(Display *display)
+find_port(Display *display, Window window)
 {
-  int i;
+  int screen_number, i;
+
+  /* first, look using only 'display' */
   for (i = 0; i < nports; i++)
-    if (ports[i].display == display)
+    if (ports[i].display == display && ports[i].display_unique)
       return &ports[i];
+
+  /* if display not unique (or not found), try 'screen_number' also */
+  screen_number = 0;
+  if (window) {
+    XWindowAttributes attr;
+    if (XGetWindowAttributes(display, window, &attr) != 0)
+      screen_number = XScreenNumberOfScreen(attr.screen);
+  }
+  for (i = 0; i < nports; i++)
+    if (ports[i].display == display && ports[i].screen_number == screen_number)
+      return &ports[i];
+
+  /* nothing found */
   return 0;
 }
 
@@ -282,11 +297,12 @@ default_x_processing(XEvent *e)
 {
   Hand *h;
   Display *display = e->xany.display;
-  Port *port = find_port(display);
+  Port *port;
   
   switch (e->type) {
     
    case ConfigureNotify:
+    port = find_port(display, e->xconfigure.window);
     h = window_to_hand(port, e->xconfigure.window, 1);
     if (!h) break;
     h->configured = 1;
@@ -298,11 +314,13 @@ default_x_processing(XEvent *e)
     break;
     
    case ReparentNotify:
+    port = find_port(display, e->xreparent.window);
     if ((h = window_to_hand(port, e->xreparent.window, 1)))
       find_root_child(h);
     break;
     
    case MapNotify:
+    port = find_port(display, e->xmap.window);
     if ((h = window_to_hand(port, e->xmap.window, 1))) {
       draw_slide(h);
       h->mapped = 1;
@@ -310,11 +328,13 @@ default_x_processing(XEvent *e)
     break;
     
    case UnmapNotify:
-    if ((h = window_to_hand(port, e->xmap.window, 1)))
+    port = find_port(display, e->xunmap.window);
+    if ((h = window_to_hand(port, e->xunmap.window, 1)))
       h->mapped = 0;
     break;
     
    case VisibilityNotify:
+    port = find_port(display, e->xvisibility.window);
     if ((h = window_to_hand(port, e->xvisibility.window, 0))) {
       if (e->xvisibility.state == VisibilityUnobscured)
 	h->obscured = 0;
@@ -324,6 +344,7 @@ default_x_processing(XEvent *e)
     break;
     
    case Expose:
+    port = find_port(display, e->xexpose.window);
     h = window_to_hand(port, e->xexpose.window, 0);
     if (e->xexpose.count == 0 && h && h->clock)
       draw_clock(h, 0);
@@ -331,6 +352,7 @@ default_x_processing(XEvent *e)
     
    case ClientMessage:
     /* change e->type depending on the message */
+    port = find_port(display, e->xclient.window);
     h = window_to_hand(port, e->xclient.window, 0);
     if (h) {
       if (e->xclient.message_type == port->wm_protocols_atom
@@ -351,6 +373,7 @@ default_x_processing(XEvent *e)
    case CreateNotify: {
      struct timeval now;
      xwGETTIME(now);
+     port = find_port(display, e->xcreatewindow.window);
      watch_keystrokes(port, e->xcreatewindow.window, &now);
      break;
    }
@@ -359,6 +382,7 @@ default_x_processing(XEvent *e)
     /* We must unschedule any IdleSelect events for fear of selecting input on
        a destroyed window. There is a race condition here because X
        communication is asynchronous. */
+    port = find_port(display, e->xdestroywindow.window);
     unschedule_data(A_IDLE_SELECT, (void *)port,
 		    (void *)e->xdestroywindow.window);
     if (verbose)
@@ -533,9 +557,9 @@ slideshow_text_append_built_in(Options *o, char *built_in)
 	  (lis ? ";" : ""), built_in);
   
   if (!o->prev || o->prev->slideshow_text != o->slideshow_text)
-    xfree(o->slideshow_text);
+    xfree((char *)o->slideshow_text);
   if (!o->prev || o->prev->icon_slideshow_text != o->icon_slideshow_text)
-    xfree(o->icon_slideshow_text);
+    xfree((char *)o->icon_slideshow_text);
   
   o->slideshow_text = s;
   o->icon_slideshow_text = is;
@@ -850,6 +874,10 @@ initialize_port(int portno)
   assert(display && screen_number >= 0 && screen_number < ScreenCount(display));
   
   /* initialize Port fields */
+  port->display_unique = 1;
+  for (i = 0; i < nports && port->display_unique; i++)
+    if (i != portno && ports[i].display == display)
+      port->display_unique = 0;
   port->x_socket = ConnectionNumber(display);
   port->root_window = RootWindow(display, screen_number);
   port->width = DisplayWidth(display, screen_number);
@@ -893,7 +921,7 @@ initialize_port(int portno)
       port->colormap = DefaultColormap(display, screen_number);
     
   }
-  
+
   if (v) XFree(v);
   
   /* set up black_pixel and white_pixel */
@@ -914,7 +942,7 @@ initialize_port(int portno)
   
   /* set gfx */
   port->gfx = Gif_NewXContextFromVisual
-    (display, port->screen_number, port->visual, port->depth, port->colormap);
+    (display, screen_number, port->visual, port->depth, port->colormap);
 
   /* set atoms */
   port->wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
@@ -1068,7 +1096,29 @@ main(int argc, char *argv[])
   /* parse options. remove first argument = program name */
   default_settings();  
   parse_options(argc - 1, argv + 1);
-  
+
+  /* check displays, including multiscreen
+     NB: Must find true 'nports' value before continuing. */
+  orig_nports = nports;
+  for (i = 0; i < orig_nports; i++) {
+      Display *display = XOpenDisplay(ports[i].display_name);
+      if (!display)
+	  error("can't open display `%s'", ports[i].display_name);
+      ports[i].display = display;
+      if (!multiscreen)
+	  ports[i].screen_number = DefaultScreen(display);
+      else if (ScreenCount(display) > 0) {
+	  ports[i].screen_number = 0;
+	  nports += ScreenCount(display) - 1;
+	  ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
+	  for (j = 1; j < ScreenCount(display); j++) {
+	      ports[nports - j].display = display;
+	      ports[nports - j].display_name = ports[i].display_name;
+	      ports[nports - j].screen_number = j;
+	  }
+      }
+  }
+
   /* check global options */
   if (strlen(lock_password) >= MAX_PASSWORD_SIZE)
     error("password too long");
@@ -1108,30 +1158,11 @@ main(int argc, char *argv[])
   ready_icon_slideshow = parse_slideshow(ready_icon_slideshow_text, 1, force_mono);
   ocurrent = &onormal;
 
-  /* set up displays */
+  /* create ports */
   FD_ZERO(&x_socket_set);
   max_x_socket = 0;
-  orig_nports = nports;
-  for (i = 0; i < orig_nports; i++) {
-      Display *display = XOpenDisplay(ports[i].display_name);
-      if (!display)
-	  error("can't open display `%s'", ports[i].display_name);
-      ports[i].display = display;
-      if (!multiscreen)
-	  ports[i].screen_number = DefaultScreen(display);
-      else if (ScreenCount(display) > 0) {
-	  ports[i].screen_number = 0;
-	  nports += ScreenCount(display) - 1;
-	  ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
-	  for (j = 1; j < ScreenCount(display); j++) {
-	      ports[nports - j].display = display;
-	      ports[nports - j].display_name = ports[i].display_name;
-	      ports[nports - j].screen_number = j;
-	  }
-      }
-  }
   for (i = 0; i < nports; i++)
-      initialize_port(i);
+    initialize_port(i);
 
   /* initialize pictures using first hand */
   if (lock_possible) {

@@ -33,8 +33,11 @@ x_error_handler(Display *d, XErrorEvent *error)
   
   /* Maybe someone created a window then destroyed it immediately!
      I don't think there's any way of working around this. */
-  unschedule_data(A_IDLE_SELECT, (void *)find_port(error->display),
-		  (void *)((Window)error->resourceid));
+  if (error->error_code == BadWindow) {
+    Window window = (Window)error->resourceid;
+    unschedule_data(A_IDLE_SELECT, (void *)find_port(error->display, window),
+		    (void *)window);
+  }
   return 0;
 }
 

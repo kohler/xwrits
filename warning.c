@@ -160,7 +160,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
   switch (e->type) {
     
    case MapNotify: {
-     Port *port = find_port(e->xunmap.display);
+     Port *port = find_port(e->xunmap.display, e->xunmap.window);
      h = window_to_hand(port, e->xunmap.window, 1);
      if (h && h->is_icon && ocurrent->never_iconify)
        XMapRaised(port->display, h->icon->w);
@@ -196,7 +196,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
     break;
     
    case VisibilityNotify: {
-     Port *port = find_port(e->xvisibility.display);
+     Port *port = find_port(e->xvisibility.display, e->xvisibility.window);
      h = window_to_hand(port, e->xvisibility.window, 0);
      if (h && h->obscured && ocurrent->top)
        if (check_raise_window(h))

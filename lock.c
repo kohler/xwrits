@@ -180,7 +180,7 @@ static int
 lock_x_loop(XEvent *e, const struct timeval *now)
 {
   Alarm *a;
-  Port *port = find_port(e->xany.display);
+  Port *port;
   
   switch (e->type) {
     
@@ -197,6 +197,7 @@ lock_x_loop(XEvent *e, const struct timeval *now)
     
    case VisibilityNotify:
     if (e->xvisibility.state != VisibilityUnobscured) {
+      port = find_port(e->xvisibility.display, e->xvisibility.window);
       XRaiseWindow(port->display, covers[port->port_number]);
       draw_message(REDRAW_MESSAGE);
     }

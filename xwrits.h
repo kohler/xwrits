@@ -38,6 +38,7 @@ struct Port {
   
   char *display_name;		/* name of display */
   Display *display;		/* display pointer */
+  int display_unique;		/* is this the only Port with display? */
   int x_socket;			/* socket of X connection */
   
   int screen_number;		/* screen number */
@@ -91,7 +92,7 @@ extern Port *ports;
 extern fd_set x_socket_set;
 extern int max_x_socket;
 
-Port *find_port(Display *);
+Port *find_port(Display *, Window);
 
 void mark_xwrits_window(Port *, Window);
 Window check_xwrits_window(Port *, Window);
