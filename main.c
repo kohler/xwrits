@@ -157,7 +157,7 @@ new_hand(int x, int y)
   static XClassHint classh;
   static XSizeHints *xsh;
   static XWMHints *xwmh;
-  static XTextProperty windowname, iconname;
+  static XTextProperty window_name, icon_name;
   static u_int32_t *mwm_hints;
   Hand *nh = xwNEW(Hand);
   
@@ -185,8 +185,8 @@ new_hand(int x, int y)
     char *stringlist[2];
     stringlist[0] = "xwrits";
     stringlist[1] = NULL;
-    XStringListToTextProperty(stringlist, 1, &windowname);
-    XStringListToTextProperty(stringlist, 1, &iconname);
+    XStringListToTextProperty(stringlist, 1, &window_name);
+    XStringListToTextProperty(stringlist, 1, &icon_name);
     classh.res_name = "xwrits";
     classh.res_class = "XWrits";
     
@@ -256,7 +256,7 @@ new_hand(int x, int y)
   xsh->x = x;
   xsh->y = y;
   xwmh->initial_state = ocurrent->appear_iconified ? IconicState : NormalState;
-  XSetWMProperties(display, nh->w, &windowname, &iconname,
+  XSetWMProperties(display, nh->w, &window_name, &icon_name,
 		   NULL, 0, xsh, xwmh, &classh);
   XSetWMProtocols(display, nh->w, &wm_delete_window_atom, 1);
   XChangeProperty(display, nh->w, mwm_hints_atom, mwm_hints_atom, 32,
@@ -662,10 +662,6 @@ choose_visual(void)
   XVisualInfo *best_v = 0;
   int default_visualid = DefaultVisual(display, screen_number)->visualid;
   visi_template.screen = screen_number;
-  
-  visual = CopyFromParent;
-  depth = CopyFromParent;
-  colormap = CopyFromParent;
   
   v = XGetVisualInfo(display, VisualScreenMask, &visi_template, &nv);
   for (i = 0; i < nv && !best_v; i++)

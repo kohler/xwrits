@@ -320,7 +320,7 @@ void unmap_all(void);
 
 
 #ifdef X_GETTIMEOFDAY
-#define xwGETTIMEOFDAY(t) X_GETTIMEOFDAY(t)
+#define xwGETTIMEOFDAY(a) X_GETTIMEOFDAY(a)
 #elif SYSV_GETTIMEOFDAY
 #define xwGETTIMEOFDAY(a) gettimeofday((a))
 #else

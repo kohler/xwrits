@@ -11,8 +11,7 @@ AC_PROG_INSTALL
 
 AC_PATH_XTRA
 
-AC_MSG_CHECKING(for gettimeofday prototype)
-AC_CACHE_VAL(ac_cv_gettimeofday,
+AC_CACHE_CHECK(for gettimeofday prototype, ac_cv_gettimeofday,
 [AC_TRY_COMPILE([#include <time.h>
 #include <sys/time.h>],
 [gettimeofday((void *)0, (void *)0);],
@@ -21,15 +20,11 @@ AC_CACHE_VAL(ac_cv_gettimeofday,
 [gettimeofday((void *)0);],
 ac_cv_gettimeofday=0,
 ac_cv_gettimeofday=2)],
-ac_cv_gettimeofday=1)])dnl
+ac_cv_gettimeofday=1)])
 if test $ac_cv_gettimeofday = 1 ;
 then AC_DEFINE_UNQUOTED(SYSV_GETTIMEOFDAY)
-AC_MSG_RESULT(1)
-elif test $ac_cv_gettimeofday ;
-then AC_MSG_RESULT(2)
-else
-AC_DEFINE_UNQUOTED(NO_GETTIMEOFDAY_PROTO)
-AC_MSG_RESULT(no)
+elif test $ac_cv_gettimeofday = 0 ;
+then AC_DEFINE_UNQUOTED(NO_GETTIMEOFDAY_PROTO)
 fi
 
 AC_CACHE_CHECK(for integer typedefs in sys/types.h, ac_cv_sys_types_int,
