@@ -116,7 +116,8 @@ Appearance:\n\
   +clock              Show how long you have ignored the warning window.\n\
   +finger             Be rude.\n\
   +finger=CULTURE     Be rude according to CULTURE. Choices: `american',\n\
-                      `korean' (synonyms `japanese', `russian'), `german'.\n\
+                      `korean' (synonyms `japanese', `russian'), `german',\n\
+                      or the name of any GIF file.\n\
   flashtime=RATE      Flash the warning window at RATE (default 2 sec).\n\
   +iconified          Warning windows appear as icons.\n\
   lock-picture=GIF-FILE, lp=GIF-FILE     Show GIF animation on lock window.\n\
@@ -578,7 +579,7 @@ slideshow_text_append_built_in(Options *o, char *built_in)
   
   sprintf(s, "%s%s&%s", (ls ? o->slideshow_text : ""),
 	  (ls ? ";" : ""), built_in);
-  sprintf(is, "%s%s&%sicon", (lis ? o->icon_slideshow_text : ""),
+  sprintf(is, "%s%s*%sicon", (lis ? o->icon_slideshow_text : ""),
 	  (lis ? ";" : ""), built_in);
   
   if (!o->prev || o->prev->slideshow_text != o->slideshow_text)

@@ -231,17 +231,21 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
   
   while (*s) {
     char *n, save;
+    FILE *f;
     
-    while (isspace(*s)) s++;
+    while (isspace(*s))
+	s++;
     n = s;
-    while (!isspace(*s) && *s != ';' && *s) s++;
+    while (!isspace(*s) && *s != ';' && *s)
+	s++;
     save = *s;
     *s = 0;
     
-    if (n[0] == '&') {
+    if (n[0] == '&' || n[0] == '*') {
       /* built-in image */
       strcpy(name, n + 1);
-      if (mono) strcat(name, "mono");
+      if (mono)
+	  strcat(name, "mono");
       i = strlen(name);
       add = get_built_in_image(name);
       /* some images don't have monochromatic versions; fall back on color */
@@ -252,27 +256,33 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 	  warning("no monochrome version of built-in picture `%s'", name);
 	name[i-4] = 'm';
       }
-      if (!add)
-	error("unknown built-in picture `%s'", name);
-      /* add images */
-      add_stream_to_slideshow(add, gfs, flash_rate_ratio);
-      
-    } else {
-      /* load file from disk */
-      FILE *f = fopen(n, "rb");
-      add = Gif_FullReadFile(f, GIF_READ_COMPRESSED, 0, 0);
-      if (!f)
-	error("%s: %s", n, strerror(errno));
-      else if (!add || (add->nimages == 0 && add->errors > 0))
-	error("%s: not a GIF", n);
+      if (add) {		/* add images */
+	  add_stream_to_slideshow(add, gfs, flash_rate_ratio);
+	  goto done;
+      } else if (n[0] == '*')
+	  goto done;
       else
-	add_stream_to_slideshow(add, gfs, flash_rate_ratio);
-      if (add) Gif_DeleteStream(add);
-      if (f) fclose(f);
+	  n++;
     }
-    
+
+    /* load file from disk */
+    f = fopen(n, "rb");
+    add = Gif_FullReadFile(f, GIF_READ_COMPRESSED, 0, 0);
+    if (!f)
+	error("%s: %s", n, strerror(errno));
+    else if (!add || (add->nimages == 0 && add->errors > 0))
+	error("%s: not a GIF", n);
+    else
+	add_stream_to_slideshow(add, gfs, flash_rate_ratio);
+    if (add)
+	Gif_DeleteStream(add);
+    if (f)
+	fclose(f);
+
+  done:
     *s = save;
-    if (*s) s++;
+    if (*s)
+	s++;
   }
 
   /* make sure screen_width and screen_height aren't 0 */
