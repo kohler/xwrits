@@ -1,0 +1,3 @@
+- Xwrits should optionally log to a file the number of keystrokes made each
+  time period, and optionally some other statistics. Suggested by Miernik
+  <miernik@ctnet.pl>.
