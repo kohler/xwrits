@@ -1,9 +1,13 @@
+Xwrits NEWS
+
 Version 2.6
 
 * Made and included pictures for monochromatic screens and added `mono'
   option.
 
-* Bug fixes for `lock'.
+* Bug fixes for `lock', `clock' and `breakclock'.
+
+* Restored the time argument to `idle'.
 
 
 Version 2.6b8
@@ -48,3 +52,23 @@ Version 2.6b3
 Version 2.6b2
 
 * Fixed bug with freeing memory multiple times. Works better on Linux now.
+
+
+Version 2.5
+
+* The most important change is the +idle option, on by default, which makes
+  xwrits slightly smarter than an alarm clock. The code has also been
+  completely reorganized around the Alarm concept, which makes it much
+  cleaner.
+
+
+Version 2
+
+* Many, many more options have been added. The code has been cleaned up a
+  great deal, and also expanded a great deal. Comments should still be
+  added to the code.
+
+* Xwrits no longer uses XPM files. Instead, it uses GIF files, with some
+  proprietary extensions. The GIF files are compiled into C files, then
+  object files, and read from memory. This makes xwrits a much, much
+  smaller executable, faster, and more portable.

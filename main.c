@@ -75,8 +75,8 @@ usage(void)
   fprintf(stderr, "\
 usage: xwrits [display=d] [typetime=time] [breaktime=time] [after=time]\n\
               [+/-beep] [+/-breakclock] [+/-clock] [+/-finger] [flashtime=time]\n\
-              [+/-flipoff] [+/-iconified] [-/+idle] [+/-lock[=time]]\n\
-              [maxhands=#] [+/-multiply[=time]] [+/-noiconify]\n\
+              [+/-flipoff] [+/-iconified] [-/+idle[=time]] [+/-lock[=time]]\n\
+              [maxhands=#] [mono] [+/-multiply[=time]] [+/-noiconify]\n\
               [password=password] [+/-top] [version]\n");
   exit(1);
 }
@@ -584,6 +584,8 @@ parse_options(int pargc, char **pargv)
       o->beep = optparse_yesno;
     else if (optparse(s, "breakclock", 6, "t"))
       o->break_clock = optparse_yesno;
+    else if (optparse(s, "bc", 2, "t"))
+      o->break_clock = optparse_yesno;
     
     else if (optparse(s, "clock", 1, "t"))
       o->clock = optparse_yesno;
@@ -604,7 +606,7 @@ parse_options(int pargc, char **pargv)
       
     } else if (optparse(s, "iconified", 2, "t"))
       o->appear_iconified = optparse_yesno;
-    else if (optparse(s, "idle", 1, "t"))
+    else if (optparse(s, "idle", 1, "tT", &idle_check_delay))
       check_idle = optparse_yesno;
     
     else if (optparse(s, "lock", 1, "tT", &o->lock_bounce_delay))
@@ -758,6 +760,7 @@ main(int argc, char *argv[])
   
   xwSETTIME(idle_select_delay, DefaultIdleselectdelay, 0);
   xwSETTIME(idle_gap_delay, DefaultIdlegapdelay, DefaultIdlegapdelayUsec);
+  xwSETTIME(idle_check_delay, 0, 0);
   check_idle = 1;
   
   /* 15 seconds seems like a reasonable clock tick time, even though it'll
@@ -800,15 +803,16 @@ main(int argc, char *argv[])
   load_needed_pictures(hand->w, lock_possible, force_mono);
   init_clock(hand->w);
   
+  if (check_idle && xwTIMELEQ0(idle_check_delay)) {
+    double time = 0.3 * (break_delay.tv_sec +
+			(break_delay.tv_usec / (double)MicroPerSec));
+    long integral_time = (long)(floor(time));
+    idle_check_delay.tv_sec = integral_time;
+    idle_check_delay.tv_usec = (long)(MicroPerSec * (time - integral_time));
+  }
+  
   if (check_idle) {
     struct timeval now;
-    double icd = 0.3 * (break_delay.tv_sec +
-			(break_delay.tv_usec / (double)MicroPerSec));
-    long integral_icd = (long)(floor(icd));
-    
-    idle_check_delay.tv_sec = integral_icd;
-    idle_check_delay.tv_usec = (long)(MicroPerSec * (icd - integral_icd));
-    
     xwGETTIME(now);
     XSetErrorHandler(x_error_handler);
     idle_create(root_window, &now);

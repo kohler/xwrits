@@ -71,8 +71,8 @@ default_pictures(void)
   register_picture("clench", 0);
   register_picture("spread", 1);
   register_picture("finger", 2);
-  register_picture("ready", 3);
-  register_picture("resting", 4);
+  register_picture("resting", 3);
+  register_picture("ready", 4);
   p = register_picture("locked", 5);
   p->clock_x_off = 65;
 }

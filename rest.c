@@ -91,6 +91,7 @@ rest(void)
   if (ocurrent->break_clock) {
     clock_zero_time = a->timer;
     draw_clock(&now);
+    refresh_hands();
     a = new_alarm(Clock);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
