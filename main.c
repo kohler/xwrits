@@ -675,7 +675,7 @@ parse_options(int pargc, char **pargv)
       o->top = optparse_yesno;
 
     else if (optparse(s, "version", 1, "s")) {
-      printf("Xwrits version %s\n", VERSION);
+      printf("LCDF Xwrits %s\n", VERSION);
       printf("\
 Copyright (C) 1994-9 Eddie Kohler\n\
 This is free software; see the source for copying conditions.\n\
