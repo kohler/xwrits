@@ -21,9 +21,9 @@ move_lock(int domove)
   if (domove) {
     XClearArea(display, cover, lock_x, lock_y, WindowWidth, WindowHeight,
 	       False);
-    lock_x = ((rand() >> 4) % (display_width / WindowWidth * 2 - 1))
+    lock_x = ((rand() >> 4) % (port.width / WindowWidth * 2 - 1))
       * (WindowWidth / 2);
-    lock_y = (rand() >> 4) % (display_height - WindowHeight);
+    lock_y = (rand() >> 4) % (port.height - WindowHeight);
     lock_y = (lock_y & ~0x3) | 0x2;
   }
   if (lock_pixmap)
@@ -43,11 +43,11 @@ draw_message(char *message)
   if (message == RedrawMessage) message = oldmessage;
   if (message) {
     int length = strlen(message);
-    msgw = XTextWidth(font, message, length);
-    msgh = font->ascent + font->descent;
-    msgx = (display_width - msgw) / 2;
-    msgy = (display_height - msgh) / 2;
-    XDrawString(display, cover, gc, msgx, msgy + font->ascent,
+    msgw = XTextWidth(port.font, message, length);
+    msgh = port.font->ascent + port.font->descent;
+    msgx = (port.width - msgw) / 2;
+    msgy = (port.height - msgh) / 2;
+    XDrawString(display, cover, gc, msgx, msgy + port.font->ascent,
 		message, length);
   }
   oldmessage = message;
@@ -161,9 +161,10 @@ lock(void)
   
   {
     XSetWindowAttributes setattr;
-    unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect;
+    unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect
+      | CWBorderPixel | CWColormap;
     if (!bars_pixmap) {
-      setattr.background_pixel = black_pixel;
+      setattr.background_pixel = port.black;
       cwmask |= CWBackPixel;
     } else {
       setattr.background_pixmap = bars_pixmap;
@@ -172,10 +173,12 @@ lock(void)
     setattr.backing_store = NotUseful;
     setattr.save_under = False;
     setattr.override_redirect = True;
-    cover = XCreateWindow(display, root_window,
-			  0, 0, display_width, display_height,
-			  0, CopyFromParent, InputOutput, CopyFromParent,
-			  cwmask, &setattr);
+    setattr.colormap = port.colormap;
+    setattr.border_pixel = 0;
+    cover = XCreateWindow
+      (display, port.root_window,
+       0, 0, port.width, port.height, 0,
+       port.depth, InputOutput, port.visual, cwmask, &setattr);
     XSelectInput(display, cover, ButtonPressMask | ButtonReleaseMask |
 		 KeyPressMask | VisibilityChangeMask | ExposureMask);
     XMapRaised(display, cover);
@@ -189,8 +192,8 @@ lock(void)
   
   if (!gc) {
     XGCValues gcv;
-    gcv.font = font->fid;
-    gcv.foreground = white_pixel;
+    gcv.font = port.font->fid;
+    gcv.foreground = port.white;
     gc = XCreateGC(display, cover, GCFont | GCForeground, &gcv);
   }
   

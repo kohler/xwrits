@@ -267,9 +267,9 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
     
     pending = XPending(display);
     if (!pending) {
-      FD_SET(x_socket, &xfds);
-      select(x_socket + 1, &xfds, 0, 0, timeoutptr);
-      pending = FD_ISSET(x_socket, &xfds);
+      FD_SET(port.x_socket, &xfds);
+      select(port.x_socket + 1, &xfds, 0, 0, timeoutptr);
+      pending = FD_ISSET(port.x_socket, &xfds);
     }
     
     if (pending)

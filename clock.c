@@ -105,7 +105,7 @@ erase_clock(void)
     Picture *p = current_slideshow->picture[i];
     if (p->clock) erase_1_clock(p);
   }
-  XSetForeground(display, clock_back_gc, white_pixel);
+  XSetForeground(display, clock_back_gc, port.white);
 }
 
 
@@ -113,20 +113,15 @@ void
 init_clock(Drawable drawable)
 {
   XGCValues gcv;
-  XFontStruct *font;
   
-  gcv.foreground = black_pixel;
+  gcv.foreground = port.black;
   gcv.line_width = 3;
   gcv.cap_style = CapRound;
-  font = XLoadQueryFont(display,
-			"-adobe-helvetica-bold-r-normal--*-140-75-75-*");
-  if (!font) font = XLoadQueryFont(display, "fixed");
-  gcv.font = font->fid;
-  clock_fore_gc = XCreateGC(display, drawable, GCForeground | GCLineWidth |
-			    GCCapStyle | GCFont, &gcv);
+  clock_fore_gc = XCreateGC
+    (display, drawable, GCForeground | GCLineWidth | GCCapStyle, &gcv);
 
   clock_hand_gc = clock_fore_gc;
   
-  gcv.foreground = white_pixel;
+  gcv.foreground = port.white;
   clock_back_gc = XCreateGC(display, drawable, GCForeground, &gcv);
 }

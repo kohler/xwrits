@@ -11,7 +11,7 @@
 #endif
 #include "gif.h"
 
-
+typedef struct Port Port;
 typedef struct Options Options;
 typedef struct Hand Hand;
 typedef struct Picture Picture;
@@ -32,14 +32,31 @@ typedef struct Alarm Alarm;
 /*****************************************************************************/
 /*  Global X stuff							     */
 
+struct Port {
+  
+  Display *display;
+  int x_socket;
+  
+  int screen_number;
+  Window root_window;
+  int width;
+  int height;
+  
+  int wm_delta_x;
+  int wm_delta_y;
+  
+  Visual *visual;
+  int depth;
+  Colormap colormap;
+  unsigned long black;
+  unsigned long white;
+  
+  XFontStruct *font;
+  
+};
+
 extern Display *display;
-extern int screen_number;
-extern Window root_window;
-extern int x_socket;
-extern int display_width, display_height;
-extern int wm_delta_x, wm_delta_y;
-extern XFontStruct *font;
-extern unsigned long black_pixel, white_pixel;
+extern Port port;
 
 int default_x_processing(XEvent *);
 int x_error_handler(Display *, XErrorEvent *);

@@ -148,10 +148,10 @@ unmap_all(void)
   XUnmapWindow(display, h->w);
   /* Synthetic UnmapNotify required by ICCCM to withdraw the window */
   event.type = UnmapNotify;
-  event.xunmap.event = root_window;
+  event.xunmap.event = port.root_window;
   event.xunmap.window = h->w;
   event.xunmap.from_configure = False;
-  XSendEvent(display, root_window, False,
+  XSendEvent(display, port.root_window, False,
 	     SubstructureRedirectMask | SubstructureNotifyMask, &event);
   
   blend_slideshow(slideshow[Warning]);

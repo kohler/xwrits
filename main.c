@@ -25,22 +25,7 @@ int active_hands = 0;
 Slideshow *slideshow[MaxState];
 
 Display *display;
-int screen_number;
-int display_width;
-int display_height;
-int x_socket;
-
-Visual *visual;
-int depth;
-Colormap colormap;
-unsigned long black_pixel;
-unsigned long white_pixel;
-
-Window root_window;
-XFontStruct *font;
-
-int wm_delta_x = NODELTAS;
-int wm_delta_y = NODELTAS;
+Port port;
 
 static char *display_name = 0;
 
@@ -64,8 +49,8 @@ determine_wm_deltas(Hand *h)
     XFree(children);
   } while (parent != root);
   XGetWindowAttributes(display, pparent, &attr);
-  wm_delta_x = attr.width - h->width;
-  wm_delta_y = attr.height - h->height;
+  port.wm_delta_x = attr.width - h->width;
+  port.wm_delta_y = attr.height - h->height;
 }
 
 
@@ -107,7 +92,7 @@ get_icon_size()
   int nic;
   icon_width = IconWidth;
   icon_height = IconHeight;
-  if (XGetIconSizes(display, root_window, &ic, &nic) == 0)
+  if (XGetIconSizes(display, port.root_window, &ic, &nic) == 0)
     return;
   if (nic != 0) {
     if (icon_width < ic->min_width) icon_width = ic->min_width;
@@ -128,9 +113,9 @@ get_icon_size()
 
 static void
 get_best_position(int *xlist, int *ylist, int num, int width, int height,
-		int *retx, int *rety)
+		  int *retx, int *rety)
 {
-  unsigned int bestpenalty = 0x8000U;
+  unsigned int best_penalty = 0x8000U;
   unsigned int penalty;
   int i, overw, overh, best = 0;
   Hand *h;
@@ -144,8 +129,8 @@ get_best_position(int *xlist, int *ylist, int num, int width, int height,
 	overh = xwmin(y2, h->y + h->height) - xwmax(y1, h->y);
 	if (overw > 0 && overh > 0) penalty += overw * overh;
       }
-    if (penalty < bestpenalty) {
-      bestpenalty = penalty;
+    if (penalty < best_penalty) {
+      best_penalty = penalty;
       best = i;
     }
   }
@@ -171,14 +156,14 @@ new_hand(int x, int y)
   Hand *nh = xwNEW(Hand);
   
   if (x == NHCenter)
-    x = (display_width - WindowWidth) / 2;
+    x = (port.width - WindowWidth) / 2;
   if (y == NHCenter)
-    y = (display_height - WindowHeight) / 2;
+    y = (port.height - WindowHeight) / 2;
   
   if (x == NHRandom || y == NHRandom) {
     int xs[NHTries], ys[NHTries], i;
-    int xdist = display_width - WindowWidth;
-    int ydist = display_height - WindowHeight;
+    int xdist = port.width - WindowWidth;
+    int ydist = port.height - WindowHeight;
     int xrand = x == NHRandom;
     int yrand = y == NHRandom; /* gcc bug here */
     for (i = 0; i < NHTries; i++) {
@@ -233,7 +218,7 @@ new_hand(int x, int y)
   {
     XSetWindowAttributes setattr;
     unsigned long setattr_mask;
-    setattr.colormap = colormap;
+    setattr.colormap = port.colormap;
     setattr.backing_store = NotUseful;
     setattr.save_under = False;
     setattr.border_pixel = 0;
@@ -242,14 +227,14 @@ new_hand(int x, int y)
       | CWSaveUnder;
     
     nh->w = XCreateWindow
-      (display, root_window,
+      (display, port.root_window,
        x, y, WindowWidth, WindowHeight, 0,
-       depth, InputOutput, visual, setattr_mask, &setattr);
+       port.depth, InputOutput, port.visual, setattr_mask, &setattr);
     
     xwmh->icon_window = nh->iconw = XCreateWindow
-      (display, root_window,
+      (display, port.root_window,
        x, y, icon_width, icon_height, 0,
-       depth, InputOutput, visual, setattr_mask, &setattr);
+       port.depth, InputOutput, port.visual, setattr_mask, &setattr);
   }
 #if 0
   nh->w = XCreateSimpleWindow
@@ -371,7 +356,7 @@ default_x_processing(XEvent *e)
     h->y = e->xconfigure.y;
     h->width = e->xconfigure.width;
     h->height = e->xconfigure.height;
-    if (wm_delta_x == NODELTAS) determine_wm_deltas(h);
+    if (port.wm_delta_x == NODELTAS) determine_wm_deltas(h);
     break;
     
    case MapNotify:
@@ -682,24 +667,37 @@ check_options(Options *o)
 #endif
 
 static void
-choose_visual(void)
+initialize_port(Display *display, int screen_number)
 {
   XVisualInfo visi_template;
   int nv, i;
   XVisualInfo *v;
   XVisualInfo *best_v = 0;
-  VisualID default_visualid = DefaultVisual(display, screen_number)->visualid;
+  VisualID default_visualid;
+
+  /* initialize Port fields */
+  port.display = display;
+  port.x_socket = ConnectionNumber(display);
+  port.screen_number = screen_number;
+  port.root_window = RootWindow(display, screen_number);
+  port.width = DisplayWidth(display, screen_number);
+  port.height = DisplayHeight(display, screen_number);
+  port.wm_delta_x = NODELTAS;
+  port.wm_delta_y = NODELTAS;
+
+  /* choose the Visual */
+  default_visualid = DefaultVisual(display, screen_number)->visualid;
   visi_template.screen = screen_number;
-  
   v = XGetVisualInfo(display, VisualScreenMask, &visi_template, &nv);
+  
   for (i = 0; i < nv && !best_v; i++)
     if (v[i].visualid == default_visualid)
       best_v = &v[i];
   
   if (!best_v) {
-    visual = DefaultVisual(display, screen_number);
-    depth = DefaultDepth(display, screen_number);
-    colormap = DefaultColormap(display, screen_number);
+    port.visual = DefaultVisual(display, screen_number);
+    port.depth = DefaultDepth(display, screen_number);
+    port.colormap = DefaultColormap(display, screen_number);
   } else {
   
     /* Which visual to choose? This isn't exactly a simple decision, since
@@ -710,27 +708,31 @@ choose_visual(void)
       if (v[i].depth > best_v->depth && v[i].VISUAL_CLASS == TrueColor)
 	best_v = &v[i];
     
-    visual = best_v->visual;
-    depth = best_v->depth;
+    port.visual = best_v->visual;
+    port.depth = best_v->depth;
     if (best_v->visualid != default_visualid)
-      colormap = XCreateColormap(display, root_window, visual, AllocNone);
+      port.colormap = XCreateColormap(display, port.root_window,
+				      port.visual, AllocNone);
     else
-      colormap = DefaultColormap(display, screen_number);
+      port.colormap = DefaultColormap(display, screen_number);
     
   }
+  
+  if (v) XFree(v);
   
   /* set up black_pixel and white_pixel */
   {
     XColor color;
     color.red = color.green = color.blue = 0;
-    XAllocColor(display, colormap, &color);
-    black_pixel = color.pixel;
+    XAllocColor(display, port.colormap, &color);
+    port.black = color.pixel;
     color.red = color.green = color.blue = 0xFFFF;
-    XAllocColor(display, colormap, &color);
-    white_pixel = color.pixel;
+    XAllocColor(display, port.colormap, &color);
+    port.white = color.pixel;
   }
-  
-  if (v) XFree(v);
+
+  /* choose the font */
+  port.font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
 }
 
 
@@ -784,13 +786,7 @@ main(int argc, char *argv[])
   
   display = XOpenDisplay(display_name);
   if (!display) error("cannot open display");
-  x_socket = ConnectionNumber(display);
-  screen_number = DefaultScreen(display);
-  root_window = RootWindow(display, screen_number);
-  choose_visual();
-  display_width = DisplayWidth(display, screen_number);
-  display_height = DisplayHeight(display, screen_number);
-  font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
+  initialize_port(display, DefaultScreen(display));
   
   ocurrent = &onormal;
   
@@ -815,7 +811,7 @@ main(int argc, char *argv[])
     struct timeval now;
     xwGETTIME(now);
     XSetErrorHandler(x_error_handler);
-    idle_create(root_window, &now);
+    idle_create(port.root_window, &now);
   }
   
   while (1) {
