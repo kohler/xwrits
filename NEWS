@@ -1,5 +1,29 @@
 Xwrits NEWS
 
+Version 2.19   8.Feb.2002
+
+* The escalation "clock" corresponding to `after=TIME' options proceeds
+  even after you cancel a break by deleting all the xwrits windows.
+  Therefore, you can no longer prevent escalation by deleting xwrits
+  windows with your window manager.
+
+* Locking code works with large `lock-picture's. Reported by Carlos
+  O'Donell Jr. <carlos@baldric.uwo.ca>.
+
+* Add `bars-picture' option. If you specify your own `lock-picture', then
+  `bars-picture' defaults to a black screen. Say `bars-picture="&bars"' to
+  get the old behavior.
+
+* Add `+verbose' option for debugging.
+
+* Xwrits checks whether other clients pay attention to KeyRelease events,
+  as well as KeyPress events. This may improve its interaction with certain
+  window managers. For example, xwrits seemed to come up less frequently
+  than it should when I was using KDE.
+
+* `--multiscreen' still doesn't seem to work, but I don't know why.
+
+
 Version 2.18   21.Dec.2001
 
 * Fix `--multiscreen' option. Reported by Jamie Zawinski <jwz@jwz.org>.

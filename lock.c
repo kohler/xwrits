@@ -4,9 +4,6 @@
 #include <X11/keysym.h>
 #include <assert.h>
 
-#define BARS_WIDTH		150
-#define WINDOW_HEIGHT		300
-
 struct timeval lock_message_delay;
 char *lock_password;
 
@@ -23,11 +20,28 @@ static int password_pos;
 static void
 lock_hand_position(Port *port, int *x, int *y)
 {
-  /* x_width_bars = max x | x*150 + screen_width <= port_width */
-  int x_width_bars = (port->width - locked_slideshow->screen_width) / BARS_WIDTH;
-  *x = ((rand() >> 4) % (x_width_bars + 1)) * BARS_WIDTH;
-  *y = (((rand() >> 4) % (port->height - locked_slideshow->screen_height))
-	& ~0x3) | 0x2;
+    /* 8.Feb.2002: Fix bug reported by Carlos O'Donell Jr.
+       <carlos@baldric.uwo.ca> -- large lock pictures (full screen height or
+       width) caused arithmetic problems */
+    
+    if (port->width <= locked_slideshow->screen_width)
+	*x = 0;
+    else if (bars_slideshow) {	/* Align image with bars. */
+	/* nbars = max x s.t. x*BARS_WIDTH <= port_width - lock_width */
+	int nbars = (port->width - locked_slideshow->screen_width) / bars_slideshow->screen_width;
+	*x = ((rand() >> 4) % (nbars + 1)) * bars_slideshow->screen_width;
+    } else
+	*x = (rand() >> 4) % (port->width - locked_slideshow->screen_width);
+
+    if (port->height <= locked_slideshow->screen_height)
+	*y = 0;
+    else if (bars_slideshow)
+	/* Default monochromatic bars repeat every 4 pixels, and our
+           monochromatic hands image is aligned on the 2nd pixel; thus "& ~0x3
+           | 0x2" */
+	*y = (((rand() >> 4) % (port->height - locked_slideshow->screen_height)) & ~0x3) | 0x2;
+    else
+	*y = (rand() >> 4) % (port->height - locked_slideshow->screen_height);
 }
 
 static void

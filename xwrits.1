@@ -1,9 +1,9 @@
 .\" -*- mode: nroff -*-
-.ds V 2.18
+.ds V 2.19
 .ds E " \-\- 
 .if t .ds E \(em
 '
-.TH XWRITS 1 "30 Dec 1999" "Version \*V"
+.TH XWRITS 1 "8 Feb 2002" "Version \*V"
 .SH NAME
 xwrits \- reminds you to take wrist breaks
 .SH SYNOPSIS
@@ -137,6 +137,14 @@ See
 above.
 '
 .TP 5
+\fBbars-picture\fP=\fIfile\fP [\fBbp\fP=\fIfile\fP]
+Sets the background GIF image that appears while the screen is locked. By
+default, this is an image of bars designed to work with the usual
+\fBlock-picture\fP. If you specify your own \fBlock-picture\fP, however,
+\fBbars-picture\fP defaults to a black screen. (Say
+``bars-picture="&bars"'' to keep the bars.) Animations are not acceptable.
+'
+.TP 5
 \fB+beep\fP (\fB\-beep\fP)
 Xwrits will beep when the break should begin and again when it is
 over.
@@ -205,8 +213,8 @@ normal warning window appears instead.
 '
 .TP 5
 \fBlock-picture\fP=\fIfile\fP [\fBlp\fP=\fIfile\fP]
-Sets the image that appears while the screen is locked to an arbitrary GIF.
-Animations are acceptable.
+Sets the GIF image that appears while the screen is locked.
+Animations are acceptable. See also \fBbars-picture\fP.
 '
 .TP 5
 \fBmaxhands\fP=\fInum\fP
@@ -275,13 +283,18 @@ The warning window will try to keep itself above all other windows on the
 desktop. (Note: it can be fooled into staying only partially visible.)
 '
 .TP 5
-\fBwarning-picture\fP=\fIfile\fP [\fBwp\fP=\fIfile\fP]
-Sets the image that appears on the warning window to an arbitrary GIF.
-Animations are acceptable.
+\fB+verbose\fP (\fB\-verbose\fP)
+Xwrits will print a lot of information about the windows on which it is
+listening for keystrokes. This is mostly useful for debugging.
 '
 .TP 5
 \fBversion\fP
 Prints the version number and some quickie warranty information and exits.
+'
+.TP 5
+\fBwarning-picture\fP=\fIfile\fP [\fBwp\fP=\fIfile\fP]
+Sets the image that appears on the warning window to an arbitrary GIF.
+Animations are acceptable.
 '
 .SH EXAMPLES
 Here is the way I run xwrits:
@@ -295,11 +308,11 @@ This looks pretty spectacular:
 Whee!!
 '
 .SH AUTHOR
-Eddie Kohler, eddietwo@lcs.mit.edu
+Eddie Kohler, kohler@icir.org
 .br
-http://www.lcdf.org/~eddietwo/
+http://www.icir.org/kohler/
 .PP
-http://www.lcdf.org/~eddietwo/xwrits/
+http://www.lcdf.org/xwrits/
 .br
 The \fBxwrits\fP home page (for distributions and so forth).
 .PP

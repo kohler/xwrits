@@ -27,6 +27,9 @@ static const char *ready_icon_slideshow_text = "&readyicon";
 Gif_Stream *locked_slideshow;
 static const char *locked_slideshow_text = "&locked";
 
+Gif_Stream *bars_slideshow;
+static const char *bars_slideshow_text = 0;
+
 int nports;
 Port *ports;
 
@@ -48,6 +51,8 @@ struct timeval quota_allotment;
 #define MAX_CHEATS_UNSET -97979797
 int max_cheats;
 static int allow_cheats;
+
+int verbose;
 
 static int force_mono = 0;
 static int multiscreen = 0;
@@ -355,6 +360,8 @@ default_x_processing(XEvent *e)
        communication is asynchronous. */
     unschedule_data(A_IDLE_SELECT, (void *)port,
 		    (void *)e->xdestroywindow.window);
+    if (verbose)
+	fprintf(stderr, "Window 0x%x: destroyed\n", (unsigned)e->xdestroywindow.window);
     break;
     
    case MappingNotify:
@@ -558,7 +565,10 @@ parse_options(int pargc, char **pargv)
       p->prev = o;
       o = p;
       
-    } else if (optparse(s, "breaktime", 1, "st", &o->break_time)) {
+    } else if (optparse(s, "bars-picture", 2, "ss", &bars_slideshow_text)
+	       || optparse(s, "bp", 2, "ss", &bars_slideshow_text))
+      ;
+    else if (optparse(s, "breaktime", 1, "st", &o->break_time)) {
       if (o->prev && !breaktime_warn_context) {
 	warning("meaning of `breaktime' following `after' has changed");
 	message("(You can specify `breaktime' multiple times, to lengthen a break");
@@ -661,11 +671,14 @@ parse_options(int pargc, char **pargv)
       ;
     else if (optparse(s, "top", 2, "t"))
       o->top = optparse_yesno;
-    
+
+    else if (optparse(s, "verbose", 4, "t")
+	     || optparse(s, "V", 1, "t"))
+	verbose = optparse_yesno;
     else if (optparse(s, "version", 1, "s")) {
       printf("LCDF Xwrits %s\n", VERSION);
       printf("\
-Copyright (C) 1994-2001 Eddie Kohler\n\
+Copyright (C) 1994-2002 Eddie Kohler\n\
 This is free software; see the source for copying conditions.\n\
 There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");
@@ -978,12 +991,12 @@ main_loop(void)
 	    /* warn() will figure out current options by time */
 	    tran = warn(was_lock, &onormal);
 	    assert(tran == TRAN_CANCEL || tran == TRAN_REST || tran == TRAN_LOCK);
-	    if (tran == TRAN_CANCEL)
+	    if (tran == TRAN_REST)
+		s = ST_REST;
+	    else if (tran == TRAN_CANCEL)
 		s = ST_CANCEL_WAIT;
 	    else if (tran == TRAN_LOCK)
 		s = ST_LOCK;
-	    else if (tran == TRAN_REST)
-		s = ST_REST;
 	    break;
 
 	  case ST_CANCEL_WAIT:
@@ -1084,7 +1097,6 @@ main(int argc, char *argv[])
   resting_icon_slideshow = parse_slideshow(resting_icon_slideshow_text, 1, force_mono);
   ready_slideshow = parse_slideshow(ready_slideshow_text, 1, force_mono);
   ready_icon_slideshow = parse_slideshow(ready_icon_slideshow_text, 1, force_mono);
-  locked_slideshow = parse_slideshow(locked_slideshow_text, 1, force_mono);
   ocurrent = &onormal;
 
   /* set up displays */
@@ -1111,10 +1123,15 @@ main(int argc, char *argv[])
 
   /* initialize pictures using first hand */
   if (lock_possible) {
-    Gif_Stream *bgfs = get_built_in_image(force_mono?"barsmono":"bars");
-    if (!bgfs && force_mono) bgfs = get_built_in_image("bars");
-    for (i = 0; i < nports; i++)
-      ports[i].bars_pixmap = Gif_XImage(ports[i].gfx, bgfs, 0);
+    locked_slideshow = parse_slideshow(locked_slideshow_text, 1, force_mono);
+    /* set bars_slideshow to default only if locked_slideshow is default */
+    if (!bars_slideshow_text)
+      bars_slideshow_text = (strcmp(locked_slideshow_text, "&locked") == 0 ? "&bars" : 0);
+    if (bars_slideshow_text) {
+      bars_slideshow = parse_slideshow(bars_slideshow_text, 1, force_mono);
+      for (i = 0; i < nports; i++)
+        ports[i].bars_pixmap = Gif_XImage(ports[i].gfx, bars_slideshow, 0);
+    }
   }
   
   /* watch keystrokes on all windows */

@@ -56,6 +56,8 @@ watch_keystrokes(Port *port, Window w, const struct timeval *now)
   
   XSelectInput(display, w, SubstructureNotifyMask);
   created_count++;
+  if (verbose)
+      fprintf(stderr, "Window 0x%x: watching for subwindows\n", (unsigned)w);
   
   /* This code ensures that at least register_keystrokes_delay elapses before
      we listen for KeyPress events on the window. We want to wait so we can
@@ -98,10 +100,13 @@ register_keystrokes(Port *port, Window w)
   
   if (attr.root == w
       || ((attr.all_event_masks | attr.do_not_propagate_mask)
-	  & KeyPressMask)) {
+	  & (KeyPressMask | KeyReleaseMask))) {
     key_press_selected_count++;
     XSelectInput(port->display, w, SubstructureNotifyMask | KeyPressMask);
-  }
+    if (verbose)
+      fprintf(stderr, "Window 0x%x: listening for keystrokes\n", (unsigned)w);
+  } else if (verbose)
+    fprintf(stderr, "Window 0x%x: skipping keystrokes\n", (unsigned)w);
 }
 
 

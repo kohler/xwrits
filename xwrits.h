@@ -260,7 +260,7 @@ void draw_slide(Hand *);
 extern Gif_Stream *current_slideshow;
 extern Gif_Stream *resting_slideshow, *resting_icon_slideshow;
 extern Gif_Stream *ready_slideshow, *ready_icon_slideshow;
-extern Gif_Stream *locked_slideshow;
+extern Gif_Stream *locked_slideshow, *bars_slideshow;
 #define DEFAULT_FLASH_DELAY_SEC 2
 
 Gif_Stream *get_built_in_image(const char *);
@@ -308,6 +308,8 @@ extern struct timeval quota_allotment;	/* counted towards break */
 
 extern int max_cheats;			/* allow this many cheat events before
 					   cancelling break */
+
+extern int verbose;			/* be verbose */
 
 void watch_keystrokes(Port *, Window, const struct timeval *);
 void register_keystrokes(Port *, Window);
