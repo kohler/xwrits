@@ -40,5 +40,7 @@ char *strerror(int errno);
 
 #ifdef __cplusplus
 }
+/* Get rid of inline macro under C++ */
+# undef inline
 #endif
 #endif
