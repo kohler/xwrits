@@ -52,7 +52,7 @@ dist-hook:
 	@d=`cd $(distdir)/mono; pwd` && cd $(srcdir) && cp -p $(MONO_PIC) $$d
 
 srclinks:
-	for i in fmalloc.c ; do \
+	for i in fmalloc.c strerror.c ; do \
 	ln -sf ~/src/edlib/$$i $$i ; done
 	for i in gif.h giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
 	ln -sf ~/src/giflib/$$i $$i ; done

@@ -1,6 +1,4 @@
 Makefile.in aclocal.m4 stamp-h.in config.h.in
 Makefile configure config.log config.cache config.status stamp-h config.h
 xwrits
-clp.c clp.h strerror.c gif.h giffunc.c gifread.c gifwrite.c
-gifx.h gifx.c giftoc.c
 giftoc colorpic.c monopic.c
