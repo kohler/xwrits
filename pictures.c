@@ -17,20 +17,20 @@ Slideshow *current_slideshow = 0;
 static Gif_XContext *gfx;
 
 static Gif_Record *large_color_records[] = {
-  &clenchl_gif, &spreadl_gif, &fingerl_gif, &restl_gif, &okl_gif,
-  &lock_gif, &bars_gif
+  &clenchl_gif, &spreadl_gif, &fingerl_gif, &koreanl_gif,
+  &restl_gif, &okl_gif, &lock_gif, &bars_gif
 };
 static Gif_Record *icon_color_records[] = {
-  &clenchi_gif, &spreadi_gif, &fingeri_gif, &resti_gif, &oki_gif,
-  0, 0
+  &clenchi_gif, &spreadi_gif, &fingeri_gif, 0,
+  &resti_gif, &oki_gif, 0, 0
 };
 static Gif_Record *large_mono_records[] = {
-  &clenchlm_gif, &spreadlm_gif, &fingerlm_gif, &restlm_gif, &oklm_gif,
-  &lockm_gif, &barsm_gif
+  &clenchlm_gif, &spreadlm_gif, &fingerlm_gif, 0,
+  &restlm_gif, &oklm_gif, &lockm_gif, &barsm_gif
 };
 static Gif_Record *icon_mono_records[] = {
-  &clenchim_gif, &spreadim_gif, &fingerim_gif, &restim_gif, &okim_gif,
-  0, 0
+  &clenchim_gif, &spreadim_gif, &fingerim_gif, 0,
+  &restim_gif, &okim_gif, 0, 0
 };
 
 static Picture *
@@ -72,9 +72,10 @@ default_pictures(void)
   register_picture("clench", 0);
   register_picture("spread", 1);
   register_picture("finger", 2);
-  register_picture("resting", 3);
-  register_picture("ready", 4);
-  p = register_picture("locked", 5);
+  register_picture("korean", 3);
+  register_picture("resting", 4);
+  register_picture("ready", 5);
+  p = register_picture("locked", 6);
   p->clock_x_off = 65;
 }
 

@@ -6,7 +6,7 @@
 #include <stdarg.h>
 
 #define DEFAULT_SLIDESHOW		"clench;spread"
-#define DEFAULT_SLIDESHOW_FINGER	"clench;spread;finger"
+#define DEFAULT_SLIDESHOW_FINGER	"clench;spread;korean"
 
 #define SET_TIME(timeval, sec, usec) do { (timeval).tv_sec = (sec); (timeval).tv_usec = (usec); } while (0)
 
