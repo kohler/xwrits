@@ -1,8 +1,9 @@
+#include "config.h"
+#include "xwrits.h"
 #include <stdlib.h>
 #include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
-#include "xwrits.h"
 
 #define DEFAULT_SLIDESHOW		"clench;spread"
 #define DEFAULT_SLIDESHOW_FINGER	"clench;spread;finger"

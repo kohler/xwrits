@@ -1,10 +1,10 @@
+#include "config.h"
+#include "xwrits.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "xwrits.h"
 
 #include "gifx.h"
-
 #include "colorpic.c"
 #include "monopic.c"
 

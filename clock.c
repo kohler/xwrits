@@ -1,6 +1,7 @@
+#include "config.h"
+#include "xwrits.h"
 #include <stdlib.h>
 #include <math.h>
-#include "xwrits.h"
 
 #define ClockWidth 30
 #define ClockHeight 30

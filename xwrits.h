@@ -335,14 +335,14 @@ void unmap_all(void);
 
 
 #ifdef X_GETTIMEOFDAY
-#define xwGETTIMEOFDAY(a) X_GETTIMEOFDAY(a)
-#elif SYSV_GETTIMEOFDAY
-#define xwGETTIMEOFDAY(a) gettimeofday((a))
-#else
-#ifdef NO_GETTIMEOFDAY_PROTO
+# define xwGETTIMEOFDAY(a) X_GETTIMEOFDAY(a)
+#elif GETTIMEOFDAY_PROTO == 0
 EXTERNFUNCTION int gettimeofday(struct timeval *, struct timezone *);
-#endif
-#define xwGETTIMEOFDAY(a) gettimeofday((a), 0)
+# define xwGETTIMEOFDAY(a) gettimeofday((a), 0)
+#elif GETTIMEOFDAY_PROTO == 1
+# define xwGETTIMEOFDAY(a) gettimeofday((a))
+#else
+# define xwGETTIMEOFDAY(a) gettimeofday((a), 0)
 #endif
 
 #define xwGETTIME(a) do { xwGETTIMEOFDAY(&(a)); xwSUBTIME((a), (a), genesis_time); } while (0)

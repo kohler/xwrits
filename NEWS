@@ -1,5 +1,10 @@
 Xwrits NEWS
 
+Version 2.7.3
+
+* Updated GIF library to 0.99; moved to config.h-based configuration.
+
+
 Version 2.7.2   16.Dec.1998
 
 * Another bug fix in code for adjusting break length (sometimes it wouldn't

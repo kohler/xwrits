@@ -1,3 +1,4 @@
+#include "config.h"
 #include "xwrits.h"
 #include <math.h>
 

@@ -7,19 +7,19 @@ man_MANS = xwrits.1
 
 INCLUDES = $(X_CFLAGS)
 
-LDADD = @STRERROR_O@
+LDADD = @LIBOBJS@
 xwrits_LDADD = $(LDADD) @X_LIBS@ @X_PRE_LIBS@ -lX11 @X_EXTRA_LIBS@ -lm
 
-xwrits_SOURCES = giffunc.c gifread.c gifx.c gifx.h \
-		clock.c lock.c main.c pictures.c rest.c \
-		schedule.c warning.c xwrits.h
+xwrits_SOURCES = gif.h giffunc.c gifread.c gifx.h gifx.c \
+		xwrits.h clock.c lock.c main.c pictures.c rest.c \
+		schedule.c warning.c
 
 giftoc_SOURCES = giftoc.c
 
 BUILT_SOURCES = colorpic.c monopic.c
 
-xwrits_DEPENDENCIES = @STRERROR_O@
-giftoc_DEPENDENCIES = @STRERROR_O@
+xwrits_DEPENDENCIES = @LIBOBJS@
+giftoc_DEPENDENCIES = @LIBOBJS@
 
 giffunc.o: giffunc.c gif.h
 gifread.o: gifread.c gif.h
@@ -45,16 +45,13 @@ monopic.c: $(MONO_PIC) giftoc
 EXTRA_DIST = strerror.c xwrits.1 logo.gif rpm.spec
 MOSTLYCLEANFILES = colorpic.c monopic.c
 
-GIF_MEMORY_DEFINES =
-INTEGER_TYPES =
-
 dist-hook:
 	mkdir $(distdir)/color $(distdir)/mono
 	cp -p $(srcdir)/color/*.gif $(distdir)/color
 	cp -p $(srcdir)/mono/*.gif $(distdir)/mono
 
 srclinks:
-	for i in gif.h.in giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
+	for i in gif.h giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
 	ln -sf ~/src/giflib/$$i $$i ; done
 
 versionize:
