@@ -1,8 +1,9 @@
 Xwrits NEWS
 
-Version 2.22
+Version 2.22   2.Apr.2005
 
-* Support `+finger=GIFFILE'. Requested by Urko Lusa.
+* Support `+finger=GIFFILE'. Requested by Urko Lusa.  This change was made
+  in August 2002, but for some reason never released.
 
 
 Version 2.21   6.May.2002
