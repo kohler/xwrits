@@ -170,7 +170,6 @@ blendslideshow(Slideshow *ss)
 {
   Hand *h;
   Picture *p;
-  Alarm *a;
   struct timeval t, now;
   
   currentslideshow = ss;

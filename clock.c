@@ -45,7 +45,6 @@ draw1clock(Picture *p, int seconds)
 {
   int x, y;
   int hour, min;
-  double sinv, cosv;
   
   p->clock = 1;
   if (!p->large) return;

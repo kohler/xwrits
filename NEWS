@@ -7,4 +7,8 @@ Version 2.6b4
 
 Version 2.6b3
 
+* Fixed installation and improved the configure script.
+
+Version 2.6b2
+
 * Fixed bug with freeing memory multiple times. Works better on Linux now.

@@ -34,7 +34,6 @@ switchoptions(Options *opt, struct timeval now, int lockfailed)
 {
   Hand *h;
   Alarm *a;
-  Picture *p;
   
   ocurrent = opt;
   
