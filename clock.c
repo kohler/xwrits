@@ -70,13 +70,13 @@ draw_1_clock(Picture *p, int seconds)
 	   ClockHeight, 0, 23040);
   x += ClockWidth / 2;
   y += ClockHeight / 2;
-  min = (seconds + 5) / SecPerMin;
-  hour = min / MinPerHr;
-  min %= MinPerHr;
+  min = (seconds + 5) / SEC_PER_MIN;
+  hour = min / MIN_PER_HOUR;
+  min %= MIN_PER_HOUR;
   
   if (hour)
-    draw_hand(p, x, y, ClockHour, hour, HrPerCycle);
-  draw_hand(p, x, y, ClockMin, min, MinPerHr);
+    draw_hand(p, x, y, ClockHour, hour, HOUR_PER_CYCLE);
+  draw_hand(p, x, y, ClockMin, min, MIN_PER_HOUR);
 }
 
 

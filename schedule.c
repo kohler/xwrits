@@ -16,8 +16,8 @@ Alarm *alarms;
 
 /* Support for Xidle is *not* included. */
 
-struct timeval idle_select_delay;
-struct timeval idle_gap_delay;
+struct timeval register_keystrokes_delay;
+struct timeval register_keystrokes_gap;
 int check_idle;
 static unsigned long created_count;
 static unsigned long key_press_selected_count;
@@ -42,11 +42,11 @@ x_error_handler(Display *d, XErrorEvent *error)
 
 
 void
-idle_create(Window w, struct timeval *now)
+watch_keystrokes(Window w, struct timeval *now)
 {
   Window root, parent, *children;
   unsigned i, nchildren;
-  static struct timeval next_idle_create;
+  static struct timeval next_watch_keystrokes;
   Alarm *a;
   
   if (window_to_hand(w) || icon_window_to_hand(w))
@@ -62,28 +62,30 @@ idle_create(Window w, struct timeval *now)
      do idle processing for all of them all at once, in case we are doing
      something else as well (e.g., "spectacular effects").
      This code ensures that:
-     - at least idleselectdelay elapses before selection is done on the window.
-       We want to wait so we can make sure the window selects for KeyPress
-       events.
-     - at least idlegapdelay elapses between selection on any 2 windows. */
+     - at least register_keystrokes_delay elapses before selection is done
+       on the window. We want to wait so we can make sure the window
+       selects for KeyPress events.
+     - at least register_keystrokes_gap elapses between selection on any
+       2 windows. */
   a = new_alarm_data(IdleSelect, (void *)w);
-  xwADDTIME(a->timer, *now, idle_select_delay);
-  if (xwTIMEGT(a->timer, next_idle_create))
-    next_idle_create = a->timer;
+  xwADDTIME(a->timer, *now, register_keystrokes_delay);
+  if (xwTIMEGT(a->timer, next_watch_keystrokes))
+    next_watch_keystrokes = a->timer;
   else
-    a->timer = next_idle_create;
+    a->timer = next_watch_keystrokes;
   schedule(a);
-  xwADDTIME(next_idle_create, next_idle_create, idle_gap_delay);
+  xwADDTIME(next_watch_keystrokes, next_watch_keystrokes,
+	    register_keystrokes_gap);
   
   for (i = 0; i < nchildren; i++)
-    idle_create(children[i], now);
+    watch_keystrokes(children[i], now);
   
   if (children) XFree(children);
 }
 
 
 void
-idle_select(Window w)
+register_keystrokes(Window w)
 {
   /* Before I only selected KeyPress if someone else had selected KeyPress on
      the window (indicated by the `or' of all_event_masks and
@@ -246,7 +248,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	break;
 	
        case IdleSelect:
-	idle_select((Window)a->data);
+	register_keystrokes((Window)a->data);
 	break;
 	
        default:

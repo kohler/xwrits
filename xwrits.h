@@ -70,7 +70,7 @@ struct Options {
   struct timeval multiply_delay;
   struct timeval lock_bounce_delay;
   struct timeval top_delay;
-  
+    
   unsigned never_iconify: 1;
   unsigned top: 1;
   unsigned clock: 1;
@@ -80,7 +80,7 @@ struct Options {
   unsigned appear_iconified: 1;
   unsigned lock: 1;
   int max_hands;
-  
+
   Slideshow *slideshow;
   
   struct timeval next_delay;
@@ -200,8 +200,8 @@ struct Hand {
 extern Hand *hands;
 extern int active_hands;
 
-#define NHCenter	-0x8000
-#define NHRandom	-0x7FFF
+#define NHCenter	0x8000
+#define NHRandom	0x7FFF
 Hand *new_hand(int x, int y);
 void destroy_hand(Hand *);
 
@@ -264,13 +264,19 @@ void load_needed_pictures(Window, int, int force_mono);
 /*****************************************************************************/
 /*  Idle processing							     */
 
+<<<<<<< xwrits.h
+extern struct timeval register_keystrokes_delay;
+extern struct timeval register_keystrokes_gap;
+extern struct timeval idle_time;
+=======
 extern struct timeval idle_select_delay;
 extern struct timeval idle_gap_delay;
 extern struct timeval idle_check_delay;
+>>>>>>> 1.7
 extern int check_idle;
 
-void idle_create(Window, struct timeval *);
-void idle_select(Window);
+void watch_keystrokes(Window, struct timeval *);
+void register_keystrokes(Window);
 
 
 /*****************************************************************************/
@@ -302,23 +308,23 @@ void unmap_all(void);
 /*****************************************************************************/
 /*  Time functions							     */
 
-#define MicroPerSec 1000000
-#define SecPerMin 60
-#define MinPerHr 60
-#define HrPerCycle 12
+#define MICRO_PER_SEC 1000000
+#define SEC_PER_MIN 60
+#define MIN_PER_HOUR 60
+#define HOUR_PER_CYCLE 12
 
 #define xwADDTIME(result, a, b) do { \
 	(result).tv_sec = (a).tv_sec + (b).tv_sec; \
-	if (((result).tv_usec = (a).tv_usec + (b).tv_usec) >= MicroPerSec) { \
+	if (((result).tv_usec = (a).tv_usec+(b).tv_usec) >= MICRO_PER_SEC) { \
 		(result).tv_sec++; \
-		(result).tv_usec -= MicroPerSec; \
+		(result).tv_usec -= MICRO_PER_SEC; \
 	} } while (0)
 
 #define xwSUBTIME(result, a, b) do { \
 	(result).tv_sec = (a).tv_sec - (b).tv_sec; \
 	if (((result).tv_usec = (a).tv_usec - (b).tv_usec) < 0) { \
 		(result).tv_sec--; \
-		(result).tv_usec += MicroPerSec; \
+		(result).tv_usec += MICRO_PER_SEC; \
 	} } while (0)
 
 #define xwSETMINTIME(a, b) do { \

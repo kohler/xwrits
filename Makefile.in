@@ -43,7 +43,7 @@ install: $(PROGRAMS)
 	$(INSTALL_PROGRAM) xwrits $(bindir)/xwrits
 	$(INSTALL_DATA) xwrits.man $(mandir)/xwrits.$(manext)
 
-main.o: main.c defaults.h
+main.o: main.c
 	$(CC) $(CPPFLAGS) -DVERSION='"$(VERSION)"' $(CFLAGS) -c $<
 
 #####
@@ -93,7 +93,7 @@ dist:
 	mkdir -m 0777 $(PACKAGE)-$(VERSION)
 	cp Makefile.in README NEWS INSTALL configure configure.in install-sh \
 	gif.h.in giffunc.c gifread.c gifx.h gifx.c giftoc.c \
-	defaults.h xwrits.h xwrits.man \
+	xwrits.h xwrits.man \
 	pictures.c clock.c lock.c rest.c schedule.c warning.c rest.c main.c \
 	$(PACKAGE)-$(VERSION)
 	mkdir -m 0777 $(PACKAGE)-$(VERSION)/color

@@ -3,10 +3,11 @@
 #include <math.h>
 #include <stdarg.h>
 #include "xwrits.h"
-#include "defaults.h"
 
+#define DEFAULT_SLIDESHOW		"clench;spread"
+#define DEFAULT_SLIDESHOW_FINGER	"clench;spread;finger"
 
-#define xwSETTIME(timeval, sec, usec) do { (timeval).tv_sec = (sec); (timeval).tv_usec = (usec); } while (0)
+#define SET_TIME(timeval, sec, usec) do { (timeval).tv_sec = (sec); (timeval).tv_usec = (usec); } while (0)
 
 #define NODELTAS	-0x8000
 
@@ -18,6 +19,8 @@ struct timeval type_delay;
 struct timeval break_delay;
 struct timeval idle_check_delay;
 static struct timeval zero = {0, 0};
+
+static struct timeval flash_delay;
 
 Hand *hands;
 int active_hands = 0;
@@ -165,7 +168,7 @@ new_hand(int x, int y)
     int xdist = port.width - WindowWidth;
     int ydist = port.height - WindowHeight;
     int xrand = x == NHRandom;
-    int yrand = y == NHRandom; /* gcc bug here */
+    int yrand = y == NHRandom;
     for (i = 0; i < NHTries; i++) {
       if (xrand) xs[i] = (rand() >> 4) % xdist;
       else xs[i] = x;
@@ -400,7 +403,7 @@ default_x_processing(XEvent *e)
     {
       struct timeval now;
       xwGETTIME(now);
-      idle_create(e->xcreatewindow.window, &now);
+      watch_keystrokes_create(e->xcreatewindow.window, &now);
       break;
     }
     
@@ -435,8 +438,8 @@ strtointerval(char *s, char **stores, struct timeval *iv)
   if (stores) *stores = s;
   if (!ok || *s != 0) return 0;
   integral_sec = (long)(floor(sec));
-  iv->tv_sec = min * SecPerMin + integral_sec;
-  iv->tv_usec = (int)(MicroPerSec * (sec - integral_sec));
+  iv->tv_sec = min * SEC_PER_MIN + integral_sec;
+  iv->tv_usec = (int)(MICRO_PER_SEC * (sec - integral_sec));
   return 1;
 }
 
@@ -539,16 +542,13 @@ static void
 parse_options(int pargc, char **pargv)
 {
   char *s;
-  char *slideshow_text = DefaultSlideshow;
-  struct timeval flash_delay;
+  char *slideshow_text = DEFAULT_SLIDESHOW;
   Slideshow *slideshow = 0;
   Options *o = &onormal;
   Options *p;
   
   argc = pargc;
   argv = pargv;
-  
-  xwSETTIME(flash_delay, DefaultFlashdelay, 0);
   
   while (argc > 0) {
     
@@ -580,13 +580,13 @@ parse_options(int pargc, char **pargv)
     
     else if (optparse(s, "finger", 1, "t")) {
       slideshow_text =
-	optparse_yesno ? DefaultSlideshowFinger : DefaultSlideshow;
+	optparse_yesno ? DEFAULT_SLIDESHOW_FINGER : DEFAULT_SLIDESHOW;
       slideshow = 0;
     } else if (optparse(s, "flashtime", 3, "st", &flash_delay))
       slideshow = 0;
     else if (optparse(s, "flipoff", 1, "t")) {
       slideshow_text =
-	optparse_yesno ? DefaultSlideshowFinger : DefaultSlideshow;
+	optparse_yesno ? DEFAULT_SLIDESHOW_FINGER : DEFAULT_SLIDESHOW;
       slideshow = 0;
       
     } else if (optparse(s, "iconified", 2, "t"))
@@ -730,9 +730,46 @@ initialize_port(Display *display, int screen_number)
     XAllocColor(display, port.colormap, &color);
     port.white = color.pixel;
   }
-
+  
   /* choose the font */
   port.font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
+}
+
+
+static void
+default_settings(void)
+{
+  /* Global default settings */
+  SET_TIME(type_delay, 55 * SEC_PER_MIN, 0);
+  SET_TIME(break_delay, 5 * SEC_PER_MIN, 0);
+  SET_TIME(flash_delay, 2, 0);
+  
+  SET_TIME(onormal.top_delay, 2, 0);
+  
+  SET_TIME(onormal.multiply_delay, 2, 300000);
+  onormal.max_hands = 25;
+  
+  /* Locking settings */
+  SET_TIME(onormal.lock_bounce_delay, 4, 0);
+  SET_TIME(lock_message_delay, 10, 0);
+  lock_password = "quit";
+
+  /* Keystroke registration functions */
+  SET_TIME(register_keystrokes_delay, 1, 0);
+  SET_TIME(register_keystrokes_gap, 0, 10000);
+  SET_TIME(idle_check_delay, 0, 0);
+  check_idle = 1;
+
+  /* Clock tick time functions */
+  /* 15 seconds seems like a reasonable clock tick time, even though it'll
+     redraw the same hands 4 times. */
+  SET_TIME(clock_tick, 15, 0);
+
+  /* Next opiton set */
+  SET_TIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
+  onormal.next = 0;
+
+  /* For slideshow defaults, see the two #defines at the top of this file */
 }
 
 
@@ -746,29 +783,8 @@ main(int argc, char *argv[])
   xwGETTIMEOFDAY(&genesis_time);
   
   srand((getpid() + 1) * time(0));
-  
-  xwSETTIME(type_delay, DefaultTypedelay, 0);
-  xwSETTIME(break_delay, DefaultBreakdelay, 0);
-  xwSETTIME(onormal.multiply_delay,
-	    DefaultMultiplydelay, DefaultMultiplydelayUsec);
-  xwSETTIME(onormal.lock_bounce_delay, DefaultLockbouncedelay, 0);
-  xwSETTIME(onormal.top_delay, DefaultTopdelay, 0);
-  onormal.max_hands = DefaultMaxHands;
-  xwSETTIME(onormal.next_delay, DefaultRudedelay, 0);
-  onormal.next = 0;
-  
-  xwSETTIME(lock_message_delay, DefaultLockmessagedelay, 0);
-  lock_password = DefaultLockpassword;
-  
-  xwSETTIME(idle_select_delay, DefaultIdleselectdelay, 0);
-  xwSETTIME(idle_gap_delay, DefaultIdlegapdelay, DefaultIdlegapdelayUsec);
-  xwSETTIME(idle_check_delay, 0, 0);
-  check_idle = 1;
-  
-  /* 15 seconds seems like a reasonable clock tick time, even though it'll
-     redraw the same hands 4 times. */
-  xwSETTIME(clock_tick, 15, 0);
-  
+
+  default_settings();
   default_pictures();
   
   /* remove first argument = program name */
@@ -801,17 +817,17 @@ main(int argc, char *argv[])
   
   if (check_idle && xwTIMELEQ0(idle_check_delay)) {
     double time = 0.3 * (break_delay.tv_sec +
-			(break_delay.tv_usec / (double)MicroPerSec));
+			(break_delay.tv_usec / (double)MICRO_PER_SEC));
     long integral_time = (long)(floor(time));
     idle_check_delay.tv_sec = integral_time;
-    idle_check_delay.tv_usec = (long)(MicroPerSec * (time - integral_time));
+    idle_check_delay.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
   }
   
   if (check_idle) {
     struct timeval now;
     xwGETTIME(now);
     XSetErrorHandler(x_error_handler);
-    idle_create(port.root_window, &now);
+    watch_keystrokes(port.root_window, &now);
   }
   
   while (1) {

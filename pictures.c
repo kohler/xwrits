@@ -147,7 +147,7 @@ parse_slideshow(char *slideshowtext, struct timeval *delayinput)
   if (!delayinput || xwTIMELEQ0(delay)) {
     /* Simulate never flashing by flashing with a VERY long period --
        30 days. */
-    delay.tv_sec = 30 * HrPerCycle * MinPerHr * SecPerMin;
+    delay.tv_sec = 30 * HOUR_PER_CYCLE * MIN_PER_HOUR * SEC_PER_MIN;
     delay.tv_usec = 0;
   }
   
