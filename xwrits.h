@@ -113,6 +113,7 @@ Window check_xwrits_window(Port *, Window);
 #define Xw_TakeBreak		(LASTEvent + 101)
 int default_x_processing(XEvent *);
 int x_error_handler(Display *, XErrorEvent *);
+extern XErrorHandler old_x_error_handler;
 
 void add_peer(Port *, Window);
 void notify_peers_rest(void);

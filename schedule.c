@@ -24,21 +24,24 @@ static unsigned long key_press_selected_count;
 int
 x_error_handler(Display *d, XErrorEvent *error)
 {
-  if (error->error_code != BadWindow && error->error_code != BadDrawable) {
-    char buffer[BUFSIZ];
-    XGetErrorText(d, error->error_code, buffer, BUFSIZ);
-    fprintf(stderr, "X Error of failed request: %s\n", buffer);
-    abort();
-  }
-  
-  /* Maybe someone created a window then destroyed it immediately!
-     I don't think there's any way of working around this. */
-  if (error->error_code == BadWindow) {
-    Window window = (Window)error->resourceid;
-    unschedule_data(A_IDLE_SELECT, (void *)find_port(error->display, window),
-		    (void *)window);
-  }
-  return 0;
+    if (error->error_code != BadWindow && error->error_code != BadDrawable) {
+	char buffer[BUFSIZ];
+	/* avoid recursive calls to this function, in case XGetErrorText
+	   returns an error! Problem reported by Mike Swieton
+	   <swietonm@student.gvsu.edu> */
+	XSetErrorHandler(old_x_error_handler);	
+	XGetErrorText(d, error->error_code, buffer, BUFSIZ);
+	fprintf(stderr, "X Error of failed request: %s\n", buffer);
+	abort();
+    }
+
+    /* Maybe someone created a window then destroyed it immediately!
+       I don't think there's any way of working around this. */
+    if (error->error_code == BadWindow) {
+	Window window = (Window)error->resourceid;
+	unschedule_data(A_IDLE_SELECT, (void *)find_port(error->display, window), (void *)window);
+    }
+    return 0;
 }
 
 

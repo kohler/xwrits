@@ -39,6 +39,7 @@ Port **ports;
 
 fd_set x_socket_set;
 int max_x_socket;
+XErrorHandler old_x_error_handler;
 
 int check_idle;
 struct timeval idle_time;
@@ -1286,7 +1287,7 @@ main(int argc, char *argv[])
   
   /* watch keystrokes on all windows */
   xwGETTIME(now);
-  XSetErrorHandler(x_error_handler);
+  old_x_error_handler = XSetErrorHandler(x_error_handler);
   for (i = 0; i < nports; i++)
       if (ports[i]->master == ports[i])
 	  watch_keystrokes(ports[i], ports[i]->root_window, &now);
