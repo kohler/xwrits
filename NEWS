@@ -1,5 +1,16 @@
 Xwrits NEWS
 
+Version 2.14   15.Feb.2001
+
+* Fixed new crash when `+lock' and `+breakclock' were both supplied.
+  Reported by Chris Keane <chris@chris-keane.co.uk>.
+
+* Fixed time-adjusting code when the system clock jumps backwards: Do not
+  use the remaining-timeout value to calculate how much the system clock
+  has changed. The symptom was that xwrits windows would stop animating if
+  the system clock jumped backwards (even by a little bit).
+
+
 Version 2.13   11.Feb.2001
 
 * Documented multiple `breaktime' specifications. This lets you, for

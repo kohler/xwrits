@@ -21,7 +21,7 @@ ensure_one_hand(Port *port)
 static struct timeval wait_over_time;
 
 static int
-wait_x_loop(XEvent *e, struct timeval *now)
+wait_x_loop(XEvent *e, const struct timeval *now)
 {
   struct timeval diff;
   
@@ -49,7 +49,7 @@ wait_x_loop(XEvent *e, struct timeval *now)
 }
 
 static int
-adjust_wait_time(struct timeval *wait_began_time, struct timeval *type_time)
+adjust_wait_time(struct timeval *wait_began_time, const struct timeval *type_time)
      /* Adjust the time to wake up to reflect the length of the break, if
         under check_quota. Want to be able to type for slightly longer if
         you've been taking mini-breaks. */
@@ -81,7 +81,7 @@ adjust_wait_time(struct timeval *wait_began_time, struct timeval *type_time)
 }
 
 int
-wait_for_break(struct timeval *type_time)
+wait_for_break(const struct timeval *type_time)
 {
   int val, i;
   struct timeval wait_began_time;
@@ -134,7 +134,7 @@ static int current_cheats;
 static struct timeval break_over_time;
 
 static int
-rest_x_loop(XEvent *e, struct timeval *now)
+rest_x_loop(XEvent *e, const struct timeval *now)
 {
   /* If the break is over, wake up. */
   if (xwTIMEGEQ(*now, break_over_time))
@@ -153,7 +153,7 @@ rest_x_loop(XEvent *e, struct timeval *now)
 }
 
 void
-calculate_break_time(struct timeval *break_over_time, struct timeval *now)
+calculate_break_time(struct timeval *break_over_time, const struct timeval *now)
 {
   struct timeval this_break_time;
   
@@ -234,7 +234,7 @@ rest(void)
 /* ready */
 
 static int
-ready_x_loop(XEvent *e, struct timeval *now)
+ready_x_loop(XEvent *e, const struct timeval *now)
 {
   if (e->type == KeyPress || e->type == MotionNotify
       || e->type == ButtonPress) {

@@ -47,10 +47,14 @@ static void
 draw_1_clock(Hand *hand, int seconds)
 {
   Port *port = hand->port;
-  Picture *p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
+  Picture *p;
   int x, y;
   int hour, min;
 
+  if (!hand->slideshow)
+    return;
+  
+  p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
   x = p->clock_x_off;
   y = p->clock_y_off;
   
@@ -73,15 +77,15 @@ draw_1_clock(Hand *hand, int seconds)
 
 
 static int
-now_to_clock_sec(struct timeval *now_ptr)
+now_to_clock_sec(const struct timeval *now_ptr)
 {
   struct timeval now;
   struct timeval diff;
   
-  if (!now_ptr)
-    xwGETTIME(now);
-  else
+  if (now_ptr)
     now = *now_ptr;
+  else
+    xwGETTIME(now);
 
   if (xwTIMEGEQ(now, clock_zero_time))
     xwSUBTIME(diff, now, clock_zero_time);
@@ -92,14 +96,14 @@ now_to_clock_sec(struct timeval *now_ptr)
 }
 
 void
-draw_clock(Hand *h, struct timeval *now)
+draw_clock(Hand *h, const struct timeval *now)
 {
   draw_1_clock(h, now_to_clock_sec(now));
   h->clock = 1;
 }
 
 void
-draw_all_clocks(struct timeval *now)
+draw_all_clocks(const struct timeval *now)
 {
   Hand *h;
   int i;
@@ -119,7 +123,13 @@ void
 erase_clock(Hand *hand)
 {
   Port *port = hand->port;
-  Picture *p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
+  Picture *p;
+
+  if (!hand->slideshow)
+    return;
+
+  p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
+
   XCopyArea(port->display, p->pix[port->port_number], hand->w,
 	    port->clock_fore_gc,
 	    p->clock_x_off - 2, p->clock_y_off - 2,

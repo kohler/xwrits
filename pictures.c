@@ -292,7 +292,7 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 
 
 void
-set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
+set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
 {
   int which_im = 0;
   Alarm *a;
@@ -307,8 +307,8 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
     return;
   }
   
-  if (now)
-    t = *now;
+  if (now_ptr)
+    t = *now_ptr;
   else
     xwGETTIME(t);
   

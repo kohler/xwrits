@@ -40,7 +40,7 @@ x_error_handler(Display *d, XErrorEvent *error)
 
 
 void
-watch_keystrokes(Display *display, Window w, struct timeval *now)
+watch_keystrokes(Display *display, Window w, const struct timeval *now)
 {
   Window root, parent, *children;
   unsigned i, nchildren;
@@ -301,7 +301,6 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       xwGETTIME(new_now);
       if (xwTIMEGT(now, new_now)) {
 	xwSUBTIME(new_now, now, new_now);
-	if (timeoutptr) xwSUBTIME(new_now, new_now, timeout);
 	xwSUBTIME(genesis_time, genesis_time, new_now);
 	xwGETTIME(new_now);
       }

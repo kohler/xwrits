@@ -140,7 +140,7 @@ check_password(XKeyEvent *xkey)
 
 
 static int
-lock_alarm_loop(Alarm *a, struct timeval *now)
+lock_alarm_loop(Alarm *a, const struct timeval *now)
 {
   switch (a->action) {
     
@@ -163,7 +163,7 @@ lock_alarm_loop(Alarm *a, struct timeval *now)
 
 
 static int
-lock_x_loop(XEvent *e, struct timeval *now)
+lock_x_loop(XEvent *e, const struct timeval *now)
 {
   Alarm *a;
   Port *port = find_port(e->xany.display);
@@ -210,7 +210,7 @@ lock(void)
     set_all_slideshows(ports[i].hands, 0);
     set_all_slideshows(ports[i].icon_hands, 0);
   }
-  
+
   /* calculate break time */
   xwGETTIME(now);
   calculate_break_time(&break_over_time, &now);

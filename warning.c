@@ -19,8 +19,8 @@ pop_up_hand(Hand *h)
 
 
 static int
-switch_options(Options *opt, struct timeval *option_switch_time,
-	       struct timeval *now)
+switch_options(Options *opt, const struct timeval *option_switch_time,
+	       const struct timeval *now)
 {
   Hand *h;
   Alarm *a;
@@ -76,7 +76,7 @@ switch_options(Options *opt, struct timeval *option_switch_time,
 
 
 static int
-warn_alarm_loop(Alarm *a, struct timeval *now)
+warn_alarm_loop(Alarm *a, const struct timeval *now)
 {
   switch (a->action) {
     
@@ -148,7 +148,7 @@ check_raise_window(Hand *h)
 }
 
 static int
-warn_x_loop(XEvent *e, struct timeval *now)
+warn_x_loop(XEvent *e, const struct timeval *now)
 {
   Alarm *a;
   Hand *h;

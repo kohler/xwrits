@@ -139,8 +139,8 @@ extern struct timeval clock_zero_time;
 extern struct timeval clock_tick;
 
 void init_clock(Port *);
-void draw_clock(Hand *, struct timeval *);
-void draw_all_clocks(struct timeval *);
+void draw_clock(Hand *, const struct timeval *);
+void draw_all_clocks(const struct timeval *);
 void erase_clock(Hand *);
 void erase_all_clocks(void);
 
@@ -172,8 +172,8 @@ struct Alarm {
   
 };
 
-typedef int (*Alarmloopfunc)(Alarm *, struct timeval *);
-typedef int (*Xloopfunc)(XEvent *, struct timeval *);
+typedef int (*Alarmloopfunc)(Alarm *, const struct timeval *);
+typedef int (*Xloopfunc)(XEvent *, const struct timeval *);
 
 #define new_alarm(i)	new_alarm_data((i), 0, 0)
 Alarm *new_alarm_data(int, void *, void *);
@@ -247,7 +247,7 @@ extern Gif_Stream *locked_slideshow;
 
 Gif_Stream *get_built_in_image(const char *);
 Gif_Stream *parse_slideshow(const char *, double, int mono);
-void set_slideshow(Hand *, Gif_Stream *, struct timeval *);
+void set_slideshow(Hand *, Gif_Stream *, const struct timeval *);
 void set_all_slideshows(Hand *, Gif_Stream *);
 
 
@@ -291,7 +291,7 @@ extern struct timeval quota_allotment;	/* counted towards break */
 extern int max_cheats;			/* allow this many cheat events before
 					   cancelling break */
 
-void watch_keystrokes(Display *, Window, struct timeval *);
+void watch_keystrokes(Display *, Window, const struct timeval *);
 void register_keystrokes(Display *, Window);
 
 
@@ -311,9 +311,9 @@ void message(const char *, ...);
 
 extern struct timeval first_warn_time;
 
-int wait_for_break(struct timeval *type_time);
+int wait_for_break(const struct timeval *type_time);
 int warn(int was_lock, Options *first_options);
-void calculate_break_time(struct timeval *break_over_time, struct timeval *now);
+void calculate_break_time(struct timeval *break_over_time, const struct timeval *now);
 int rest(void);
 int lock(void);
 
