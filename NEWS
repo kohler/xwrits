@@ -1,3 +1,11 @@
+Version 2.6b6
+
+* Improved the configure script to use <sys/types.h> for u_int32_t, etc.
+  when possible.
+* Fixed bug in gifx.c: on a 24-plane display, any picture came out all black.
+  (The problem: implementation-specific behavior of <<; specifically,
+  I expected 1<<32 == 0 for 32-bit ints.)
+* Added visual searching: xwrits will now use a TrueColor visual if available.
 
 Version 2.6b4
 
