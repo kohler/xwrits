@@ -1,17 +1,18 @@
 ## Process this file with automake to produce Makefile.in
-AUTOMAKE_OPTIONS = no-dependencies foreign check-news
+AUTOMAKE_OPTIONS = foreign check-news
 
 bin_PROGRAMS = xwrits
 noinst_PROGRAMS = giftoc
 man_MANS = xwrits.1
 
 CFLAGS = @CFLAGS@ @X_CFLAGS@
+AM_CPPFLAGS = -I$(top_srcdir)/include
 
 LDADD = @LIBOBJS@
 xwrits_LDADD = $(LDADD) @X_LIBS@ @X_PRE_LIBS@ -lX11 @X_EXT_LIBS@ @X_EXTRA_LIBS@ -lm
 
 xwrits_SOURCES = fmalloc.c \
-		gif.h giffunc.c gifread.c gifx.h gifx.c \
+		giffunc.c gifread.c gifx.c \
 		xwrits.h clock.c hands.c lock.c main.c pictures.c rest.c \
 		schedule.c warning.c
 
@@ -22,7 +23,7 @@ BUILT_SOURCES = colorpic.c monopic.c
 xwrits_DEPENDENCIES = @LIBOBJS@
 giftoc_DEPENDENCIES = @LIBOBJS@
 
-giffunc.o gifread.o giftoc.o gifx.o: gif.h config.h
+giffunc.o gifread.o giftoc.o gifx.o: include/lcdfgif/gif.h config.h
 pictures.o: pictures.c colorpic.c monopic.c
 clock.o lock.o main.o pictures.o rest.o schedule.o warning.o: xwrits.h config.h
 
@@ -41,7 +42,8 @@ colorpic.c: $(COLOR_PIC) giftoc
 monopic.c: $(MONO_PIC) giftoc
 	./giftoc -makename -dir $(srcdir) $(MONO_PIC) > $@
 
-EXTRA_DIST = GESTURES xwrits.1 logo.gif rpm.spec
+EXTRA_DIST = GESTURES xwrits.1 logo.gif xwrits.spec \
+	include/lcdfgif/gif.h include/lcdfgif/gifx.h
 MOSTLYCLEANFILES = colorpic.c monopic.c
 
 dist-hook:
@@ -50,14 +52,17 @@ dist-hook:
 	@d=`cd $(distdir)/mono; pwd` && cd $(srcdir) && cp -p $(MONO_PIC) $$d
 
 srclinks:
-	for i in fmalloc.c strerror.c ; do \
-	ln -sf ~/src/edlib/$$i $$i ; done
-	for i in gif.h giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
-	ln -sf ~/src/giflib/$$i $$i ; done
+	cd $(top_srcdir); for i in fmalloc.c strerror.c ; do \
+	ln -sf ~/src/liblcdf/liblcdf/$$i $$i ; done
+	cd $(top_srcdir); test -d include/lcdfgif || mkdir -p include/lcdfgif
+	cd $(top_srcdir); for i in gif.h gifx.h; do \
+	ln -sf ~/src/liblcdf/include/lcdfgif/$$i include/lcdfgif/$$i; done
+	cd $(top_srcdir); for i in giffunc.c gifread.c giftoc.c gifx.c ; do \
+	ln -sf ~/src/liblcdf/liblcdfgif/$$i $$i ; done
 
 versionize:
 	perl -pi -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.1
-	perl -pi -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\w.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" rpm.spec
+	perl -pi -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\w.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" xwrits.spec
 
 rpm: dist
 	buildarch=`rpm --showrc | awk '/^build arch/ { print $$4; }'` ; \
@@ -67,7 +72,7 @@ rpm: dist
 	echo 'macrofiles: /usr/lib/rpm/macros:/tmp/rpm-xw/macros' >> /tmp/rpm-xw/rc ; \
 	echo '%_topdir /tmp/rpm-xw' > /tmp/rpm-xw/macros ; \
 	cp logo.gif $(PACKAGE)-$(VERSION).tar.gz /tmp/rpm-xw/SOURCES ; \
-	rpm --rcfile /tmp/rpm-xw/rc -bb rpm.spec ; \
+	rpmbuild --rcfile /tmp/rpm-xw/rc -bb xwrits.spec ; \
 	cp /tmp/rpm-xw/RPMS/$$buildarch/*.rpm .
 	rm -rf /tmp/rpm-xw
 

@@ -9,8 +9,8 @@
 #ifndef FD_SET
 #include <sys/select.h>
 #endif
-#include "gif.h"
-#include "gifx.h"
+#include <lcdfgif/gif.h>
+#include <lcdfgif/gifx.h>
 
 typedef struct Port Port;
 typedef struct Options Options;

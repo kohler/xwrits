@@ -21,7 +21,8 @@ dnl
 
 save_cppflags="$CPPFLAGS"
 CPPFLAGS="$CPPFLAGS $X_CFLAGS"
-AC_CHECK_HEADER(X11/extensions/Xinerama.h, ac_xinerama_header=y, ac_xinerama_header=n)
+AC_CHECK_HEADER(X11/extensions/Xinerama.h, ac_xinerama_header=y, ac_xinerama_header=n, [#include <X11/Xlib.h>
+])
 if test "${ac_xinerama_header}" = y; then
     AC_CHECK_LIB(Xinerama, XineramaQueryScreens, ac_xinerama_lib=y, ac_xinerama_lib=, ${X_LIBS} ${X_PRE_LIBS} -lX11 -lXext)
     if test "${ac_xinerama_lib}" = y; then
@@ -42,7 +43,7 @@ dnl
 dnl gethostname()
 dnl
 
-AC_CHECK_FUNCS(gethostname, uname)
+AC_CHECK_FUNCS(gethostname uname)
 
 dnl
 dnl gettimeofday()
