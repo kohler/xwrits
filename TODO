@@ -1,3 +1,12 @@
 - Xwrits should optionally log to a file the number of keystrokes made each
   time period, and optionally some other statistics. Suggested by Miernik
   <miernik@ctnet.pl>.
+
+- I just started using xwrits at work, and I realized that when
+xwrits locks my screen is a good time to go elsewhere and do
+something else.
+
+To do that, though, I have to first unlock xwrits, and then lock
+my screen.  It would be cool if I could type something into xwrits
+that would cause it to run a command I set up in advance (e.g.,
+``xscreensaver-command -lock''). [C. M. Connelly]
