@@ -73,6 +73,7 @@ struct Options {
   
   struct timeval break_time;		/* length of break */
   struct timeval min_break_time;	/* minimum length of break (+quota) */
+  struct timeval cancel_type_time;	/* typing OK for TIME after cancel */
   
   Gif_Stream *slideshow;		/* warn window animation  */
   Gif_Stream *icon_slideshow;		/* warn icon window animation */
@@ -288,7 +289,7 @@ void message(const char *, ...);
 
 extern struct timeval first_warn_time;
 
-int wait_for_break(void);
+int wait_for_break(struct timeval *type_time);
 int warn(int was_lock);
 int rest(void);
 int lock(void);

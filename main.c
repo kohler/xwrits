@@ -10,10 +10,10 @@ static Options onormal;
 Options *ocurrent;
 
 struct timeval genesis_time;
-struct timeval type_delay;
 static struct timeval zero = {0, 0};
 struct timeval first_warn_time;
 struct timeval last_key_time;
+static struct timeval normal_type_time;
 
 Gif_Stream *resting_slideshow, *resting_icon_slideshow;
 static const char *resting_slideshow_text = "&resting";
@@ -80,10 +80,10 @@ General options:\n\
 \n");
   printf("\
 Break characteristics:\n\
-  --typetime=TIME, t=TIME    Allow typing for TIME (default 55 minutes).\n\
-  --breaktime=TIME, b=TIME   Breaks last for TIME (default 5 minutes).\n\
+  typetime=TIME, t=TIME     Allow typing for TIME (default 55 minutes).\n\
+  breaktime=TIME, b=TIME    Breaks last for TIME (default 5 minutes).\n\
   +lock               Lock the keyboard during the break.\n\
-  --password=PW       Set the password for unlocking the keyboard.\n\
+  password=TEXT       Set the password for unlocking the keyboard.\n\
   +mouse              Monitor your mouse movements.\n\
   +idle[=TIME]        Leaving the keyboard idle for TIME is the same as taking\n\
                       a break. On by default. Default TIME is breaktime.\n\
@@ -91,6 +91,8 @@ Break characteristics:\n\
                       break length by the idle time. Default TIME is 1 minute.\n\
   minbreaktime=TIME   Minimum break length is TIME (see +quota).\n\
   +cheat[=NUM]        Allow NUM keystrokes before cancelling a break.\n\
+  canceltime=TIME, ct=TIME  Allow typing for TIME after a break is cancelled\n\
+                      (default 10 minutes).\n\
 \n");
   printf("\
 Appearance:\n\
@@ -456,6 +458,9 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "bc", 2, "t"))
       o->break_clock = optparse_yesno;
     
+    else if (optparse(s, "canceltime", 2, "sT", &o->cancel_type_time)
+	     || optparse(s, "ct", 2, "sT", &o->cancel_type_time))
+      ;
     else if (optparse(s, "cheat", 2, "tI", &max_cheats))
       allow_cheats = optparse_yesno;
     else if (optparse(s, "clock", 1, "t"))
@@ -525,7 +530,7 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "ready-picture", 3, "ss", &ready_slideshow_text))
       ;
     
-    else if (optparse(s, "typetime", 1, "st", &type_delay))
+    else if (optparse(s, "typetime", 1, "st", &normal_type_time))
       ;
     else if (optparse(s, "top", 2, "t"))
       o->top = optparse_yesno;
@@ -582,6 +587,13 @@ check_options(Options *o)
     if (xwTIMEGEQ(quota_time, o->min_break_time))
       o->min_break_time = quota_time;
   }
+
+  /* check cancel_type_time */
+  if (xwTIMELT0(o->cancel_type_time)) {
+    xwSETTIME(o->cancel_type_time, 10 * SEC_PER_MIN, 0);
+    if (xwTIMEGT(o->cancel_type_time, o->break_time))
+      o->cancel_type_time = o->break_time;
+  }
   
   /* If the next set of options is supposed to appear before this one, replace
      this one with the next set. Iterate. */
@@ -618,8 +630,9 @@ static void
 default_settings(void)
 {
   /* time settings */
-  xwSETTIME(type_delay, 55 * SEC_PER_MIN, 0);
+  xwSETTIME(normal_type_time, 55 * SEC_PER_MIN, 0);
   xwSETTIME(onormal.break_time, 5 * SEC_PER_MIN, 0);
+  xwSETTIME(onormal.cancel_type_time, -1, 0);
   xwSETTIME(onormal.min_break_time, -1, 0);
   onormal.flash_rate_ratio = 1;
 
@@ -764,6 +777,7 @@ main(int argc, char *argv[])
   Options *o;
   int lock_possible = 0;
   struct timeval now;
+  struct timeval type_time;
   
   xwGETTIMEOFDAY(&genesis_time);
   
@@ -788,9 +802,9 @@ main(int argc, char *argv[])
   /* check quota */
   if (check_quota && check_idle && xwTIMEGEQ(quota_time, onormal.break_time)) {
     warning("quota time is longer than break length");
-    warning("(With +quota, breaks longer than the quota time reduce the");
-    warning("length of the main break, so a quota time longer than the main");
-    warning("break length is probably a mistake.)");
+    warning("(With +quota=TIME, unexpected breaks longer than TIME reduce");
+    warning("the length of the main break, so a TIME longer than the main");
+    warning("break is probably a mistake.)");
   }
   
   /* fix cheats */
@@ -847,14 +861,17 @@ main(int argc, char *argv[])
   
   /* main loop */
   ocurrent = &onormal;		/* start with normal options */
+  type_time = normal_type_time;
+  
   while (1) {
     int tran = 0;
     int was_lock = 0;
     
     /* wait for break */
-    tran = wait_for_break();
+    tran = wait_for_break(&type_time);
     if (tran == TRAN_REST) {
       ocurrent = &onormal;	/* reset to normal options */
+      type_time = normal_type_time;
       continue;
     }
     
@@ -874,7 +891,9 @@ main(int argc, char *argv[])
     if (tran == TRAN_AWAKE) {
       ready();
       ocurrent = &onormal;	/* reset to normal options */
-    }
+      type_time = normal_type_time;
+    } else			/* tran == TRAN_CANCEL */
+      type_time = ocurrent->cancel_type_time;
     
     unmap_all();
   }

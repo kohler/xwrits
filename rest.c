@@ -49,7 +49,7 @@ wait_x_loop(XEvent *e, struct timeval *now)
 }
 
 static int
-adjust_wait_time(struct timeval *wait_began_time)
+adjust_wait_time(struct timeval *wait_began_time, struct timeval *type_time)
      /* Adjust the time to wake up to reflect the length of the break, if
         under check_quota. Want to be able to type for slightly longer if
         you've been taking mini-breaks. */
@@ -60,7 +60,7 @@ adjust_wait_time(struct timeval *wait_began_time)
 
   /* Find the time when this break should end = beginning of wait + type delay
      + break delay */
-  xwADDTIME(break_end_time, *wait_began_time, type_delay);
+  xwADDTIME(break_end_time, *wait_began_time, *type_time);
   xwADDTIME(break_end_time, break_end_time, ocurrent->break_time);
   
   /* Find the length of this break */
@@ -81,14 +81,14 @@ adjust_wait_time(struct timeval *wait_began_time)
 }
 
 int
-wait_for_break(void)
+wait_for_break(struct timeval *type_time)
 {
   int val;
   struct timeval wait_began_time;
 
   /* Schedule wait_over_time */
   xwGETTIME(wait_began_time);
-  xwADDTIME(wait_over_time, wait_began_time, type_delay);
+  xwADDTIME(wait_over_time, wait_began_time, *type_time);
   if (check_quota)
     xwSETTIME(quota_allotment, 0, 0);
 
@@ -113,7 +113,7 @@ wait_for_break(void)
     /* Adjust the wait time if necessary */
     assert(val == TRAN_WARN || val == TRAN_REST);
     if (val == TRAN_WARN && check_quota)
-      val = adjust_wait_time(&wait_began_time);
+      val = adjust_wait_time(&wait_began_time, type_time);
   }
   
   unschedule(A_AWAKE);

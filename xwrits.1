@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.9b1
+.ds V 2.9
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -92,8 +92,8 @@ Many options take arguments. You can give these after an equal sign, as in
 separately, as in ``xwrits breaktime 2''.
 .PP
 Time arguments are expressed in minutes. For example, ``2'' is 2 minutes,
-``2.5'' is 2 minutes 30 seconds. A colon can be used to specify seconds as
-well: ``2:05.4'' is 2 minutes 5.4 seconds, and ``:5'' is 5 seconds.
+``2.5'' is 2 minutes 30 seconds. Use a colon to specify seconds: ``2:05.4''
+is 2 minutes 5.4 seconds, and ``:5'' is 5 seconds.
 
 .TP 5
 \fB\-display\fP \fIdisplay\fP
@@ -101,7 +101,7 @@ Which display to run on.
 '
 .TP 5
 \fBtypetime\fP=\fItime\fP [\fBt\fP]
-The amount of time between breaks. Default is 55 minutes.
+Allow typing for \fItime\fP between breaks. Default is 55 minutes.
 '
 .TP 5
 \fBbreaktime\fP=\fItime\fP [\fBb\fP]
@@ -124,10 +124,18 @@ A clock will appear in the resting window showing how many minutes
 remain in the wrist break.
 '
 .TP 5
+\fBcanceltime\fP=\fItime\fP [\fBct\fP]
+Allow typing for \fItime\fP after a break is cancelled. You cancel a
+break by deleting all
+.BR xwrits
+windows with your window manager. This time should probably be less than
+the regular type time. Default is 10 minutes.
+'
+.TP 5
 \fB+cheat\fP[=\fInum\fP] (\fB\-cheat\fP)
 Allows you to cheat during a break. You can type \fInum\fP keystrokes
 before xwrits cancels the break. Default for \fInum\fP is 5. (If you're
-using \fB+mouse\fP, mouse movements also count.)
+using \fB+mouse\fP, mouse movements also count as keystrokes.)
 '
 .TP 5
 \fB+clock\fP (\fB\-clock\fP) [\fBc\fP]
@@ -141,8 +149,8 @@ The warning window will be rude to you.
 .TP 5
 \fB+finger\fP=\fIculture\fP
 The warning window will be rude to you, according to \fIculture\fP's idea
-of rudeness. Possible values for \fIculture\fP are `american' (the default)
-and `korean' (synonyms `japanese' and `russian'), and `german'.
+of rudeness. Possible values for \fIculture\fP are `american' (the default),
+`korean' (synonyms `japanese' and `russian'), and `german'.
 '
 .TP 5
 \fBflashtime\fP=\fItime\fP
@@ -170,8 +178,8 @@ over. You can prematurely disable the lock and get a normal warning
 window by typing your password (see \fBpassword\fP below). The
 \fIjump-time\fP argument specifies how fast the screensaver will move;
 default is 4 seconds. If the keyboard has been grabbed by another
-application when the lock is attempted, the lock will fail and a
-normal warning window will appear instead.
+application when the lock is attempted, the lock fails and a
+normal warning window appears instead.
 '
 .TP 5
 \fBmaxhands\fP=\fInum\fP
