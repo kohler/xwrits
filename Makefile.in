@@ -39,15 +39,15 @@ xwrits: $(OBJS)
 	$(CCLINKER) $(CFLAGS) -o xwrits $(OBJS) $(LDFLAGS) $(LIBS)
 
 main.o: main.c
-	$(CC) $(CPPFLAGS) -DVERSION='"$(VERSION)"' $(CFLAGS) -c $<
+	$(CC) $(CPPFLAGS) -DVERSION='"$(VERSION)"' $(CFLAGS) -c $(srcdir)/main.c
 
 #####
 # Making pictures
 
 pictures.o: pictures.c color/gifs.c mono/gifs.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $(srcdir)/pictures.c
 giftoc: giftoc.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o giftoc $<
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o giftoc $(srcdir)/giftoc.c
 
 COLOR_PIX = color/bars.gif color/lock.gif \
 	color/clenchl.gif color/spreadl.gif color/fingerl.gif color/restl.gif \

@@ -1,5 +1,11 @@
 Xwrits NEWS
 
+Version 2.6.5   6.Oct.1998
+
+* Makefiles: Fixed vpath builds and problems with old `make's (makes which
+  didn't support $< in explicit rules).
+
+
 Version 2.6.4   26.Sep.1998
 
 * Added `--help' (well, `help') to conform to GNU program behavior standards.
