@@ -108,6 +108,7 @@ wait_for_break(void)
     
     /* Wait */
     val = loopmaster(0, wait_x_loop);
+    if (val == TRAN_AWAKE) val = TRAN_WARN; /* patch A_AWAKE case */
     
     /* Adjust the wait time if necessary */
     assert(val == TRAN_WARN || val == TRAN_REST);
