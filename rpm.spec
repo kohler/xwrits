@@ -40,14 +40,11 @@ example -- which makes it harder to cheat.
 %setup
 
 %build
-CFLAGS="$RPM_OPT_FLAGS" ./configure
+CFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=$RPM_BUILD_ROOT/usr/X11R6
 make
 
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/X11R6/bin $RPM_BUILD_ROOT/usr/X11R6/man/man1
-install -c -s xwrits $RPM_BUILD_ROOT/usr/X11R6/bin/xwrits
-install -c -m 644 xwrits.man $RPM_BUILD_ROOT/usr/X11R6/man/man1/xwrits.1
+make install
 
 %clean
 rm -rf $RPM_BUILD_ROOT

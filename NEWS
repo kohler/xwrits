@@ -1,9 +1,10 @@
 Xwrits NEWS
 
-Version 2.7
+Version 2.7   7.Dec.1998
 
 * Xwrits will adjust the length it wants you to rest depending on how long
-  it's been since you last typed.
+  it's been since you last typed. Bug reported by A.T. Hofkamp
+  <a.hofkamp@wtb.tue.nl>.
 
 * Xwrits now behaves robustly when the system time is adjusted backwards.
 
@@ -37,7 +38,8 @@ Version 2.6.2   17.Aug.1998
 
 * Bug fix: If `idle' was off, the warning window would never appear (it was
   waiting for a key press -- stupid, since it wasn't listening for any key
-  presses).
+  presses). Bug reported by Malcolm Ross Kinsella Ryan
+  <malcolmr@cse.unsw.edu.au>.
 
 
 Version 2.6.1   8.Jun.1998
@@ -60,15 +62,17 @@ Version 2.6b8   27.May.1998
 
 * Added support for --long-options and --version.
 
-* Fixed race condition in schedule.c.
+* Fixed race condition in schedule.c, which could result in losing
+  keystrokes. Bug reported by Gregory Galperin <grg@ai.mit.edu>.
 
 
 Version 2.6b7   23.May.1998
 
 * Clock improvements: fixed problem with black-on-black clock on 24-plane
-  displays (it had to do with visual selection: WhitePixel wasn't white since
-  the Visual was not the default). Also improved clock appearance and made it
-  appear more like when it's supposed to.
+  displays (it had to do with visual selection: WhitePixel wasn't white
+  since the Visual was not the default). Also improved clock appearance and
+  made it appear more like when it's supposed to. Bug reported by Erez
+  Zadok <ezk@cs.columbia.edu>.
 
 
 Version 2.6b6   5.May.1998
@@ -76,11 +80,14 @@ Version 2.6b6   5.May.1998
 * Improved the configure script to use <sys/types.h> for u_int32_t, etc.
   when possible.
 
-* Fixed bug in gifx.c: on a 24-plane display, any picture came out all black.
-  (The problem: implementation-specific behavior of <<; specifically,
-  I expected 1<<32 == 0 for 32-bit ints.)
+* Fixed bug in gifx.c: on a 24-plane display, any picture came out all
+  black. (The problem: implementation-specific behavior of <<;
+  specifically, I expected 1<<32 == 0 for 32-bit ints.) Bug reported by
+  Alexander Konstantinou <akonstan@cs.columbia.edu> and Matthew Lewis
+  <mlewis@cgrg.ohio-state.edu>.
 
-* Added visual searching: xwrits will now use a TrueColor visual if available.
+* Added visual searching: xwrits will now use a TrueColor visual if
+  available.
 
 
 Version 2.6b4   5.May.1998
@@ -98,6 +105,7 @@ Version 2.6b3   24.Nov.1997
 Version 2.6b2
 
 * Fixed bug with freeing memory multiple times. Works better on Linux now.
+  Thanks to Albert L. Ting <alt@artisan.com> for a patch.
 
 
 Version 2.5
