@@ -15,6 +15,7 @@ fi)
 
 AC_PATH_XTRA
 
+
 dnl
 dnl Xinerama extension?
 dnl
@@ -28,10 +29,11 @@ if test "${ac_xinerama_header}" = y; then
     if test "${ac_xinerama_lib}" = y; then
 	X_EXT_LIBS="-lXext -lXinerama"
 	AC_SUBST(X_EXT_LIBS)
-	AC_DEFINE(HAVE_XINERAMA)
+	AC_DEFINE(HAVE_XINERAMA, 1, [Define if the Xinerama extension is available.])
     fi
 fi
 CPPFLAGS="$save_cppflags"
+
 
 dnl
 dnl strerror()?
@@ -39,11 +41,13 @@ dnl
 
 AC_REPLACE_FUNCS(strerror)
 
+
 dnl
 dnl gethostname()
 dnl
 
 AC_CHECK_FUNCS(gethostname uname)
+
 
 dnl
 dnl gettimeofday()
@@ -59,65 +63,90 @@ AC_CACHE_CHECK(for gettimeofday prototype, ac_cv_gettimeofday,
 ac_cv_gettimeofday=0,
 ac_cv_gettimeofday=2)],
 ac_cv_gettimeofday=1)])
-AC_DEFINE_UNQUOTED(GETTIMEOFDAY_PROTO, $ac_cv_gettimeofday)
+AC_DEFINE_UNQUOTED(GETTIMEOFDAY_PROTO, $ac_cv_gettimeofday, [Define to the number of arguments taken by gettimeofday().])
+
 
 dnl
-dnl Integer typedefs
+dnl integer types
 dnl
 
-AC_CHECK_HEADERS(inttypes.h)
+AC_CHECK_HEADERS(inttypes.h, have_inttypes_h=yes, have_inttypes_h=no)
+AC_CHECK_HEADERS(sys/types.h, have_sys_types_h=yes, have_sys_types_h=no)
 
-AC_CACHE_CHECK(for integer typedefs, ac_cv_int_types,
-[AC_EGREP_HEADER(uint32_t, sys/types.h, ac_cv_int_types=yes,
-  AC_EGREP_HEADER(u_int32_t, sys/types.h, ac_cv_int_types=close,
-   ac_cv_int_types=no))])
-
-if test "$ac_cv_int_types" = no ;
-then
-  # Define our own versions
-  AC_CACHE_CHECK(for a 16-bit value, ac_cv_int16,
-  [AC_TRY_RUN([#include <stdio.h>
-#include <stdlib.h>
-int main(int argc, char **argv) {
-  FILE *f = fopen("conftestval", "w");
-  if (!f) exit(1);
-  if (sizeof(short) == 2) fprintf(f, "short\n");
-  else exit(1);
-  fclose(f);
-  exit(0);
-}], ac_cv_int16=`cat conftestval`,
-  AC_MSG_ERROR(no 16-bit value found),
-  ac_cv_int16=short)])
-
-  AC_CACHE_CHECK(for a 32-bit value, ac_cv_int32,
-  [AC_TRY_RUN([#include <stdio.h>
-#include <stdlib.h>
-int main(int argc, char **argv) {
-  FILE *f = fopen("conftestval", "w");
-  if (!f) exit(1);
-  if (sizeof(int) == 4) fprintf(f, "int\n");
-  else if (sizeof(long) == 4) fprintf(f, "long\n");
-  else exit(1);
-  fclose(f);
-  exit(0);
-}], ac_cv_int32=`cat conftestval`, 
-  AC_MSG_ERROR(no 32-bit value found),
-  ac_cv_int32=int)])
+if test $have_inttypes_h = no -a $have_sys_types_h = yes; then
+    AC_CACHE_CHECK([for uintXX_t typedefs], ac_cv_uint_t,
+    [AC_EGREP_HEADER(dnl
+changequote(<<,>>)<<(^|[^a-zA-Z_0-9])uint32_t[^a-zA-Z_0-9]>>changequote([,]),
+    sys/types.h, ac_cv_uint_t=yes, ac_cv_uint_t=no)])
 fi
-
-if test "$ac_cv_header_inttypes_h" = yes; then
-  :
-elif test "$ac_cv_int_types" = no; then
-  AC_DEFINE_UNQUOTED(uint16_t, unsigned $ac_cv_int16)
-  AC_DEFINE_UNQUOTED(uint32_t, unsigned $ac_cv_int32)
-  AC_DEFINE_UNQUOTED(int32_t, $ac_cv_int32)
-elif test "$ac_cv_int_types" = close; then
-  AC_DEFINE(NEED_SYS_TYPES_H)
-  AC_DEFINE(uint16_t, u_int16_t)
-  AC_DEFINE(uint32_t, u_int32_t)
+if test $have_inttypes_h = no -a $have_sys_types_h = yes -a "$ac_cv_uint_t" = no; then
+    AC_CACHE_CHECK([for u_intXX_t typedefs], ac_cv_u_int_t,
+    [AC_EGREP_HEADER(dnl
+changequote(<<,>>)<<(^|[^a-zA-Z_0-9])u_int32_t[^a-zA-Z_0-9]>>changequote([,]),
+    sys/types.h, ac_cv_u_int_t=yes, ac_cv_u_int_t=no)])
+fi
+if test $have_inttypes_h = yes -o "$ac_cv_uint_t" = yes; then
+    :
+elif test "$ac_cv_u_int_t" = yes; then
+    AC_DEFINE(HAVE_U_INT_TYPES, 1, [Define if you have u_intXX_t types but not uintXX_t types.])
 else
-  AC_DEFINE(NEED_SYS_TYPES_H)
+    AC_MSG_WARN([
+=========================================
+
+Neither uint32_t nor u_int32_t defined by <inttypes.h> or <sys/types.h>!
+Assuming "short" has 16 bits and "int" has 32 bits.
+
+=========================================])
+    AC_DEFINE(HAVE_FAKE_INT_TYPES, 1, [Define if intXX_t types are not available.])
 fi
+
+AC_CHECK_TYPES(uintptr_t, [], [],
+[#if HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#if HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+])
+
+AC_CHECK_SIZEOF(void *)
+AC_CHECK_SIZEOF(unsigned long)
+AC_CHECK_SIZEOF(unsigned int)
+
+
+dnl
+dnl verbatim portions of the header
+dnl
+
+AH_TOP([#ifndef XWRITS_CONFIG_H
+#define XWRITS_CONFIG_H])
+
+AH_BOTTOM([#include <stddef.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Use the clean-failing malloc library in fmalloc.c */
+#define xmalloc(s)		fail_die_malloc((s),__FILE__,__LINE__)
+#define xrealloc(p,s)		fail_die_realloc((p),(s),__FILE__,__LINE__)
+#define xfree			free
+void *fail_die_malloc(size_t, const char *, int);
+void *fail_die_realloc(void *, size_t, const char *, int);
+
+/* Prototype strerror() if we don't have it. */
+#if !HAVE_STRERROR
+char *strerror(int errno);
+#endif
+
+#ifdef __cplusplus
+}
+/* Get rid of a possible inline macro under C++. */
+# define inline inline
+#endif
+
+#endif /* XWRITS_CONFIG_H */])
+
 
 dnl
 dnl Output

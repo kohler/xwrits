@@ -1,4 +1,5 @@
 Makefile.in aclocal.m4 stamp-h.in config.h.in
-Makefile configure config.log config.cache config.status stamp-h config.h
+Makefile configure config.log config.cache config.status stamp-h* config.h
 xwrits
 giftoc colorpic.c monopic.c
+autom4te* .deps

@@ -43,7 +43,7 @@ monopic.c: $(MONO_PIC) giftoc
 	./giftoc -makename -dir $(srcdir) $(MONO_PIC) > $@
 
 EXTRA_DIST = GESTURES xwrits.1 logo.gif xwrits.spec \
-	include/lcdfgif/gif.h include/lcdfgif/gifx.h
+	include/lcdf/inttypes.h include/lcdfgif/gif.h include/lcdfgif/gifx.h
 MOSTLYCLEANFILES = colorpic.c monopic.c
 
 dist-hook:
@@ -54,7 +54,10 @@ dist-hook:
 srclinks:
 	cd $(top_srcdir); for i in fmalloc.c strerror.c ; do \
 	ln -sf ~/src/liblcdf/liblcdf/$$i $$i ; done
+	cd $(top_srcdir); test -d include/lcdf || mkdir -p include/lcdf
 	cd $(top_srcdir); test -d include/lcdfgif || mkdir -p include/lcdfgif
+	cd $(top_srcdir); for i in inttypes.h; do \
+	ln -sf ~/src/liblcdf/include/lcdf/$$i include/lcdf/$$i; done
 	cd $(top_srcdir); for i in gif.h gifx.h; do \
 	ln -sf ~/src/liblcdf/include/lcdfgif/$$i include/lcdfgif/$$i; done
 	cd $(top_srcdir); for i in giffunc.c gifread.c giftoc.c gifx.c ; do \
