@@ -24,11 +24,11 @@ Hand *icon_hands;
 
 Gif_Stream *resting_slideshow, *resting_icon_slideshow;
 static const char *resting_slideshow_text = "&resting";
-static const char *resting_icon_slideshow_text = "&resting";
+static const char *resting_icon_slideshow_text = "&restingicon";
 
 Gif_Stream *ready_slideshow, *ready_icon_slideshow;
 static const char *ready_slideshow_text = "&ready";
-static const char *ready_icon_slideshow_text = "&ready";
+static const char *ready_icon_slideshow_text = "&readyicon";
 
 Display *display;
 Port port;
