@@ -7,6 +7,9 @@ Version 2.6.4   26.Sep.1998
 * Added `make uninstall' target and enabled `./configure's program name
   transformations.
 
+* Makefiles: Added `make uninstall' target, enabled `./configure's
+  program name transformations, made VPATH builds possible.
+
 
 Version 2.6.3   7.Sep.1998
 
