@@ -28,8 +28,8 @@ details.
 
 COPYRIGHT
 ---------
-   Source and pictures copyright 1994-2000 Eddie Kohler:
-eddietwo@lcs.mit.edu and http://www.pdos.lcs.mit.edu/~eddietwo/
+   Source and pictures copyright 1994-2001 Eddie Kohler:
+kohler@aciri.org and http://www.pdos.lcs.mit.edu/~eddietwo/
 
    This package is distributed under the GNU General Public License, Version
 2, or, at your discretion, any later version. The GNU General Public License
@@ -37,8 +37,13 @@ is available via the Web at <http://www.gnu.org/copyleft/gpl.html>. The GPL
 is designed to allow you to alter and redistribute the package, as long as
 you do not deny that freedom to others.
 
+   Xwrits uses the currently-patented GIF file format to store its images.
+It is, nevertheless, compatible with the GPL, because GIF reading is not
+patented -- only GIF writing/compression. Xwrits is not distributed with,
+and does not link with, any GIF writing or compression code.
+
 BUGS, SUGGESTIONS, ETC.
 -----------------------
    Please write me if you have trouble building or running xwrits, or if
 you have any suggestions, or if you know some rude finger gestures not
-listed in `GESTURES'. Again that email address is: eddietwo@lcs.mit.edu
+listed in `GESTURES'. Again that email address is: kohler@aciri.org
