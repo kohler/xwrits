@@ -1176,7 +1176,9 @@ main(int argc, char *argv[])
       Port *p = ports[i];
 #ifdef HAVE_XINERAMA
       int j, nxsi;
-      XineramaScreenInfo *xsi = XineramaQueryScreens(p->display, &nxsi);
+      XineramaScreenInfo *xsi = 0;
+      if (XineramaQueryExtension(p->display, &j, &nxsi))
+	  xsi = XineramaQueryScreens(p->display, &nxsi);
       if (xsi) {
 	  for (j = 0; j < nxsi; j++) {
 	      Port *q = (j == 0 ? p : add_port(p->display_name, p->display, p->screen_number, p));
@@ -1184,7 +1186,6 @@ main(int argc, char *argv[])
 	      q->top = xsi[j].y_org;
 	      q->width = xsi[j].width;
 	      q->height = xsi[j].height;
-	      fprintf(stderr, "%d %d %d %d\n", xsi[j].x_org, xsi[j].y_org, xsi[j].width, xsi[j].height);
 	  }
 	  XFree(xsi);
       } else {
