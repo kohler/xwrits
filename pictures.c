@@ -5,8 +5,8 @@
 
 #include "gifx.h"
 
-#include "color/gifs.c"
-#include "mono/gifs.c"
+#include "colorpic.c"
+#include "monopic.c"
 
 Pixmap bars_pixmap = None;
 Pixmap lock_pixmap = None;

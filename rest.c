@@ -85,7 +85,7 @@ rest_x_loop(XEvent *e)
 int
 rest(void)
 {
-  struct timeval now;
+  struct timeval now, finish;
   Alarm *a;
   int val;
   
@@ -93,8 +93,15 @@ rest(void)
   ensure_one_hand();
   
   xwGETTIME(now);
+  if (!check_idle)
+    xwADDTIME(finish, now, break_delay);
+  else
+    xwADDTIME(finish, last_key_time, break_delay);
+  if (xwTIMEGEQ(now, finish))
+    return RestOK;
+  
   a = new_alarm(Return);
-  xwADDTIME(a->timer, now, break_delay);
+  a->timer = finish;
   schedule(a);
   
   if (ocurrent->break_clock) {

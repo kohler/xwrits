@@ -1,7 +1,6 @@
+dnl Process this file with autoconf to produce a configure script.
 AC_INIT(xwrits.h)
-
-VERSION=2.6.5
-AC_SUBST(VERSION)
+AM_INIT_AUTOMAKE(xwrits, 2.7)
 
 AC_PROG_CC
 AC_C_CONST
@@ -20,6 +19,13 @@ AC_PATH_XTRA
 dnl Don't do anything special with memory allocation for the GIF library.
 GIF_MEMORY_DEFINES=''
 AC_SUBST(GIF_MEMORY_DEFINES)dnl
+
+dnl
+dnl strerror()? unistd.h?
+dnl
+
+AC_CHECK_FUNC(strerror, STRERROR_O='', STRERROR_O='strerror.o')
+AC_SUBST(STRERROR_O)dnl
 
 dnl
 dnl gettimeofday()
@@ -104,6 +110,4 @@ dnl
 dnl Output
 dnl
 
-if test ! -d mono ; then mkdir mono ; fi
-if test ! -d color ; then mkdir color ; fi
 AC_OUTPUT(Makefile gif.h)

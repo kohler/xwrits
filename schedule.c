@@ -191,7 +191,6 @@ int
 loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 {
   struct timeval timeout, now, *timeoutptr;
-  XEvent event;
   fd_set xfds;
   int pending;
   int ret_val = 0;
@@ -276,12 +275,27 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
     
     if (pending)
       while (XPending(display)) {
+	XEvent event;
 	XNextEvent(display, &event);
 	default_x_processing(&event);
 	if (x_looper) ret_val = x_looper(&event);
 	if (ret_val != 0) return ret_val;
       }
     
-    xwGETTIME(now);
+    /* Behave robustly when the system clock is adjusted backwards. The idea:
+       estimate the duration of the backwards jump and subtract that from
+       genesis_time. This will compensate for the jump in any new times
+       returned from xwGETTIME. */
+    {
+      struct timeval new_now;
+      xwGETTIME(new_now);
+      if (xwTIMEGT(now, new_now)) {
+	xwSUBTIME(new_now, now, new_now);
+	if (timeoutptr) xwSUBTIME(new_now, new_now, timeout);
+	xwSUBTIME(genesis_time, genesis_time, new_now);
+	xwGETTIME(new_now);
+      }
+      now = new_now;
+    }
   }
 }
