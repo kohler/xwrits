@@ -33,34 +33,57 @@ typedef struct Alarm Alarm;
 /*  Global X stuff							     */
 
 struct Port {
-  
-  Display *display;
-  int x_socket;
-  
-  int screen_number;
-  Window root_window;
-  int width;
-  int height;
 
-  Drawable drawable;
-  Visual *visual;
-  int depth;
-  Colormap colormap;
-  unsigned long black;
-  unsigned long white;
+  int port_number;		/* 0 <= port_number < nports */
   
-  XFontStruct *font;
+  char *display_name;		/* name of display */
+  Display *display;		/* display pointer */
+  int x_socket;			/* socket of X connection */
   
-  Gif_XContext *gfx;
+  int screen_number;		/* screen number */
+  Window root_window;		/* root window of screen */
+  int width;			/* width of root window */
+  int height;			/* height of root window */
+
+  Drawable drawable;		/* drawable corresponding to visual */
+  Visual *visual;		/* visual used for new windows */
+  int depth;			/* depth of visual */
+  Colormap colormap;		/* colormap on visual */
+  unsigned long black;		/* black pixel value on colormap */
+  unsigned long white;		/* white pixel value on colormap */
   
-  Atom wm_delete_window_atom;
+  XFontStruct *font;		/* font for lock messages */
+  GC white_gc;			/* foreground white, font font */
+  GC clock_fore_gc;		/* foreground black, thick rounded line */
+  GC clock_hand_gc;		/* same as clock_fore_gc */
+  
+  Gif_XContext *gfx;		/* GIF X context */
+  
+  Atom wm_delete_window_atom;	/* atoms for window manager communication */
   Atom wm_protocols_atom;
   Atom mwm_hints_atom;
+
+  Hand *hands;			/* list of main hands */
+  Hand *icon_hands;		/* list of icon hands */
+  
+  int icon_width;		/* preferred icon width */
+  int icon_height;		/* preferred icon height */
+
+  Window last_mouse_root;	/* last root window the mouse was on */
+  int last_mouse_x;		/* last X position of mouse */
+  int last_mouse_y;		/* last Y position of mouse */
+
+  Pixmap bars_pixmap;		/* bars background for lock screen */
   
 };
 
-extern Display *display;
-extern Port port;
+extern int nports;
+extern Port *ports;
+
+extern fd_set x_socket_set;
+extern int max_x_socket;
+
+Port *find_port(Display *);
 
 int default_x_processing(XEvent *);
 int x_error_handler(Display *, XErrorEvent *);
@@ -115,7 +138,7 @@ extern char *lock_password;
 extern struct timeval clock_zero_time;
 extern struct timeval clock_tick;
 
-void init_clock(Drawable);
+void init_clock(Port *);
 void draw_clock(Hand *, struct timeval *);
 void draw_all_clocks(struct timeval *);
 void erase_clock(Hand *);
@@ -131,18 +154,18 @@ void erase_all_clocks(void);
 #define A_MULTIPLY		0x0008
 #define A_NEXT_OPTIONS		0x0010
 #define A_LOCK_BOUNCE		0x0020
-#define A_LOCK_CLOCK		0x0040
-#define A_LOCK_MESS_ERASE	0x0080
-#define A_IDLE_SELECT		0x0100
-#define A_IDLE_CHECK		0x0200
-#define A_MOUSE			0x0400
+#define A_LOCK_MESS_ERASE	0x0040
+#define A_IDLE_SELECT		0x0080
+#define A_IDLE_CHECK		0x0100
+#define A_MOUSE			0x0200
 
 struct Alarm {
   
   Alarm *next;
   struct timeval timer;
   int action;
-  void *data;
+  void *data1;
+  void *data2;
   
   unsigned scheduled: 1;
   
@@ -153,15 +176,15 @@ typedef int (*Xloopfunc)(XEvent *, struct timeval *);
 
 extern Alarm *alarms;
 
-#define new_alarm(i)	new_alarm_data((i), 0)
-Alarm *new_alarm_data(int, void *);
-#define grab_alarm(i)	grab_alarm_data((i), 0)
-Alarm *grab_alarm_data(int, void *);
+#define new_alarm(i)	new_alarm_data((i), 0, 0)
+Alarm *new_alarm_data(int, void *, void *);
+#define grab_alarm(i)	grab_alarm_data((i), 0, 0)
+Alarm *grab_alarm_data(int, void *, void *);
 void destroy_alarm(Alarm *);
 
 void schedule(Alarm *);
-#define unschedule(i)	unschedule_data((i), 0)
-void unschedule_data(int, void *);
+#define unschedule(i)	unschedule_data((i), 0, 0)
+void unschedule_data(int, void *, void *);
 
 int loopmaster(Alarmloopfunc, Xloopfunc);
 
@@ -176,7 +199,8 @@ struct Hand {
   Hand *next;
   Hand *prev;
   Hand *icon;
-  
+
+  Port *port;
   Window w;
   int x;
   int y;
@@ -194,20 +218,20 @@ struct Hand {
   unsigned configured: 1;
   unsigned obscured: 1;
   unsigned clock: 1;
+  unsigned permanent: 1;
+  unsigned toplevel: 1;
   
 };
 
-
-extern Hand *hands;
-extern Hand *icon_hands;
 int active_hands(void);
 
 #define NEW_HAND_CENTER	0x8000
 #define NEW_HAND_RANDOM	0x7FFF
-Hand *new_hand(int x, int y);
+Hand *new_hand(Port *, int x, int y);
+Hand *new_hand_subwindow(Port *, Window parent, int x, int y);
 void destroy_hand(Hand *);
 
-Hand *window_to_hand(Window, int allow_icon);
+Hand *window_to_hand(Port *, Window, int allow_icon);
 
 void draw_slide(Hand *);
 
@@ -218,6 +242,7 @@ void draw_slide(Hand *);
 extern Gif_Stream *current_slideshow;
 extern Gif_Stream *resting_slideshow, *resting_icon_slideshow;
 extern Gif_Stream *ready_slideshow, *ready_icon_slideshow;
+extern Gif_Stream *locked_slideshow;
 #define DEFAULT_FLASH_DELAY_SEC 2
 
 Gif_Stream *get_built_in_image(const char *);
@@ -230,14 +255,13 @@ void set_all_slideshows(Hand *, Gif_Stream *);
 /*  Pictures								     */
 
 struct Picture {
-  Pixmap pix;
+  
   int clock_x_off;
   int clock_y_off;
   Gif_Image *canonical;
+  Pixmap pix[1];
+  
 };
-
-extern Pixmap bars_pixmap;
-extern Pixmap lock_pixmap;
 
 void default_pictures(void);
 void load_needed_pictures(Window, int, int force_mono);
@@ -258,8 +282,6 @@ extern struct timeval warn_idle_time;	/* " during warning */
 extern int check_mouse;			/* pay attention to mouse movement? */
 extern struct timeval check_mouse_time;	/* next time to check mouse pos */
 extern int mouse_sensitivity;		/* movement > sensitivity = keypress */
-extern int last_mouse_x, last_mouse_y;	/* last mouse position */
-extern Window last_mouse_root;		/* mouse was last on this root */
 
 extern int check_quota;			/* use quota system? */
 extern struct timeval quota_time;	/* if idle more than quota_time,
@@ -269,8 +291,8 @@ extern struct timeval quota_allotment;	/* counted towards break */
 extern int max_cheats;			/* allow this many cheat events before
 					   cancelling break */
 
-void watch_keystrokes(Window, struct timeval *);
-void register_keystrokes(Window);
+void watch_keystrokes(Display *, Window, struct timeval *);
+void register_keystrokes(Display *, Window);
 
 
 /*****************************************************************************/

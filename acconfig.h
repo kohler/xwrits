@@ -2,10 +2,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-/* Package and version */
-#define PACKAGE "xwrits"
-#define VERSION "97"
-
 /* How many arguments does gettimeofday() take? */
 #undef GETTIMEOFDAY_PROTO
 

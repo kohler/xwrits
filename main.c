@@ -23,10 +23,14 @@ Gif_Stream *ready_slideshow, *ready_icon_slideshow;
 static const char *ready_slideshow_text = "&ready";
 static const char *ready_icon_slideshow_text = "&readyicon";
 
-Display *display;
-Port port;
+Gif_Stream *locked_slideshow;
+static const char *locked_slideshow_text = "&locked";
 
-static char *display_name = 0;
+int nports;
+Port *ports;
+
+fd_set x_socket_set;
+int max_x_socket;
 
 int check_idle;
 struct timeval idle_time;
@@ -35,9 +39,6 @@ struct timeval warn_idle_time;
 int check_mouse;
 int mouse_sensitivity;
 struct timeval check_mouse_time;
-int last_mouse_x;
-int last_mouse_y;
-Window last_mouse_root;
 
 int check_quota;
 struct timeval quota_time;
@@ -74,7 +75,8 @@ All options may be abbreviated to their unique prefixes. The three forms\n\
 explicitly with `-OPTION'.\n\
 \n\
 General options:\n\
-  --display DISPLAY   Monitor the X display DISPLAY.\n\
+  --display DISPLAY   Monitor the X display DISPLAY. You can monitor more than\n\
+                      one display by giving this option multiple times.\n\
   --help              Print this message and exit.\n\
   --version           Print version number and exit.\n\
 \n");
@@ -106,6 +108,7 @@ Appearance:\n\
                       `korean' (synonyms `japanese', `russian'), `german'.\n\
   flashtime=RATE      Flash the warning window at RATE (default 2 sec).\n\
   +iconified          Warning windows appear as icons.\n\
+  lock-picture=GIF-FILE, lp=GIF-FILE     Show GIF animation on lock window.\n\
   maxhands=NUM        Maximum number of warning windows is NUM (default 25).\n\
   +mono               Use monochrome pictures.\n\
   +multiply=PERIOD    Make a new warning window every PERIOD.\n\
@@ -161,6 +164,7 @@ message(const char *format, ...)
 static void
 find_root_child(Hand *h)
 {
+  Display *display = h->port->display;
   Window w = h->w;
   Window root, parent, *children;
   unsigned nchildren;
@@ -179,11 +183,13 @@ int
 default_x_processing(XEvent *e)
 {
   Hand *h;
+  Display *display = e->xany.display;
+  Port *port = find_port(display);
   
   switch (e->type) {
     
    case ConfigureNotify:
-    h = window_to_hand(e->xconfigure.window, 1);
+    h = window_to_hand(port, e->xconfigure.window, 1);
     if (!h) break;
     h->configured = 1;
     h->x = e->xconfigure.x;
@@ -194,24 +200,24 @@ default_x_processing(XEvent *e)
     break;
     
    case ReparentNotify:
-    if ((h = window_to_hand(e->xreparent.window, 1)))
+    if ((h = window_to_hand(port, e->xreparent.window, 1)))
       find_root_child(h);
     break;
     
    case MapNotify:
-    if ((h = window_to_hand(e->xmap.window, 1))) {
+    if ((h = window_to_hand(port, e->xmap.window, 1))) {
       draw_slide(h);
       h->mapped = 1;
     }
     break;
     
    case UnmapNotify:
-    if ((h = window_to_hand(e->xmap.window, 1)))
+    if ((h = window_to_hand(port, e->xmap.window, 1)))
       h->mapped = 0;
     break;
     
    case VisibilityNotify:
-    if ((h = window_to_hand(e->xvisibility.window, 0))) {
+    if ((h = window_to_hand(port, e->xvisibility.window, 0))) {
       if (e->xvisibility.state == VisibilityUnobscured)
 	h->obscured = 0;
       else
@@ -220,35 +226,36 @@ default_x_processing(XEvent *e)
     break;
     
    case Expose:
-    h = window_to_hand(e->xexpose.window, 0);
+    h = window_to_hand(port, e->xexpose.window, 0);
     if (e->xexpose.count == 0 && h && h->clock)
       draw_clock(h, 0);
     break;
     
    case ClientMessage:
     /* Leave e->type == ClientMessage only if it was a DELETE_WINDOW. */
-    if (e->xclient.message_type != port.wm_protocols_atom ||
-	(Atom)(e->xclient.data.l[0]) != port.wm_delete_window_atom)
+    if (e->xclient.message_type != port->wm_protocols_atom ||
+	(Atom)(e->xclient.data.l[0]) != port->wm_delete_window_atom)
       e->type = 0;
     else {
-      h = window_to_hand(e->xclient.window, 0);
+      h = window_to_hand(port, e->xclient.window, 0);
       if (h) destroy_hand(h);
     }
     break;
     
-    /* for idle processing */
-   case CreateNotify:
-    {
-      struct timeval now;
-      xwGETTIME(now);
-      watch_keystrokes(e->xcreatewindow.window, &now);
-      break;
-    }
-    
+   /* for idle processing */
+   case CreateNotify: {
+     struct timeval now;
+     xwGETTIME(now);
+     watch_keystrokes(display, e->xcreatewindow.window, &now);
+     break;
+   }
+   
    case DestroyNotify:
     /* We must unschedule any IdleSelect events for fear of selecting input
-       on a destroyed window. There may be a race condition here... */
-    unschedule_data(A_IDLE_SELECT, (void *)e->xdestroywindow.window);
+       on a destroyed window. There is a race condition here because of the
+       asynchronicity of X communication. */
+    unschedule_data(A_IDLE_SELECT, (void *)e->xdestroywindow.display,
+		    (void *)e->xdestroywindow.window);
     break;
     
    case MappingNotify:
@@ -466,11 +473,17 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "clock", 1, "t"))
       o->clock = optparse_yesno;
     
-    else if (optparse(s, "display", 1, "ss", &display_name))
-      ;
+    else if (optparse(s, "display", 1, "ss", &arg)) {
+      if (nports == 1 && ports[0].display_name == 0)
+	ports[0].display_name = arg;
+      else {
+	nports++;
+	ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
+	ports[nports-1].display_name = arg;
+      }
     
-    else if (optparse(s, "finger", 1, "tS", &arg)
-	     || optparse(s, "flipoff", 1, "tS", &arg)) {
+    } else if (optparse(s, "finger", 1, "tS", &arg)
+	      || optparse(s, "flipoff", 1, "tS", &arg)) {
       if (!optparse_yesno) {
 	o->slideshow_text = o->icon_slideshow_text = 0;
 	slideshow_text_append_built_in(o, "clench");
@@ -494,6 +507,9 @@ parse_options(int pargc, char **pargv)
     
     else if (optparse(s, "lock", 1, "tT", &o->lock_bounce_delay))
       o->lock = optparse_yesno;
+    else if (optparse(s, "lock-picture", 5, "ss", &locked_slideshow_text)
+	     || optparse(s, "lp", 2, "ss", &locked_slideshow_text))
+      ;
 
     else if (optparse(s, "minbreaktime", 2, "st", &o->min_break_time))
       ;
@@ -591,8 +607,8 @@ check_options(Options *o)
   /* check cancel_type_time */
   if (xwTIMELT0(o->cancel_type_time)) {
     xwSETTIME(o->cancel_type_time, 10 * SEC_PER_MIN, 0);
-    if (xwTIMEGT(o->cancel_type_time, o->break_time))
-      o->cancel_type_time = o->break_time;
+    if (xwTIMEGT(o->cancel_type_time, normal_type_time))
+      o->cancel_type_time = normal_type_time;
   }
   
   /* If the next set of options is supposed to appear before this one, replace
@@ -654,7 +670,6 @@ default_settings(void)
   check_mouse = 0;
   xwSETTIME(check_mouse_time, 3, 0);
   mouse_sensitivity = 15;
-  last_mouse_x = last_mouse_y = 0;
 
   /* quota settings */
   check_quota = 0;
@@ -690,7 +705,7 @@ default_settings(void)
 #endif
 
 static void
-initialize_port(Display *display, int screen_number)
+initialize_port(Port *port, Display *display, int screen_number)
 {
   XVisualInfo visi_template;
   int nv, i;
@@ -699,12 +714,12 @@ initialize_port(Display *display, int screen_number)
   VisualID default_visualid;
   
   /* initialize Port fields */
-  port.display = display;
-  port.x_socket = ConnectionNumber(display);
-  port.screen_number = screen_number;
-  port.root_window = RootWindow(display, screen_number);
-  port.width = DisplayWidth(display, screen_number);
-  port.height = DisplayHeight(display, screen_number);
+  port->display = display;
+  port->x_socket = ConnectionNumber(display);
+  port->screen_number = screen_number;
+  port->root_window = RootWindow(display, screen_number);
+  port->width = DisplayWidth(display, screen_number);
+  port->height = DisplayHeight(display, screen_number);
   
   /* choose the Visual */
   default_visualid = DefaultVisual(display, screen_number)->visualid;
@@ -716,9 +731,9 @@ initialize_port(Display *display, int screen_number)
       best_v = &v[i];
   
   if (!best_v) {
-    port.visual = DefaultVisual(display, screen_number);
-    port.depth = DefaultDepth(display, screen_number);
-    port.colormap = DefaultColormap(display, screen_number);
+    port->visual = DefaultVisual(display, screen_number);
+    port->depth = DefaultDepth(display, screen_number);
+    port->colormap = DefaultColormap(display, screen_number);
   } else {
   
     /* Which visual to choose? This isn't exactly a simple decision, since
@@ -729,13 +744,13 @@ initialize_port(Display *display, int screen_number)
       if (v[i].depth > best_v->depth && v[i].VISUAL_CLASS == TrueColor)
 	best_v = &v[i];
     
-    port.visual = best_v->visual;
-    port.depth = best_v->depth;
+    port->visual = best_v->visual;
+    port->depth = best_v->depth;
     if (best_v->visualid != default_visualid)
-      port.colormap = XCreateColormap(display, port.root_window,
-				      port.visual, AllocNone);
+      port->colormap = XCreateColormap(display, port->root_window,
+				       port->visual, AllocNone);
     else
-      port.colormap = DefaultColormap(display, screen_number);
+      port->colormap = DefaultColormap(display, screen_number);
     
   }
   
@@ -745,26 +760,67 @@ initialize_port(Display *display, int screen_number)
   {
     XColor color;
     color.red = color.green = color.blue = 0;
-    XAllocColor(display, port.colormap, &color);
-    port.black = color.pixel;
+    XAllocColor(display, port->colormap, &color);
+    port->black = color.pixel;
     color.red = color.green = color.blue = 0xFFFF;
-    XAllocColor(display, port.colormap, &color);
-    port.white = color.pixel;
+    XAllocColor(display, port->colormap, &color);
+    port->white = color.pixel;
   }
   
   /* choose the font */
-  port.font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
+  port->font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-*");
   
-  /* don't set port.drawable until after we create the first hand */
-
   /* set gfx */
-  port.gfx = Gif_NewXContextFromVisual(display, port.screen_number,
-				       port.visual, port.depth, port.colormap);
+  port->gfx = Gif_NewXContextFromVisual
+    (display, port->screen_number, port->visual, port->depth, port->colormap);
 
   /* set atoms */
-  port.wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
-  port.wm_protocols_atom = XInternAtom(display, "WM_PROTOCOLS", False);
-  port.mwm_hints_atom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+  port->wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  port->wm_protocols_atom = XInternAtom(display, "WM_PROTOCOLS", False);
+  port->mwm_hints_atom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+
+  /* create first hand for this port, set drawable */
+  {
+    Hand *hand = new_hand(port, NEW_HAND_CENTER, NEW_HAND_CENTER);
+    port->drawable = hand->w;
+    hand->permanent = 1;
+  }
+
+  /* initialize GCs */
+  {
+    XGCValues gcv;
+    
+    gcv.foreground = port->black;
+    gcv.line_width = 3;
+    gcv.cap_style = CapRound;
+    port->clock_fore_gc = XCreateGC
+      (port->display, port->drawable,
+       GCForeground | GCLineWidth | GCCapStyle, &gcv);
+    
+    port->clock_hand_gc = port->clock_fore_gc;
+    
+    gcv.foreground = port->white;
+    gcv.font = port->font->fid;
+    gcv.subwindow_mode = IncludeInferiors;
+    port->white_gc = XCreateGC
+      (port->display, port->drawable,
+       GCForeground | GCFont | GCSubwindowMode, &gcv);
+  }
+  
+  /* initialize other stuff */
+  port->icon_width = port->icon_height = 0;
+  port->last_mouse_root = None;
+  port->bars_pixmap = None;
+}
+
+Port *
+find_port(Display *display)
+{
+  int i;
+  for (i = 0; i < nports; i++)
+    if (ports[i].display == display)
+      return &ports[i];
+  return 0;
 }
 
 
@@ -773,8 +829,8 @@ initialize_port(Display *display, int screen_number)
 int
 main(int argc, char *argv[])
 {
-  Hand *hand;
   Options *o;
+  int i;
   int lock_possible = 0;
   struct timeval now;
   struct timeval type_time;
@@ -782,6 +838,9 @@ main(int argc, char *argv[])
   xwGETTIMEOFDAY(&genesis_time);
   
   srand((getpid() + 1) * time(0));
+  
+  nports = 1;
+  ports = (Port *)xmalloc(sizeof(Port));
   
   /* parse options. remove first argument = program name */
   default_settings();  
@@ -824,39 +883,41 @@ main(int argc, char *argv[])
   resting_icon_slideshow = parse_slideshow(resting_icon_slideshow_text, 1, force_mono);
   ready_slideshow = parse_slideshow(ready_slideshow_text, 1, force_mono);
   ready_icon_slideshow = parse_slideshow(ready_icon_slideshow_text, 1, force_mono);
-
-  /* set up display */
-  display = XOpenDisplay(display_name);
-  if (!display) error("cannot open display");
-  initialize_port(display, DefaultScreen(display));
-  
-  /* create first hand */
+  locked_slideshow = parse_slideshow(locked_slideshow_text, 1, force_mono);
   ocurrent = &onormal;
-  hand = new_hand(NEW_HAND_CENTER, NEW_HAND_CENTER);
+
+  /* set up displays */
+  FD_ZERO(&x_socket_set);
+  max_x_socket = 0;
+  for (i = 0; i < nports; i++) {
+    Display *display = XOpenDisplay(ports[i].display_name);
+    if (!display) error("can't open display `%s'", ports[i].display_name);
+    initialize_port(&ports[i], display, DefaultScreen(display));
+    ports[i].port_number = i;
+    FD_SET(ports[i].x_socket, &x_socket_set);
+    if (ports[i].x_socket > max_x_socket)
+      max_x_socket = ports[i].x_socket;
+  }
 
   /* initialize pictures using first hand */
-  port.drawable = hand->w;
-  init_clock(hand->w);
   if (lock_possible) {
-    Gif_Stream *gfs = get_built_in_image(force_mono ? "lockedmono" : "locked");
-    if (!gfs && force_mono) gfs = get_built_in_image("locked");
-    lock_pixmap = Gif_XImage(port.gfx, gfs, 0);
-    gfs = get_built_in_image(force_mono ? "barsmono" : "bars");
-    if (!gfs && force_mono) gfs = get_built_in_image("bars");
-    bars_pixmap = Gif_XImage(port.gfx, gfs, 0);
+    Gif_Stream *bgfs = get_built_in_image(force_mono?"barsmono":"bars");
+    if (!bgfs && force_mono) bgfs = get_built_in_image("bars");
+    for (i = 0; i < nports; i++)
+      ports[i].bars_pixmap = Gif_XImage(ports[i].gfx, bgfs, 0);
   }
   
   /* watch keystrokes on all windows */
   xwGETTIME(now);
   XSetErrorHandler(x_error_handler);
-  watch_keystrokes(port.root_window, &now);
+  for (i = 0; i < nports; i++)
+    watch_keystrokes(ports[i].display, ports[i].root_window, &now);
   
   /* start mouse checking */
   if (check_mouse) {
     Alarm *a = new_alarm(A_MOUSE);
     xwGETTIME(a->timer);
     schedule(a);
-    last_mouse_root = None;
   }
   
   /* main loop */

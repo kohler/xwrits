@@ -4,15 +4,15 @@
 #include <assert.h>
 
 static void
-ensure_one_hand(void)
+ensure_one_hand(Port *port)
 {
   Hand *h;
-  int nummapped = 0;
-  for (h = hands; h; h = h->next)
+  int nmapped = 0;
+  for (h = port->hands; h; h = h->next)
     if (h->mapped)
-      nummapped++;
-  if (nummapped == 0)
-    XMapRaised(display, hands->w);
+      nmapped++;
+  if (nmapped == 0)
+    XMapRaised(port->display, port->hands->w);
 }
 
 
@@ -151,7 +151,7 @@ rest(void)
   struct timeval now;
   struct timeval this_break_time;
   Alarm *a;
-  int tran;
+  int tran, i;
   
   /* determine length of this break. usually break_time; can be different if
      check_quota is on */
@@ -177,19 +177,22 @@ rest(void)
   schedule(a);
   
   /* set up pictures */
-  set_all_slideshows(hands, resting_slideshow);
-  set_all_slideshows(icon_hands, resting_icon_slideshow);
-  ensure_one_hand();
+  for (i = 0; i < nports; i++) {
+    set_all_slideshows(ports[i].hands, resting_slideshow);
+    set_all_slideshows(ports[i].icon_hands, resting_icon_slideshow);
+    ensure_one_hand(&ports[i]);
+  }
   current_cheats = 0;
   
   /* reschedule mouse position query timing: allow 5 seconds for people to
      jiggle the mouse before we save its position */
   if (check_mouse) {
-    a = grab_alarm_data(A_MOUSE, 0);
+    a = grab_alarm_data(A_MOUSE, 0, 0);
     a->timer = now;
     a->timer.tv_sec += 5;
     schedule(a);
-    last_mouse_root = None;
+    for (i = 0; i < nports; i++)
+      ports[i].last_mouse_root = None;
   }
   
   if (ocurrent->break_clock) {
@@ -199,8 +202,9 @@ rest(void)
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
   }
-  
-  XFlush(display);
+
+  for (i = 0; i < nports; i++)
+    XFlush(ports[i].display);
   tran = loopmaster(0, rest_x_loop);
   
   unschedule(A_AWAKE | A_CLOCK);
@@ -226,33 +230,14 @@ ready_x_loop(XEvent *e, struct timeval *now)
 void
 ready(void)
 {
-  set_all_slideshows(hands, ready_slideshow);
-  set_all_slideshows(icon_hands, ready_icon_slideshow);
-  ensure_one_hand();
-  
-  if (ocurrent->beep)
-    XBell(display, 0);
-  XFlush(display);
-  
-  loopmaster(0, ready_x_loop);
-}
-
-
-/* unmap all windows */
-
-void
-unmap_all(void)
-{
-  XEvent event;
-  
-  while (hands->next)
-    destroy_hand(hands);
-  destroy_hand(hands);		/* final destroy_hand() doesn't remove the
-                                   hand from the list, it unmaps it. */
-  
-  XFlush(display);
-  while (XPending(display)) {
-    XNextEvent(display, &event);
-    default_x_processing(&event);
+  int i;
+  for (i = 0; i < nports; i++) {
+    set_all_slideshows(ports[i].hands, ready_slideshow);
+    set_all_slideshows(ports[i].icon_hands, ready_icon_slideshow);
+    ensure_one_hand(&ports[i]);
+    if (ocurrent->beep)
+      XBell(ports[i].display, 0);
+    XFlush(ports[i].display);
   }
+  loopmaster(0, ready_x_loop);
 }

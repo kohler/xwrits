@@ -10,22 +10,18 @@
 #define HandWidth 1.5
 #define HandOffset 1.5
 
-static GC clock_fore_gc;
-static GC clock_back_gc;
-static GC clock_hand_gc;
-
 struct timeval clock_zero_time;
 struct timeval clock_tick;
 
 
 static void
-draw_hand(Drawable drawable, int xin, int yin, int hand_length,
+draw_hand(Port *port, Drawable drawable, int xin, int yin, int hand_length,
 	  int value, int value_cycle)
 {
   double sinv = sin(value * 2 * M_PI / value_cycle);
   double cosv = cos(value * 2 * M_PI / value_cycle);
 
-  XDrawLine(display, drawable, clock_hand_gc, xin, yin,
+  XDrawLine(port->display, drawable, port->clock_hand_gc, xin, yin,
 	    (int)(xin + hand_length * sinv), (int)(yin - hand_length * cosv));
   
 #if 0
@@ -39,7 +35,8 @@ draw_hand(Drawable drawable, int xin, int yin, int hand_length,
   points[2].x = (int)(x - HandWidth * cosv);
   points[2].y = (int)(y - HandWidth * sinv);
   points[4] = points[0];
-  XDrawLines(display, drawable, clock_fore_gc, points, 3, CoordModeOrigin);
+  XDrawLines(port->display, drawable, port->clock_fore_gc,
+	     points, 3, CoordModeOrigin);
 #endif
 }
 
@@ -47,6 +44,7 @@ draw_hand(Drawable drawable, int xin, int yin, int hand_length,
 static void
 draw_1_clock(Hand *hand, int seconds)
 {
+  Port *port = hand->port;
   Picture *p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
   int x, y;
   int hour, min;
@@ -54,10 +52,10 @@ draw_1_clock(Hand *hand, int seconds)
   x = p->clock_x_off;
   y = p->clock_y_off;
   
-  XFillArc(display, hand->w, clock_back_gc, x, y, ClockWidth,
-	   ClockHeight, 0, 23040);
-  XDrawArc(display, hand->w, clock_fore_gc, x, y, ClockWidth,
-	   ClockHeight, 0, 23040);
+  XFillArc(port->display, hand->w, port->white_gc,
+	   x, y, ClockWidth, ClockHeight, 0, 23040);
+  XDrawArc(port->display, hand->w, port->clock_fore_gc,
+	   x, y, ClockWidth, ClockHeight, 0, 23040);
   x += ClockWidth / 2;
   y += ClockHeight / 2;
   min = (seconds + 5) / SEC_PER_MIN;
@@ -65,10 +63,8 @@ draw_1_clock(Hand *hand, int seconds)
   min %= MIN_PER_HOUR;
   
   if (hour)
-    draw_hand(hand->w, x, y, ClockHour, hour, HOUR_PER_CYCLE);
-  draw_hand(hand->w, x, y, ClockMin, min, MIN_PER_HOUR);
-  
-  hand->clock = 1;
+    draw_hand(port, hand->w, x, y, ClockHour, hour, HOUR_PER_CYCLE);
+  draw_hand(port, hand->w, x, y, ClockMin, min, MIN_PER_HOUR);
 }
 
 
@@ -94,26 +90,30 @@ void
 draw_clock(Hand *h, struct timeval *now)
 {
   draw_1_clock(h, now_to_clock_sec(now));
+  h->clock = 1;
 }
 
 void
 draw_all_clocks(struct timeval *now)
 {
   Hand *h;
-  int sec = now_to_clock_sec(now);
-  for (h = hands; h; h = h->next)
-    if (h->mapped)
-      draw_1_clock(h, sec);
-    else
+  int i, sec = now_to_clock_sec(now);
+  for (i = 0; i < nports; i++)
+    for (h = ports[i].hands; h; h = h->next) {
+      if (h->mapped)
+	draw_1_clock(h, sec);
       h->clock = 1;
+    }
 }
 
 
 void
 erase_clock(Hand *hand)
 {
+  Port *port = hand->port;
   Picture *p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
-  XCopyArea(display, p->pix, hand->w, clock_fore_gc,
+  XCopyArea(port->display, p->pix[port->port_number], hand->w,
+	    port->clock_fore_gc,
 	    p->clock_x_off - 2, p->clock_y_off - 2,
 	    ClockWidth + 4, ClockHeight + 4,
 	    p->clock_x_off - 2, p->clock_y_off - 2);
@@ -124,27 +124,11 @@ void
 erase_all_clocks(void)
 {
   Hand *h;
-  for (h = hands; h; h = h->next)
-    if (h->mapped && h->clock)
-      erase_clock(h);
-    else
+  int i;
+  for (i = 0; i < nports; i++)
+    for (h = ports[i].hands; h; h = h->next) {
+      if (h->mapped && h->clock)
+	erase_clock(h);
       h->clock = 0;
-}
-
-
-void
-init_clock(Drawable drawable)
-{
-  XGCValues gcv;
-  
-  gcv.foreground = port.black;
-  gcv.line_width = 3;
-  gcv.cap_style = CapRound;
-  clock_fore_gc = XCreateGC
-    (display, drawable, GCForeground | GCLineWidth | GCCapStyle, &gcv);
-  
-  clock_hand_gc = clock_fore_gc;
-  
-  gcv.foreground = port.white;
-  clock_back_gc = XCreateGC(display, drawable, GCForeground, &gcv);
+    }
 }

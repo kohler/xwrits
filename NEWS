@@ -1,5 +1,18 @@
 Xwrits NEWS
 
+Version 2.10
+
+* Xwrits can simultaneously monitor multiple displays (and report problems
+  on all of them). Just give the `display' option multiple times.
+
+* Added `lock-picture' option.
+
+* Fixed bug: default `canceltime' could be longer than `typetime'.
+
+* Fixed bug: sometimes the warning window picture would stop being
+  animated.
+
+
 Version 2.9   30.Dec.1999
 
 * `german' is now its own beast: an animated gesture suggested by Andreas

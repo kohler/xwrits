@@ -9,9 +9,6 @@
 #include "colorpic.c"
 #include "monopic.c"
 
-Pixmap bars_pixmap = None;
-Pixmap lock_pixmap = None;
-
 Gif_Stream *current_slideshow = 0;
 
 #define NPICTURES 14
@@ -57,21 +54,27 @@ static void
 free_picture(void *v)
 {
   Picture *p = (Picture *)v;
+  int i;
   if (p->canonical)
     Gif_DeleteImage(p->canonical);
-  else if (p->pix)
-    XFreePixmap(display, p->pix);
+  else
+    for (i = 0; i < nports; i++)
+      if (p->pix[i])
+	XFreePixmap(ports[i].display, p->pix[i]);
   xfree(p);
 }
 
 static void
 add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
 {
-  Picture *p = (Picture *)xmalloc(sizeof(Picture));
-  p->pix = None;
+  Picture *p = (Picture *)
+    xmalloc(sizeof(Picture) + (nports-1)*sizeof(Pixmap));
+  int i;
   p->clock_x_off = clock_x_off;
   p->clock_y_off = clock_y_off;
   p->canonical = 0;
+  for (i = 0; i < nports; i++)
+    p->pix[i] = None;
   
   gfi->user_data = p;
   gfi->free_user_data = free_picture;
@@ -152,7 +155,7 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
   /* adapt delays for 1-frame images */
   if (add->nimages == 1)
     add->images[0]->delay = DEFAULT_FLASH_DELAY_SEC * 100;
-  
+
   /* account for background and loopcount */
   if (gfs->nimages == 0) {
     if (add->global) {
@@ -193,10 +196,16 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
   }
   
   /* add multiple times if it has a loop count, up to a max of 20 loops */
-  if (gfs->nimages != 0 && add->loopcount > 0) {
+  if (add->nimages > 1 && add->loopcount >= 0) {
     int loop = (add->loopcount <= 20 ? add->loopcount : 20);
     int first = gfs->nimages - add->nimages;
     int j;
+    if (loop == 0 && first > 0) {
+      for (i = j = 0; i < add->nimages; i++)
+	j += gfs->images[first + i]->delay;
+      loop =
+	(int)((DEFAULT_FLASH_DELAY_SEC * 100) * flash_rate_ratio / j);
+    }
     for (i = 0; i < loop; i++)
       for (j = 0; j < add->nimages; j++)
 	Gif_AddImage(gfs, gfs->images[first + j]);
@@ -288,6 +297,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
   int i = 0;
   Alarm *a;
   struct timeval t;
+  Port *port = h->port;
   
   assert(gfs);
   if (h->slideshow == gfs)
@@ -298,7 +308,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
   else
     xwGETTIME(t);
   
-  a = grab_alarm_data(A_FLASH, h);
+  a = grab_alarm_data(A_FLASH, h, 0);
   
   if (h->slideshow) {
     Gif_Image *cur_im = h->slideshow->images[h->slide];
@@ -311,7 +321,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
   }
   
   if (gfs->nimages > 1) {
-    if (!a) a = new_alarm_data(A_FLASH, h);
+    if (!a) a = new_alarm_data(A_FLASH, h, 0);
     xwADDDELAY(a->timer, t, gfs->images[i]->delay);
     schedule(a);
   } else {
@@ -329,8 +339,8 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
     xsh->min_height = xsh->max_height = gfs->screen_height;
     wmch.width = gfs->screen_width;
     wmch.height = gfs->screen_height;
-    XSetWMNormalHints(display, h->w, xsh);
-    XReconfigureWMWindow(display, h->w, port.screen_number,
+    XSetWMNormalHints(port->display, h->w, xsh);
+    XReconfigureWMWindow(port->display, h->w, port->screen_number,
 			 CWWidth | CWHeight, &wmch);
     XFree(xsh);
   }

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <X11/keysym.h>
 
-#define WINDOW_WIDTH	300
+#define BARS_WIDTH	150
 #define WINDOW_HEIGHT	300
 
 struct timeval lock_message_delay;
@@ -11,54 +11,66 @@ char *lock_password;
 
 #define REDRAW_MESSAGE ((char *)1L)
 
-static Window cover;
-static GC gc;
+static Window *covers;
+static Hand **lock_hands;
+
 static char password[MaxPasswordSize];
-static int passwordpos = -1;
+static int password_pos = -1;
 
 
 static void
-move_lock(int domove)
+lock_hand_position(Port *port, int *x, int *y)
 {
-  static int lock_x, lock_y;
-  if (domove) {
-    XClearArea(display, cover, lock_x, lock_y, WINDOW_WIDTH, WINDOW_HEIGHT,
-	       False);
-    lock_x = ((rand() >> 4) % (port.width / WINDOW_WIDTH * 2 - 1))
-      * (WINDOW_WIDTH / 2);
-    lock_y = (rand() >> 4) % (port.height - WINDOW_HEIGHT);
-    lock_y = (lock_y & ~0x3) | 0x2;
-  }
-  if (lock_pixmap)
-    XCopyArea(display, lock_pixmap, cover, gc, 0, 0,
-	      WINDOW_WIDTH, WINDOW_HEIGHT, lock_x, lock_y);
-  XFlush(display);
+  /* x_width_bars = max x | x*150 + screen_width <= port_width */
+  int x_width_bars = (port->width - locked_slideshow->screen_width) / BARS_WIDTH;
+  *x = ((rand() >> 4) % (x_width_bars + 1)) * BARS_WIDTH;
+  *y = (((rand() >> 4) % (port->height - locked_slideshow->screen_height))
+	& ~0x3) | 0x2;
 }
 
+static void
+move_locks(void)
+{
+  int i, x, y;
+  struct timeval now;
+  xwGETTIME(now);
+  for (i = 0; i < nports; i++)
+    if (covers[i]) {
+      lock_hand_position(&ports[i], &x, &y);
+      XClearWindow(ports[i].display, lock_hands[i]->w);
+      XMoveWindow(ports[i].display, lock_hands[i]->w, x, y);
+      if (ocurrent->break_clock) draw_clock(lock_hands[i], &now);
+      XFlush(ports[i].display);
+    }
+}
 
 static void
 draw_message(char *message)
 {
   static int msgx, msgy, msgw, msgh;
-  static char *oldmessage;
-  if (oldmessage && message != REDRAW_MESSAGE)
-    XClearArea(display, cover, msgx, msgy, msgw, msgh, False);
-  if (message == REDRAW_MESSAGE) message = oldmessage;
-  if (message) {
-    int length = strlen(message);
-    msgw = XTextWidth(port.font, message, length);
-    msgh = port.font->ascent + port.font->descent;
-    msgx = (port.width - msgw) / 2;
-    msgy = (port.height - msgh) / 2;
-    XDrawString(display, cover, gc, msgx, msgy + port.font->ascent,
-		message, length);
-  }
-  oldmessage = message;
+  static char *cur_message;
+  int i, redraw = (message == REDRAW_MESSAGE);
+  if (redraw) message = cur_message;
+  for (i = 0; i < nports; i++)
+    if (covers[i]) {
+      if (cur_message && !redraw)
+	XClearArea(ports[i].display, covers[i],
+		   msgx, msgy, msgw, msgh, False);
+      if (message) {
+	int length = strlen(message);
+	msgw = XTextWidth(ports[i].font, message, length);
+	msgh = ports[i].font->ascent + ports[i].font->descent;
+	msgx = (ports[i].width - msgw) / 2;
+	msgy = (ports[i].height - msgh) / 2;
+	XDrawString(ports[i].display, covers[i], ports[i].white_gc,
+		    msgx, msgy + ports[i].font->ascent, message, length);
+      }
+    }
+  cur_message = message;
 }
 
-
 static int
-checkpassword(XKeyEvent *xkey)
+check_password(XKeyEvent *xkey)
 {
   KeySym keysym;
   XComposeStatus compose;
@@ -67,18 +79,18 @@ checkpassword(XKeyEvent *xkey)
   
   if (keysym == XK_Return ||
       (nchars == 1 && (c == '\n' || c == '\r'))) {
-    password[passwordpos] = 0;
-    passwordpos = 0;
+    password[password_pos] = 0;
+    password_pos = 0;
     if (strcmp(lock_password, password) == 0)
       return 1;
     else 
       draw_message("Incorrect password! Try again");
   } else if (keysym == XK_Delete || keysym == XK_BackSpace) {
-    if (passwordpos > 0)
-      passwordpos--;
+    if (password_pos > 0)
+      password_pos--;
   } else if (nchars == 1) {
-    if (passwordpos < MaxPasswordSize - 1)
-      password[passwordpos++] = c;
+    if (password_pos < MaxPasswordSize - 1)
+      password[password_pos++] = c;
   }
   
   return 0;
@@ -86,29 +98,20 @@ checkpassword(XKeyEvent *xkey)
 
 
 static int
-lockalarmloop(Alarm *a, struct timeval *now)
+lock_alarm_loop(Alarm *a, struct timeval *now)
 {
   switch (a->action) {
     
    case A_LOCK_BOUNCE:
-    move_lock(1);
+    move_locks();
     draw_message(REDRAW_MESSAGE);
     xwADDTIME(a->timer, a->timer, ocurrent->lock_bounce_delay);
     schedule(a);
     break;
     
-   case A_LOCK_CLOCK:
-    draw_all_clocks(now);
-    move_lock(0);
-    draw_message(0);
-    xwADDTIME(a->timer, a->timer, clock_tick);
-    schedule(a);
-    break;
-    
    case A_LOCK_MESS_ERASE:
     draw_message(0);
-    move_lock(0);
-    passwordpos = -1;
+    password_pos = -1;
     break;
     
   }
@@ -118,20 +121,22 @@ lockalarmloop(Alarm *a, struct timeval *now)
 
 
 static int
-lockxloop(XEvent *e, struct timeval *now)
+lock_x_loop(XEvent *e, struct timeval *now)
 {
   Alarm *a;
+  Port *port = find_port(e->xany.display);
   
   switch (e->type) {
     
    case KeyPress:
-    if (passwordpos == -1) {
+    if (password_pos == -1) {
       draw_message("Enter password to unlock screen");
-      passwordpos = 0;
+      password_pos = 0;
     }
-    if (checkpassword(&e->xkey))
+    if (check_password(&e->xkey))
       return TRAN_FAIL;
-    a = new_alarm(A_LOCK_MESS_ERASE);
+    a = grab_alarm(A_LOCK_MESS_ERASE);
+    if (!a) a = new_alarm(A_LOCK_MESS_ERASE);
     xwGETTIME(a->timer);
     xwADDTIME(a->timer, a->timer, lock_message_delay);
     schedule(a);
@@ -139,8 +144,7 @@ lockxloop(XEvent *e, struct timeval *now)
     
    case VisibilityNotify:
     if (e->xvisibility.state != VisibilityUnobscured) {
-      XRaiseWindow(display, cover);
-      move_lock(0);
+      XRaiseWindow(port->display, covers[port->port_number]);
       draw_message(REDRAW_MESSAGE);
     }
     break;
@@ -156,50 +160,68 @@ lock(void)
 {
   struct timeval now;
   Alarm *a;
+  int i, successful_grabs;
   
   XEvent event;
   int tran = TRAN_FAIL;
+
+  if (!covers) {
+    covers = (Window *)xmalloc(sizeof(Window) * nports);
+    lock_hands = (Hand **)xmalloc(sizeof(Hand *) * nports);
+  }
   
-  {
+  for (i = 0; i < nports; i++) {
     XSetWindowAttributes setattr;
     unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect
       | CWBorderPixel | CWColormap;
-    if (!bars_pixmap) {
-      setattr.background_pixel = port.black;
+    if (!ports[i].bars_pixmap) {
+      setattr.background_pixel = ports[i].black;
       cwmask |= CWBackPixel;
     } else {
-      setattr.background_pixmap = bars_pixmap;
+      setattr.background_pixmap = ports[i].bars_pixmap;
       cwmask |= CWBackPixmap;
     }
     setattr.backing_store = NotUseful;
     setattr.save_under = False;
     setattr.override_redirect = True;
-    setattr.colormap = port.colormap;
+    setattr.colormap = ports[i].colormap;
     setattr.border_pixel = 0;
-    cover = XCreateWindow
-      (display, port.root_window,
-       0, 0, port.width, port.height, 0,
-       port.depth, InputOutput, port.visual, cwmask, &setattr);
-    XSelectInput(display, cover, ButtonPressMask | ButtonReleaseMask |
-		 KeyPressMask | VisibilityChangeMask | ExposureMask);
-    XMapRaised(display, cover);
-    XSync(display, False);
+    covers[i] = XCreateWindow
+      (ports[i].display, ports[i].root_window,
+       0, 0, ports[i].width, ports[i].height, 0,
+       ports[i].depth, InputOutput, ports[i].visual, cwmask, &setattr);
+    XSelectInput(ports[i].display, covers[i],
+		 ButtonPressMask | ButtonReleaseMask | KeyPressMask
+		 | VisibilityChangeMask | ExposureMask);
+    XMapRaised(ports[i].display, covers[i]);
+    XSync(ports[i].display, False);
   }
-  
-  XWindowEvent(display, cover, ExposureMask, &event);
-  if (XGrabKeyboard(display, cover, True, GrabModeAsync, GrabModeAsync,
-		    CurrentTime) != GrabSuccess)
+
+  /* grab keyboard */
+  successful_grabs = 0;
+  for (i = 0; i < nports; i++) {
+    XWindowEvent(ports[i].display, covers[i], ExposureMask, &event);
+    if (XGrabKeyboard(ports[i].display, covers[i], True,
+		      GrabModeAsync, GrabModeAsync, CurrentTime)
+	== GrabSuccess) {
+      int x, y;
+      lock_hand_position(&ports[i], &x, &y);
+      lock_hands[i] = new_hand_subwindow(&ports[i], covers[i], x, y);
+      set_slideshow(lock_hands[i], locked_slideshow, 0);
+      XMapRaised(ports[i].display, lock_hands[i]->w);
+      successful_grabs++;
+    } else {
+      XDestroyWindow(ports[i].display, covers[i]);
+      covers[i] = None;
+      lock_hands[i] = 0;
+    }
+  }
+  if (!successful_grabs)
     goto no_keyboard_grab;
-  
-  if (!gc) {
-    XGCValues gcv;
-    gcv.font = port.font->fid;
-    gcv.foreground = port.white;
-    gc = XCreateGC(display, cover, GCFont | GCForeground, &gcv);
-  }
-  
+
+  /* set up clocks */
   xwGETTIME(now);
-  
+
   a = new_alarm(A_AWAKE);
   xwADDTIME(a->timer, ocurrent->break_time, now);
   clock_zero_time = a->timer;
@@ -211,24 +233,24 @@ lock(void)
   
   if (ocurrent->break_clock) {
     draw_all_clocks(&now);
-    a = new_alarm(A_LOCK_CLOCK);
+    a = new_alarm(A_CLOCK);
     xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
   }
-  
+
   draw_message(0);
-  move_lock(1);
-  passwordpos = -1;
+  password_pos = -1;
   
-  tran = loopmaster(lockalarmloop, lockxloop);
-  
-  XUngrabKeyboard(display, CurrentTime);
-  
+  tran = loopmaster(lock_alarm_loop, lock_x_loop);
+
  no_keyboard_grab:
-  unschedule(A_LOCK_CLOCK | A_LOCK_BOUNCE | A_AWAKE | A_LOCK_MESS_ERASE);
-  if (ocurrent->break_clock) erase_all_clocks();
-  XDestroyWindow(display, cover);
-  XFlush(display);
-  
+  unschedule(A_CLOCK | A_LOCK_BOUNCE | A_AWAKE | A_LOCK_MESS_ERASE);
+  for (i = 0; i < nports; i++)
+    if (covers[i]) {
+      XUngrabKeyboard(ports[i].display, CurrentTime);
+      destroy_hand(lock_hands[i]);
+      XDestroyWindow(ports[i].display, covers[i]);
+      XFlush(ports[i].display);
+    }
   return tran;
 }

@@ -6,33 +6,28 @@
 #include <stdarg.h>
 #include <assert.h>
 
-Hand *hands;
-Hand *icon_hands;
-
 #define NEW_HAND_TRIES 6
-
 
 /* creating a new hand */
 
-static int icon_width;
-static int icon_height;
-
 static void
-get_icon_size()
+get_icon_size(Port *port)
 {
   XIconSize *ic;
   int nic;
-  icon_width = ocurrent->icon_slideshow->screen_width;
-  icon_height = ocurrent->icon_slideshow->screen_height;
-  if (XGetIconSizes(display, port.root_window, &ic, &nic) == 0)
-    return;
-  if (nic != 0) {
-    if (icon_width < ic->min_width) icon_width = ic->min_width;
-    if (icon_width < ic->min_height) icon_height = ic->min_height;
-    if (icon_width > ic->max_width) icon_width = ic->max_width;
-    if (icon_height > ic->max_height) icon_height = ic->max_height;
+  int w = ocurrent->icon_slideshow->screen_width;
+  int h = ocurrent->icon_slideshow->screen_height;
+  if (XGetIconSizes(port->display, port->root_window, &ic, &nic) != 0) {
+    if (nic != 0) {
+      if (w < ic->min_width) w = ic->min_width;
+      if (h < ic->min_height) h = ic->min_height;
+      if (w > ic->max_width) w = ic->max_width;
+      if (h > ic->max_height) h = ic->max_height;
+    }
+    XFree(ic);
   }
-  XFree(ic);
+  port->icon_width = w;
+  port->icon_height = h;
 }
 
 #define xwMAX(i, j) ((i) > (j) ? (i) : (j))
@@ -43,8 +38,8 @@ get_icon_size()
      number of existing hands.' Returns it in *retx and *rety */
 
 static void
-get_best_position(int *xlist, int *ylist, int num, int width, int height,
-		  int *retx, int *rety)
+get_best_position(Port *port, int *xlist, int *ylist, int num,
+		  int width, int height, int *retx, int *rety)
 {
   unsigned int best_penalty = 0x8000U;
   unsigned int penalty;
@@ -54,7 +49,7 @@ get_best_position(int *xlist, int *ylist, int num, int width, int height,
     int x1 = xlist[i], y1 = ylist[i];
     int x2 = x1 + width, y2 = y1 + height;
     penalty = 0;
-    for (h = hands; h; h = h->next)
+    for (h = port->hands; h; h = h->next)
       if (h->mapped) {
 	overw = xwMIN(x2, h->x + h->width) - xwMAX(x1, h->x);
 	overh = xwMIN(y2, h->y + h->height) - xwMAX(y1, h->y);
@@ -70,7 +65,7 @@ get_best_position(int *xlist, int *ylist, int num, int width, int height,
 }
 
 Hand *
-new_hand(int x, int y)
+new_hand(Port *port, int x, int y)
 {
   static XClassHint classh;
   static XSizeHints *xsh;
@@ -83,14 +78,14 @@ new_hand(int x, int y)
   int height = ocurrent->slideshow->screen_height;
   
   if (x == NEW_HAND_CENTER)
-    x = (port.width - width) / 2;
+    x = (port->width - width) / 2;
   if (y == NEW_HAND_CENTER)
-    y = (port.height - height) / 2;
+    y = (port->height - height) / 2;
   
   if (x == NEW_HAND_RANDOM || y == NEW_HAND_RANDOM) {
     int xs[NEW_HAND_TRIES], ys[NEW_HAND_TRIES], i;
-    int xdist = port.width - width;
-    int ydist = port.height - height;
+    int xdist = port->width - width;
+    int ydist = port->height - height;
     int xrand = x == NEW_HAND_RANDOM;
     int yrand = y == NEW_HAND_RANDOM;
     for (i = 0; i < NEW_HAND_TRIES; i++) {
@@ -99,10 +94,13 @@ new_hand(int x, int y)
       if (yrand) ys[i] = (rand() >> 4) % ydist;
       else ys[i] = y;
     }
-    get_best_position(xs, ys, NEW_HAND_TRIES, width, height, &x, &y);
+    get_best_position(port, xs, ys, NEW_HAND_TRIES, width, height, &x, &y);
   }
+
+  if (!port->icon_width)
+    get_icon_size(port);
   
-  if (!xsh) {
+  if (!xwmh) {
     char *stringlist[2];
     stringlist[0] = "xwrits";
     stringlist[1] = NULL;
@@ -119,8 +117,6 @@ new_hand(int x, int y)
     xwmh = XAllocWMHints();
     xwmh->flags = InputHint | StateHint | IconWindowHint;
     xwmh->input = True;
-    
-    get_icon_size();
     
     /* Silly hackery to get the MWM appearance *just right*: ie., no resize
        handles or maximize button, no Resize or Maximize entries in window
@@ -145,7 +141,7 @@ new_hand(int x, int y)
   {
     XSetWindowAttributes setattr;
     unsigned long setattr_mask;
-    setattr.colormap = port.colormap;
+    setattr.colormap = port->colormap;
     setattr.backing_store = NotUseful;
     setattr.save_under = False;
     setattr.border_pixel = 0;
@@ -154,30 +150,32 @@ new_hand(int x, int y)
       | CWSaveUnder;
     
     nh->w = XCreateWindow
-      (display, port.root_window,
+      (port->display, port->root_window,
        x, y, width, height, 0,
-       port.depth, InputOutput, port.visual, setattr_mask, &setattr);
+       port->depth, InputOutput, port->visual, setattr_mask, &setattr);
     
     xwmh->icon_window = nh_icon->w = XCreateWindow
-      (display, port.root_window,
-       x, y, icon_width, icon_height, 0,
-       port.depth, InputOutput, port.visual, setattr_mask, &setattr);
+      (port->display, port->root_window,
+       x, y, port->icon_width, port->icon_height, 0,
+       port->depth, InputOutput, port->visual, setattr_mask, &setattr);
   }
   
-  XSelectInput(display, nh_icon->w, StructureNotifyMask);
+  XSelectInput(port->display, nh_icon->w, StructureNotifyMask);
   
   xsh->x = x;
   xsh->y = y;
   xwmh->initial_state = ocurrent->appear_iconified ? IconicState : NormalState;
-  XSetWMProperties(display, nh->w, &window_name, &icon_name,
+  XSetWMProperties(port->display, nh->w, &window_name, &icon_name,
 		   NULL, 0, xsh, xwmh, &classh);
-  XSetWMProtocols(display, nh->w, &port.wm_delete_window_atom, 1);
-  XChangeProperty(display, nh->w, port.mwm_hints_atom, port.mwm_hints_atom, 32,
+  XSetWMProtocols(port->display, nh->w, &port->wm_delete_window_atom, 1);
+  XChangeProperty(port->display, nh->w, port->mwm_hints_atom,
+		  port->mwm_hints_atom, 32,
 		  PropModeReplace, (unsigned char *)mwm_hints, 4);
   
-  XSelectInput(display, nh->w, ButtonPressMask | StructureNotifyMask
+  XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
-  
+
+  nh->port = port;
   nh->icon = nh_icon;
   nh->width = width;		/* will be reset correctly by */
   nh->height = height;		/* next ConfigureNotify */
@@ -187,11 +185,14 @@ new_hand(int x, int y)
   nh->configured = 0;
   nh->slideshow = 0;
   nh->clock = 0;
-  if (hands) hands->prev = nh;
-  nh->next = hands;
+  nh->permanent = 0;
+  nh->toplevel = 1;
+  if (port->hands) port->hands->prev = nh;
+  nh->next = port->hands;
   nh->prev = 0;
-  hands = nh;
-  
+  port->hands = nh;
+
+  nh_icon->port = port;
   nh_icon->icon = nh;
   nh_icon->root_child = nh->w;
   nh_icon->is_icon = 1;
@@ -199,10 +200,69 @@ new_hand(int x, int y)
   nh_icon->configured = 0;
   nh_icon->slideshow = 0;
   nh_icon->clock = 0;
-  if (icon_hands) icon_hands->prev = nh_icon;
-  nh_icon->next = icon_hands;
+  nh_icon->permanent = 0;
+  nh_icon->toplevel = 1;
+  if (port->icon_hands) port->icon_hands->prev = nh_icon;
+  nh_icon->next = port->icon_hands;
   nh_icon->prev = 0;
-  icon_hands = nh_icon;
+  port->icon_hands = nh_icon;
+  
+  return nh;
+}
+
+Hand *
+new_hand_subwindow(Port *port, Window parent, int x, int y)
+{
+  Hand *nh = xwNEW(Hand);
+  int width = ocurrent->slideshow->screen_width;
+  int height = ocurrent->slideshow->screen_height;
+  
+  if (x == NEW_HAND_CENTER)
+    x = (port->width - width) / 2;
+  if (y == NEW_HAND_CENTER)
+    y = (port->height - height) / 2;
+  
+  if (x == NEW_HAND_RANDOM)
+    x = (rand() >> 4) % (port->width - width);
+  if (y == NEW_HAND_RANDOM)
+    y = (rand() >> 4) % (port->height - height);
+  
+  {
+    XSetWindowAttributes setattr;
+    unsigned long setattr_mask;
+    setattr.colormap = port->colormap;
+    setattr.backing_store = NotUseful;
+    setattr.save_under = False;
+    setattr.border_pixel = 0;
+    setattr.background_pixel = 0;
+    setattr_mask = CWColormap | CWBorderPixel | CWBackPixel | CWBackingStore
+      | CWSaveUnder;
+    
+    nh->w = XCreateWindow
+      (port->display, parent,
+       x, y, width, height, 0,
+       port->depth, InputOutput, port->visual, setattr_mask, &setattr);
+  }
+  
+  XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
+	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
+
+  nh->port = port;
+  nh->icon = 0;
+  nh->width = width;		/* will be reset correctly by */
+  nh->height = height;		/* next ConfigureNotify */
+  nh->root_child = nh->w;
+  nh->is_icon = 0;
+  nh->mapped = 0;
+  nh->configured = 0;
+  nh->slideshow = 0;
+  nh->clock = 0;
+  nh->permanent = 0;
+  nh->toplevel = 0;
+  if (port->hands) port->hands->prev = nh;
+  nh->next = port->hands;
+  nh->prev = 0;
+  port->hands = nh;
   
   return nh;
 }
@@ -212,31 +272,34 @@ new_hand(int x, int y)
 void
 destroy_hand(Hand *h)
 {
+  Port *port = h->port;
   assert(!h->is_icon);
-  unschedule_data(A_FLASH, h);
-  if (h == hands && !h->next) {
+  unschedule_data(A_FLASH, h, 0);
+  if (h->permanent) {
     XEvent event;
     /* last remaining hand; don't destroy it, unmap it */
-    XUnmapWindow(display, h->w);
+    XUnmapWindow(port->display, h->w);
     /* Synthetic UnmapNotify required by ICCCM to withdraw the window */
     event.type = UnmapNotify;
-    event.xunmap.event = port.root_window;
+    event.xunmap.event = port->root_window;
     event.xunmap.window = h->w;
     event.xunmap.from_configure = False;
-    XSendEvent(display, port.root_window, False,
+    XSendEvent(port->display, port->root_window, False,
 	       SubstructureRedirectMask | SubstructureNotifyMask, &event);
     /* mark hand as unmapped now */
     h->mapped = h->icon->mapped = 0;
   } else {
-    Hand *ih = h->icon;
-    XDestroyWindow(display, ih->w);
-    if (ih->prev) ih->prev->next = ih->next;
-    else icon_hands = ih->next;
-    if (ih->next) ih->next->prev = ih->prev;
-    xfree(ih);
-    XDestroyWindow(display, h->w);
+    if (h->icon) {
+      Hand *ih = h->icon;
+      XDestroyWindow(port->display, ih->w);
+      if (ih->prev) ih->prev->next = ih->next;
+      else port->icon_hands = ih->next;
+      if (ih->next) ih->next->prev = ih->prev;
+      xfree(ih);
+    }
+    XDestroyWindow(port->display, h->w);
     if (h->prev) h->prev->next = h->next;
-    else hands = h->next;
+    else port->hands = h->next;
     if (h->next) h->next->prev = h->prev;
     xfree(h);
   }
@@ -249,10 +312,11 @@ int
 active_hands(void)
 {
   Hand *h;
-  int n = 0;
-  for (h = hands; h; h = h->next)
-    if (h->mapped || h->icon->mapped)
-      n++;
+  int i, n = 0;
+  for (i = 0; i < nports; i++)
+    for (h = ports[i].hands; h; h = h->next)
+      if (h->mapped || h->icon->mapped)
+	n++;
   return n;
 }
 
@@ -260,14 +324,14 @@ active_hands(void)
 /* translate a Window to a Hand */
 
 Hand *
-window_to_hand(Window w, int allow_icons)
+window_to_hand(Port *port, Window w, int allow_icons)
 {
   Hand *h;
-  for (h = hands; h; h = h->next)
+  for (h = port->hands; h; h = h->next)
     if (h->w == w)
       return h;
   if (allow_icons)
-    for (h = icon_hands; h; h = h->next)
+    for (h = port->icon_hands; h; h = h->next)
       if (h->w == w)
 	return h;
   return 0;
@@ -277,16 +341,17 @@ window_to_hand(Window w, int allow_icons)
 /* draw a picture on a hand */
 
 static void
-ensure_picture(Gif_Stream *gfs, int n)
+ensure_picture(Port *port, Gif_Stream *gfs, int n)
 {
   Gif_Image *gfi = gfs->images[n];
   Picture *p, *last_p, *last_last_p;
   int i;
+  int picn = port->port_number;
   
   for (i = 0; i < n; i++) {
     p = (Picture *)gfs->images[i]->user_data;
-    if (!p->pix)		/* no picture cached for earlier image */
-      ensure_picture(gfs, i);
+    if (!p->pix[picn])		/* no picture cached for earlier image */
+      ensure_picture(port, gfs, i);
   }
   
   p = (Picture *)gfi->user_data;
@@ -296,15 +361,16 @@ ensure_picture(Gif_Stream *gfs, int n)
   /* reuse pixmaps from other streams */
   if (p->canonical && gfi->transparent < 0 && gfi->left == 0 && gfi->top == 0
       && gfi->width == gfs->screen_width && gfi->height == gfs->screen_height
-      && ((Picture *)p->canonical->user_data)->pix) {
-    p->pix = ((Picture *)p->canonical->user_data)->pix;
+      && ((Picture *)p->canonical->user_data)->pix[picn]) {
+    p->pix[picn] = ((Picture *)p->canonical->user_data)->pix[picn];
     return;
   } else if (p->canonical)
     p->canonical = 0;
   
-  p->pix = Gif_XNextImage(port.gfx, (last_last_p ? last_last_p->pix : None),
-			  (last_p ? last_p->pix : None),
-			  gfs, n);
+  p->pix[picn] = Gif_XNextImage
+    (port->gfx, (last_last_p ? last_last_p->pix[picn] : None),
+     (last_p ? last_p->pix[picn] : None),
+     gfs, n);
 }
 
 void
@@ -312,6 +378,7 @@ draw_slide(Hand *h)
 {
   Gif_Stream *gfs;
   Gif_Image *gfi;
+  Port *port = h->port;
   Picture *p;
 
   assert(h && h->slideshow);
@@ -319,12 +386,33 @@ draw_slide(Hand *h)
   gfi = gfs->images[h->slide];
   p = (Picture *)gfi->user_data;
   
-  if (!p->pix)
-    ensure_picture(gfs, h->slide);
+  if (!p->pix[port->port_number])
+    ensure_picture(port, gfs, h->slide);
   
-  XSetWindowBackgroundPixmap(display, h->w, p->pix);
-  XClearWindow(display, h->w);
+  XSetWindowBackgroundPixmap(port->display, h->w, p->pix[port->port_number]);
+  XClearWindow(port->display, h->w);
   
   if (h->clock)
     draw_clock(h, 0);
+}
+
+
+/* unmap all windows */
+
+void
+unmap_all(void)
+{
+  int i;
+  for (i = 0; i < nports; i++) {
+    Hand *prev = 0, *trav = ports[i].hands;
+    while (trav) {
+      if (trav->permanent) {
+	prev = trav;
+	trav->slideshow = 0;
+      }
+      destroy_hand(trav);
+      trav = (prev == 0 ? ports[i].hands : prev->next);
+    }
+    XFlush(ports[i].display);
+  }
 }

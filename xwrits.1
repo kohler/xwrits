@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.9
+.ds V 2.10
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -93,7 +93,12 @@ is 2 minutes 5.4 seconds, and ``:5'' is 5 seconds.
 
 .TP 5
 \fB\-display\fP \fIdisplay\fP
-Which display to run on.
+Specify the X display. 
+.B Xwrits
+monitors this display for keystrokes and mouse movements, and displays
+windows on it. You can simultaneously monitor more than one display by
+giving this option multiple times; for example, ``xwrits display :0.0
+display fun-orgy:0.0''.
 '
 .TP 5
 \fBtypetime\fP=\fItime\fP [\fBt\fP]
@@ -176,6 +181,11 @@ window by typing your password (see \fBpassword\fP below). The
 default is 4 seconds. If the keyboard has been grabbed by another
 application when the lock is attempted, the lock fails and a
 normal warning window appears instead.
+'
+.TP 5
+\fBlock-picture\fP=\fIfile\fP [\fBlp\fP=\fIfile\fP]
+Sets the image that appears while the screen is locked to an arbitrary GIF.
+Animations are acceptable.
 '
 .TP 5
 \fBmaxhands\fP=\fInum\fP

@@ -25,30 +25,31 @@ static unsigned long key_press_selected_count;
 int
 x_error_handler(Display *d, XErrorEvent *error)
 {
-  if (d != display ||
-      (error->error_code != BadWindow && error->error_code != BadDrawable)) {
+  if (error->error_code != BadWindow && error->error_code != BadDrawable) {
     char buffer[BUFSIZ];
-    XGetErrorText(display, error->error_code, buffer, BUFSIZ);
+    XGetErrorText(d, error->error_code, buffer, BUFSIZ);
     fprintf(stderr, "X Error of failed request: %s\n", buffer);
     abort();
   }
   
   /* Maybe someone created a window then destroyed it immediately!
      I don't think there's any way of working around this. */
-  unschedule_data(A_IDLE_SELECT, (void *)((Window)error->resourceid));
+  unschedule_data(A_IDLE_SELECT, (void *)error->display,
+		  (void *)((Window)error->resourceid));
   return 0;
 }
 
 
 void
-watch_keystrokes(Window w, struct timeval *now)
+watch_keystrokes(Display *display, Window w, struct timeval *now)
 {
   Window root, parent, *children;
   unsigned i, nchildren;
   Alarm *a;
   
-  if (window_to_hand(w, 1))
-    return; /* don't need to worry about our own windows */
+  /* Don't pay attention to our own windows */
+  if (window_to_hand(find_port(display), w, 1))
+    return;
   
   if (XQueryTree(display, w, &root, &parent, &children, &nchildren) == 0)
     return; /* the window doesn't exist */
@@ -59,19 +60,18 @@ watch_keystrokes(Window w, struct timeval *now)
   /* This code ensures that at least register_keystrokes_delay elapses before
      we listen for KeyPress events on the window. We want to wait so we can
      make sure the window selects them first. */
-  a = new_alarm_data(A_IDLE_SELECT, (void *)w);
+  a = new_alarm_data(A_IDLE_SELECT, (void *)display, (void *)w);
   xwADDTIME(a->timer, *now, register_keystrokes_delay);
   schedule(a);
   
   for (i = 0; i < nchildren; i++)
-    watch_keystrokes(children[i], now);
+    watch_keystrokes(display, children[i], now);
   
   if (children) XFree(children);
 }
 
-
 void
-register_keystrokes(Window w)
+register_keystrokes(Display *display, Window w)
 {
   /* Before I only selected KeyPress if someone else had selected KeyPress on
      the window (indicated by the `or' of all_event_masks and
@@ -100,30 +100,28 @@ register_keystrokes(Window w)
 /*****************************************************************************/
 /*  Scheduling and alarm functions					     */
 
-
 Alarm *
-new_alarm_data(int action, void *data)
+new_alarm_data(int action, void *data1, void *data2)
 {
   Alarm *a = xwNEW(Alarm);
   a->action = action;
-  a->data = data;
+  a->data1 = data1;
+  a->data2 = data2;
   return a;
 }
 
-
 Alarm *
-grab_alarm_data(int action, void *data)
+grab_alarm_data(int action, void *data1, void *data2)
 {
   Alarm *prev = 0, *a;
   for (a = alarms; a; prev = a, a = a->next)
-    if (a->action == action && a->data == data) {
+    if (a->action == action && a->data1 == data1 && a->data2 == data2) {
       if (prev)	prev->next = a->next;
       else alarms = a->next;
       return a;
     }
   return 0;
 }
-
 
 void
 destroy_alarm(Alarm *adestroy)
@@ -153,12 +151,14 @@ schedule(Alarm *newalarm)
 
 
 void
-unschedule_data(int actions, void *data)
+unschedule_data(int actions, void *data1, void *data2)
 {
   Alarm *prev = 0, *a = alarms;
   while (a) {
     
-    if ((a->action & actions) != 0 && (a->data == data || data == 0)) {
+    if ((a->action & actions) != 0
+	&& (a->data1 == data1 || data1 == 0)
+	&& (a->data2 == data2 || data2 == 0)) {
       Alarm *n = a->next;
       if (prev) prev->next = n;
       else alarms = n;
@@ -178,7 +178,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 {
   struct timeval timeout, now, *timeoutptr;
   fd_set xfds;
-  int pending;
+  int pending, i;
   int ret_val = 0;
   
   /* 26 May 1998: Changed logic to avoid race conditions. Now we always flush
@@ -193,7 +193,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
   while (1) {
     while (alarms && xwTIMEGEQ(now, alarms->timer)) {
       Alarm *a = alarms;
-      Hand *h = (Hand *)a->data;
+      Hand *h = (Hand *)a->data1;
       Gif_Stream *gfs;
       
       a->scheduled = 0;
@@ -230,27 +230,30 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	break;
 	
        case A_IDLE_SELECT:
-	register_keystrokes((Window)a->data);
+	register_keystrokes((Display *)a->data1, (Window)a->data2);
 	break;
 	
        case A_MOUSE: {
 	 Window root, child;
 	 int root_x, root_y, win_x, win_y;
 	 unsigned mask;
-	 XQueryPointer(display, port.root_window, &root, &child,
-		       &root_x, &root_y, &win_x, &win_y, &mask);
-	 if (root != last_mouse_root
-	     || root_x < last_mouse_x - mouse_sensitivity
-	     || root_x > last_mouse_x + mouse_sensitivity
-	     || root_y < last_mouse_y - mouse_sensitivity
-	     || root_y > last_mouse_y + mouse_sensitivity) {
-	   XEvent event;
-	   event.type = MotionNotify; /* skeletal MotionNotify event */
-	   if (x_looper && last_mouse_root)
-	     ret_val = x_looper(&event, &now);
-	   last_mouse_root = root;
-	   last_mouse_x = root_x;
-	   last_mouse_y = root_y;
+	 int i;
+	 for (i = 0; i < nports; i++) {
+	   XQueryPointer(ports[i].display, ports[i].root_window, &root, &child,
+			 &root_x, &root_y, &win_x, &win_y, &mask);
+	   if (root != ports[i].last_mouse_root
+	       || root_x < ports[i].last_mouse_x - mouse_sensitivity
+	       || root_x > ports[i].last_mouse_x + mouse_sensitivity
+	       || root_y < ports[i].last_mouse_y - mouse_sensitivity
+	       || root_y > ports[i].last_mouse_y + mouse_sensitivity) {
+	     XEvent event;
+	     event.type = MotionNotify; /* skeletal MotionNotify event */
+	     if (x_looper && ports[i].last_mouse_root)
+	       ret_val = x_looper(&event, &now);
+	     ports[i].last_mouse_root = root;
+	     ports[i].last_mouse_x = root_x;
+	     ports[i].last_mouse_y = root_y;
+	   }
 	 }
 	 xwADDTIME(a->timer, a->timer, check_mouse_time);
 	 schedule(a);
@@ -272,13 +275,13 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       xwSUBTIME(timeout, alarms->timer, now);
     } else
       timeoutptr = 0;
-    
-    pending = XPending(display);
+
+    for (i = pending = 0; !pending && i < nports; i++)
+      pending = XPending(ports[i].display);
     if (!pending) {
       int result;
-      FD_SET(port.x_socket, &xfds);
-      result = select(port.x_socket + 1, &xfds, 0, 0, timeoutptr);
-      pending = (result <= 0 ? 0 : FD_ISSET(port.x_socket, &xfds));
+      xfds = x_socket_set;
+      result = select(max_x_socket + 1, &xfds, 0, 0, timeoutptr);
     }
     
     /* Behave robustly when the system clock is adjusted backwards. The idea:
@@ -298,10 +301,10 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
     }
     
     /* Handle X events. */
-    if (pending)
-      while (XPending(display)) {
+    for (i = 0; i < nports; i++)
+      while (XPending(ports[i].display)) {
 	XEvent event;
-	XNextEvent(display, &event);
+	XNextEvent(ports[i].display, &event);
 	default_x_processing(&event);
 	if (x_looper) ret_val = x_looper(&event, &now);
 	if (ret_val != 0) return ret_val;
