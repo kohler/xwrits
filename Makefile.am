@@ -61,12 +61,12 @@ versionize:
 
 rpm: dist
 	buildarch=`rpm --showrc | awk '/^build arch/ { print $$4; }'` ; \
-	mkdir -p /tmp/rpmb/SOURCES /tmp/rpmb/RPMS/$$buildarch \
-	/tmp/rpmb/BUILD ; \
-	echo 'topdir: /tmp/rpmb' > /tmp/rpmb/rc ; \
-	cp logo.gif $(PACKAGE)-$(VERSION).tar.gz /tmp/rpmb/SOURCES ; \
-	rpm --rcfile /tmp/rpmb/rc -bb rpm.spec ; \
-	cp /tmp/rpmb/RPMS/$$buildarch/*.rpm .
-	rm -rf /tmp/rpmb
+	mkdir -p /tmp/rpm-xw/SOURCES /tmp/rpm-xw/RPMS/$$buildarch \
+	/tmp/rpm-xw/BUILD ; \
+	echo 'topdir: /tmp/rpm-xw' > /tmp/rpm-xw/rc ; \
+	cp logo.gif $(PACKAGE)-$(VERSION).tar.gz /tmp/rpm-xw/SOURCES ; \
+	rpm --rcfile /tmp/rpm-xw/rc -bb rpm.spec ; \
+	cp /tmp/rpm-xw/RPMS/$$buildarch/*.rpm .
+	rm -rf /tmp/rpm-xw
 
 .PHONY: srclinks versionize rpm
