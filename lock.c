@@ -1,4 +1,4 @@
-#include "config.h"
+#include <config.h>
 #include "xwrits.h"
 #include <stdlib.h>
 #include <X11/keysym.h>

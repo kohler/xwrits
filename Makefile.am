@@ -43,13 +43,13 @@ colorpic.c: $(COLOR_PIC) giftoc
 monopic.c: $(MONO_PIC) giftoc
 	./giftoc -makename -dir $(srcdir) $(MONO_PIC) > $@
 
-EXTRA_DIST = strerror.c xwrits.1 logo.gif rpm.spec
+EXTRA_DIST = xwrits.1 logo.gif rpm.spec
 MOSTLYCLEANFILES = colorpic.c monopic.c
 
 dist-hook:
-	mkdir $(distdir)/color $(distdir)/mono
-	cp -p $(srcdir)/color/*.gif $(distdir)/color
-	cp -p $(srcdir)/mono/*.gif $(distdir)/mono
+	@mkdir $(distdir)/color $(distdir)/mono
+	@d=`cd $(distdir)/color; pwd` && cd $(srcdir) && cp -p $(COLOR_PIC) $$d
+	@d=`cd $(distdir)/mono; pwd` && cd $(srcdir) && cp -p $(MONO_PIC) $$d
 
 srclinks:
 	for i in fmalloc.c ; do \
@@ -58,8 +58,8 @@ srclinks:
 	ln -sf ~/src/giflib/$$i $$i ; done
 
 versionize:
-	perl -pi~ -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.1
-	perl -pi~ -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\w.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" rpm.spec
+	perl -pi -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.1
+	perl -pi -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\w.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" rpm.spec
 
 rpm: dist
 	buildarch=`rpm --showrc | awk '/^build arch/ { print $$4; }'` ; \
