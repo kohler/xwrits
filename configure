@@ -523,7 +523,7 @@ fi
 
 
 
-VERSION=2.6.4
+VERSION=2.6.5
 
 
 # Extract the first word of "gcc", so it can be a program name with args.
