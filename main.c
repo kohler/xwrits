@@ -7,11 +7,6 @@
 #include <assert.h>
 #include "gifx.h"
 
-#define DEFAULT_SLIDESHOW		"&clench;&spread"
-#define DEFAULT_ICON_SLIDESHOW		"&clenchicon;&spreadicon"
-#define FINGER_SLIDESHOW		"&clench;&spread;&finger"
-#define FINGER_ICON_SLIDESHOW		"&clenchicon;&spreadicon;&fingericon"
-
 #define SET_TIME(timeval, sec, usec) do { (timeval).tv_sec = (sec); (timeval).tv_usec = (usec); } while (0)
 
 static Options onormal;
@@ -21,7 +16,7 @@ struct timeval genesis_time;
 struct timeval type_delay;
 struct timeval break_delay;
 static struct timeval zero = {0, 0};
-struct timeval first_warning_time;
+struct timeval first_warn_time;
 struct timeval last_key_time;
 
 Hand *hands;
@@ -51,6 +46,10 @@ int last_mouse_x;
 int last_mouse_y;
 Window last_mouse_root;
 
+#define MAX_CHEATS_UNSET -97979797
+int max_cheats;
+static int allow_cheats;
+
 static int icon_width;
 static int icon_height;
 
@@ -75,47 +74,51 @@ manage a repetitive stress injury. It runs on X.\n\
 \n\
 Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [OPTION]...\n\
 \n\
-All options may be abbreviated to their unique prefixes. You can type\n\
-`--OPTION', `OPTION', or `+OPTION': they act equivalently. Some options can be\n\
-turned off with `-OPTION'; these are shown as `+/-OPTION', and only `+OPTION's\n\
-effect is described.\n\
+All options may be abbreviated to their unique prefixes. The three forms\n\
+`OPTION', `--OPTION', and `+OPTION' are equivalent. Options listed as\n\
+`+OPTION' can be on or off; they are normally off, and you can turn them off\n\
+explicitly with `-OPTION'.\n\
 \n\
 General options:\n\
   --display DISPLAY     Monitor the X display DISPLAY.\n\
   --help                Print this message and exit.\n\
   --version             Print version number and exit.\n\
-  --mono                Use monochrome pictures.\n\
-  +/-idle               Monitor your typing (on by default).\n\
-  +/-mouse              Monitor your mouse movements (off by default).\n\
 \n");
   printf("\
 Break characteristics:\n\
-  --typetime=DURATION   Type for DURATION, (also: `t=DURATION')\n\
-  --breaktime=DURATION  then take a break for DURATION. (also: `b=DURATION')\n\
-  +/-lock               Lock the keyboard during the break.\n\
+  --typetime=DURATION, t=DURATION   Allow typing for DURATION.\n\
+  --breaktime=DURATION, b=DURATION   Breaks last for DURATION.\n\
+  +lock                 Lock the keyboard during the break.\n\
   --password=PW         Set the password for unlocking the keyboard.\n\
+  +idle                 Monitor your typing (on by default).\n\
+  +mouse                Monitor your mouse movements.\n\
+  +cheat[=NUM]          Allow NUM keystrokes before cancelling a break.\n\
+\n");
+  printf("\
+Appearance:\n\
+  after=TIME            Change behavior if warning window is ignored for TIME;\n\
+                        options following `after' give new behavior.\n\
+  +beep                 Beep when the warning window appears.\n\
+  +breakclock           Show how much time remains during the break.\n\
+  +clock                Show how long you have ignored the warning window.\n\
+  +finger               Be rude.\n\
+  +finger=CULTURE       Be rude according to CULTURE. Choices: `american',\n\
+                        `korean'.\n\
+  flashtime=RATE        Flash the warning window at RATE.\n\
+  +iconified            Warning windows appear as icons.\n\
+  maxhands=NUM          Maximum number of warning windows is NUM (default: 25).\n\
+  +mono                 Use monochrome pictures.\n\
+  +multiply=PERIOD      Make a new warning window every PERIOD.\n\
+  +noiconify            Don't let anyone iconify the warning window.\n\
+  ready-picture=GIF-FILE, okp=GIF-FILE   Use a GIF animation as the\n\
+                        `OK' window picture.\n\
+  rest-picture=GIF-FILE, rp=GIF-FILE   Use a GIF animation as the\n\
+                        resting window picture.\n\
+  +top                  Keep the warning windows on top of the window stack.\n\
+  warning-picture=GIF-FILE, wp=GIF-FILE   Use a GIF animation as the\n\
+                        warning window picture.\n\
 \n\
-Appearance options:\n\
-  +/-finger             Be rude.\n\
-  --flashtime=RATE      Flash the warning window at RATE.\n\
-  --warning-picture=GIF-FILE, --wp=GIF-FILE   Use an arbitrary GIF animation\n\
-                        as the warning window picture.\n\
-  +/-beep               Beep when the warning window appears.\n\
-  +/-clock              Show how long you have ignored the warning window.\n\
-  +/-multiply=PERIOD    Make a new warning window every PERIOD,\n\
-  --maxhands=NUM        up to a maximum of NUM windows (default: 25).\n\
-  +/-iconified          Warning windows appear as icons.\n\
-  +/-noiconify          Don't let anyone iconify the warning window.\n\
-  +/-top                Keep the warning windows on top of the window stack.\n\
-  --after=TIME          Change behavior if warning window is ignored for TIME;\n\
-                        options following `--after' give new behavior.\n\
-  +/-breakclock         Show how much time remains during the break.\n\
-  --rest-picture=GIF-FILE, --rp=GIF-FILE   Use an arbitrary GIF animation\n\
-                        as the resting window picture.\n\
-  --ready-picture=GIF-FILE, --okp=GIF-FILE   Use an arbitrary GIF animation\n\
-                        as the `OK' window picture.\n\
-\n\
-Report bugs to <eddietwo@lcs.mit.edu>.\n");
+Report bugs and suggestions to <eddietwo@lcs.mit.edu>.\n");
 }
 
 
@@ -129,6 +132,17 @@ error(const char *format, ...)
   fprintf(stderr, "\n");
   va_end(val);
   exit(1);
+}
+
+void
+warning(const char *format, ...)
+{
+  va_list val;
+  va_start(val, format);
+  fprintf(stderr, "xwrits: warning: ");
+  vfprintf(stderr, format, val);
+  fprintf(stderr, "\n");
+  va_end(val);
 }
 
 
@@ -390,6 +404,7 @@ active_hands(void)
 void
 ensure_picture(Gif_Stream *gfs, int n)
 {
+  Gif_Image *gfi = gfs->images[n];
   Picture *p, *last_p, *last_last_p;
   int i;
   
@@ -399,10 +414,19 @@ ensure_picture(Gif_Stream *gfs, int n)
       ensure_picture(gfs, i);
   }
   
-  p = (Picture *)gfs->images[n]->user_data;
+  p = (Picture *)gfi->user_data;
   last_p = (n > 0 ? (Picture *)gfs->images[n-1]->user_data : 0);
   last_last_p = (n > 1 ? (Picture *)gfs->images[n-2]->user_data : 0);
-
+  
+  /* reuse pixmaps from other streams */
+  if (p->canonical && gfi->transparent < 0 && gfi->left == 0 && gfi->top == 0
+      && gfi->width == gfs->screen_width && gfi->height == gfs->screen_height
+      && ((Picture *)p->canonical->user_data)->pix) {
+    p->pix = ((Picture *)p->canonical->user_data)->pix;
+    return;
+  } else if (p->canonical)
+    p->canonical = 0;
+  
   p->pix = Gif_XNextImage(gfx, (last_last_p ? last_last_p->pix : None),
 			  (last_p ? last_p->pix : None),
 			  gfs, n);
@@ -411,9 +435,14 @@ ensure_picture(Gif_Stream *gfs, int n)
 void
 draw_slide(Hand *h)
 {
-  Gif_Stream *gfs = h->slideshow;
-  Gif_Image *gfi = gfs->images[h->slide];
-  Picture *p = (Picture *)gfi->user_data;
+  Gif_Stream *gfs;
+  Gif_Image *gfi;
+  Picture *p;
+
+  assert(h && h->slideshow);
+  gfs = h->slideshow;
+  gfi = gfs->images[h->slide];
+  p = (Picture *)gfi->user_data;
   
   if (!p->pix)
     ensure_picture(gfs, h->slide);
@@ -548,23 +577,33 @@ default_x_processing(XEvent *e)
 static int
 strtointerval(char *s, char **stores, struct timeval *iv)
 {
-  long min = 0;
   double sec = 0;
   long integral_sec;
   int ok = 0;
-  if (isdigit(*s)) min = strtol(s, &s, 10), ok = 1;
-  if (*s == ':') {
-    ++s;
-    if (isdigit(*s) || *s == '.') sec = strtod(s, &s), ok = 1;
-  } else if (*s == '.') {
-    sec = min + strtod(s, &s);
-    min = 0;
+  
+  /* read minutes */
+  if (isdigit(*s)) {
+    sec = strtol(s, &s, 10) * SEC_PER_MIN;
     ok = 1;
   }
+  if (*s == '.') {
+    sec += strtod(s, &s) * SEC_PER_MIN;
+    ok = 1;
+  }
+  
+  /* read seconds */
+  if (*s == ':' && (isdigit(s[1]) || s[1] == '.')) {
+    sec += strtod(s+1, &s);
+    ok = 1;
+  } else if (*s == ':' && s[1] == 0)
+    /* accept `MINUTES:' */
+    s++;
+
+  /* return */
   if (stores) *stores = s;
   if (!ok || *s != 0) return 0;
   integral_sec = (long)(floor(sec));
-  iv->tv_sec = min * SEC_PER_MIN + integral_sec;
+  iv->tv_sec = integral_sec;
   iv->tv_usec = (int)(MICRO_PER_SEC * (sec - integral_sec));
   return 1;
 }
@@ -630,7 +669,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
   
   switch (*format++) {
     
-   case 't': /* required time */
+   case 't': /* time */
    case 'T': /* optional time */
     timeptr = va_arg(val, struct timeval *);
     if (!strtointerval(arg, &arg, timeptr))
@@ -638,6 +677,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     break;
     
    case 's': /* string */
+   case 'S': /* optional string */
     charptr = va_arg(val, char **);
     *charptr = arg;
     break;
@@ -660,9 +700,34 @@ optparse(char *arg, char *option, int unique, char *format, ...)
      case 's':
      case 'i':
       error("%s not given enough arguments", option);
+      break;
     }
   va_end(val);
   return 1;
+}
+
+/* note: memory leak on slideshow texts */
+static void
+slideshow_text_append_built_in(Options *o, char *built_in)
+{
+  int lbi = strlen(built_in);
+  int ls = (o->slideshow_text ? strlen(o->slideshow_text) : 0);
+  int lis = (o->icon_slideshow_text ? strlen(o->icon_slideshow_text) : 0);
+  char *s = xwNEWARR(char, ls + lbi + 3);
+  char *is = xwNEWARR(char, lis + lbi + 7);
+  
+  sprintf(s, "%s%s&%s", (ls ? o->slideshow_text : ""),
+	  (ls ? ";" : ""), built_in);
+  sprintf(is, "%s%s&%sicon", (lis ? o->icon_slideshow_text : ""),
+	  (lis ? ";" : ""), built_in);
+
+  if (!o->prev || o->prev->slideshow_text != o->slideshow_text)
+    xfree(o->slideshow_text);
+  if (!o->prev || o->prev->icon_slideshow_text != o->icon_slideshow_text)
+    xfree(o->icon_slideshow_text);
+  
+  o->slideshow_text = s;
+  o->icon_slideshow_text = is;
 }
 
 
@@ -670,16 +735,18 @@ static void
 parse_options(int pargc, char **pargv)
 {
   char *s;
+  char *arg;
   Options *o = &onormal;
   Options *p;
   struct timeval flash_delay;
   
   argc = pargc;
   argv = pargv;
-  
+
   while (argc > 0) {
     
     s = argv[0];
+    arg = 0;
     
     if (optparse(s, "after", 1, "sT", &o->next_delay)) {
       p = xwNEW(Options);
@@ -697,18 +764,24 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "bc", 2, "t"))
       o->break_clock = optparse_yesno;
     
+    else if (optparse(s, "cheat", 2, "tI", &max_cheats))
+      allow_cheats = optparse_yesno;
     else if (optparse(s, "clock", 1, "t"))
       o->clock = optparse_yesno;
     
     else if (optparse(s, "display", 1, "ss", &display_name))
       ;
     
-    else if (optparse(s, "finger", 1, "t")
-	     || optparse(s, "flipoff", 1, "t")) {
-      o->slideshow_text =
-	(optparse_yesno ? FINGER_SLIDESHOW : DEFAULT_SLIDESHOW);
-      o->icon_slideshow_text =
-	(optparse_yesno ? FINGER_ICON_SLIDESHOW : DEFAULT_ICON_SLIDESHOW);
+    else if (optparse(s, "finger", 1, "tS", &arg)
+	     || optparse(s, "flipoff", 1, "tS", &arg)) {
+      if (!optparse_yesno) {
+	o->slideshow_text = o->icon_slideshow_text = 0;
+	slideshow_text_append_built_in(o, "clench");
+	slideshow_text_append_built_in(o, "spread");
+      } else if (arg)
+	slideshow_text_append_built_in(o, arg);
+      else
+	slideshow_text_append_built_in(o, "american");
     } else if (optparse(s, "flashtime", 3, "st", &flash_delay)) {
       double f = flash_delay.tv_sec*MICRO_PER_SEC + flash_delay.tv_usec;
       o->flash_rate_ratio = f / (DEFAULT_FLASH_DELAY_SEC*MICRO_PER_SEC);
@@ -920,10 +993,15 @@ default_settings(void)
   SET_TIME(check_mouse_time, 3, 0);
   mouse_sensitivity = 15;
   last_mouse_x = last_mouse_y = 0;
+
+  /* Cheating */
+  max_cheats = MAX_CHEATS_UNSET;
+  allow_cheats = 0;
   
   /* Slideshows */
-  onormal.slideshow_text = DEFAULT_SLIDESHOW;
-  onormal.icon_slideshow_text = DEFAULT_ICON_SLIDESHOW;
+  onormal.slideshow_text = onormal.icon_slideshow_text = 0;
+  slideshow_text_append_built_in(&onormal, "clench");
+  slideshow_text_append_built_in(&onormal, "spread");
   
   /* Clock tick time functions */
   /* 20 seconds seems like a reasonable clock tick time, even though it'll
@@ -948,55 +1026,66 @@ main(int argc, char *argv[])
   
   srand((getpid() + 1) * time(0));
   
-  default_settings();
-  
-  /* remove first argument = program name */
+  /* parse options. remove first argument = program name */
+  default_settings();  
   parse_options(argc - 1, argv + 1);
+
+  /* check global options */
+  if (strlen(lock_password) >= MaxPasswordSize)
+    error("password too long");
   
-  if (xwTIMELEQ0(type_delay)) type_delay = zero;
-  if (xwTIMELEQ0(break_delay)) break_delay = zero;
+  if (check_idle && xwTIMELEQ0(idle_time)) {
+    /* default for idle_time is based on break_delay */
+    double time = 0.3 * (break_delay.tv_sec +
+			(break_delay.tv_usec / (double)MICRO_PER_SEC));
+    long integral_time = (long)(floor(time));
+    idle_time.tv_sec = integral_time;
+    idle_time.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
+  }
+
+  if (check_mouse && !check_idle) {
+    warning("`+mouse' has no effect when `idle' has been turned off");
+    check_mouse = 0;
+  }
+  
+  if (!allow_cheats)
+    max_cheats = 0;
+  else if (max_cheats == MAX_CHEATS_UNSET)
+    max_cheats = 5;
+  if (max_cheats > 0 && !check_idle)
+    warning("`+cheat' has no effect when `idle' has been turned off");
+  
+  /* check local options */
   for (o = &onormal; o; o = o->next) {
     check_options(o);
     if (o->lock) lock_possible = 1;
   }
   
-  if (strlen(lock_password) >= MaxPasswordSize)
-    error("password too long");
-  
+  /* set up display */
   display = XOpenDisplay(display_name);
   if (!display) error("cannot open display");
   initialize_port(display, DefaultScreen(display));
   
   ocurrent = &onormal;
   
-  resting_slideshow =
-    parse_slideshow(resting_slideshow_text, 1, force_mono);
-  resting_icon_slideshow =
-    parse_slideshow(resting_icon_slideshow_text, 1, force_mono);
-  ready_slideshow =
-    parse_slideshow(ready_slideshow_text, 1, force_mono);
-  ready_icon_slideshow =
-    parse_slideshow(ready_icon_slideshow_text, 1, force_mono);
+  resting_slideshow = parse_slideshow(resting_slideshow_text, 1, force_mono);
+  resting_icon_slideshow = parse_slideshow(resting_icon_slideshow_text, 1, force_mono);
+  ready_slideshow = parse_slideshow(ready_slideshow_text, 1, force_mono);
+  ready_icon_slideshow = parse_slideshow(ready_icon_slideshow_text, 1, force_mono);
   
   hand = new_hand(NHCenter, NHCenter);
   gfx = Gif_NewXContext(display, hand->w);
   port.drawable = hand->w;
   init_clock(hand->w);
   if (lock_possible) {
-    Gif_Image *gfi = get_built_in_image("&locked", force_mono);
+    Gif_Image *gfi = get_built_in_image(force_mono ? "lockedmono" : "locked");
+    if (!gfi && force_mono) gfi = get_built_in_image("locked");
     lock_pixmap = Gif_XImage(gfx, 0, gfi);
     Gif_DeleteImage(gfi);
-    gfi = get_built_in_image("&bars", force_mono);
+    gfi = get_built_in_image(force_mono ? "barsmono" : "bars");
+    if (!gfi && force_mono) gfi = get_built_in_image("bars");
     bars_pixmap = Gif_XImage(gfx, 0, gfi);
     Gif_DeleteImage(gfi);
-  }
-  
-  if (check_idle && xwTIMELEQ0(idle_time)) {
-    double time = 0.3 * (break_delay.tv_sec +
-			(break_delay.tv_usec / (double)MICRO_PER_SEC));
-    long integral_time = (long)(floor(time));
-    idle_time.tv_sec = integral_time;
-    idle_time.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
   }
   
   if (check_idle) {
@@ -1012,10 +1101,10 @@ main(int argc, char *argv[])
     ocurrent = &onormal;
     wait_for_break();
     
-    xwGETTIME(first_warning_time);
+    xwGETTIME(first_warn_time);
     while (tran != TRAN_AWAKE && tran != TRAN_CANCEL) {
       
-      tran = warning(was_lock);
+      tran = warn(was_lock);
       
       if (tran == TRAN_REST)
 	tran = rest();

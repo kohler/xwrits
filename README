@@ -6,7 +6,8 @@ ABOUT XWRITS
    Xwrits was written when my wrists really hurt. They don't any more --
 most of the time.
 
-   Please see the man page (xwrits.man) for more information.
+   Please see the man page (xwrits.1) for more information. The man page is
+on line at <http://www.lcdf.org/xwrits/man.html>.
 
 MAKING XWRITS
 -------------
@@ -39,4 +40,5 @@ you do not deny that freedom to others.
 BUGS, SUGGESTIONS, ETC.
 -----------------------
    Please write me if you have trouble building or running xwrits, or if
-you have any suggestions. Again that email address is: eddietwo@lcs.mit.edu
+you have any suggestions, or if you know some rude finger gestures not
+listed in `GESTURES'. Again that email address is: eddietwo@lcs.mit.edu

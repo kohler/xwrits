@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.8b2
+.ds V 2.8
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -56,7 +56,7 @@ following \fBafter\fP only apply after you have ignored the warning window
 for \fIdelay-time\fP. In other words, xwrits's behavior escalates after
 \fIdelay-time\fP. For instance, with this command line,
 .nf
-	xwrits flashtime=:2 after=10 flashtime=.03
+	xwrits flashtime=:2 after=10 flashtime=:.03
 .fi
 the warning window will begin flashing very quickly if it is ignored
 for 10 minutes.
@@ -73,20 +73,22 @@ of escalations.
 '
 .SH OPTIONS
 All options may be abbreviated to their unique prefixes. Some may be
-abbreviated further, in which case the smallest legal abbreviation is
-shown [in brackets]. Time arguments are expressed in the form
-minutes:seconds.fraction, where any of the parts may be left off.
-``2'' is 2 minutes, ``:2'' is 2 seconds. Options are processed from
-left to right.
+abbreviated further, in which case the smallest legal abbreviation is shown
+in brackets. Options are processed from left to right.
 .PP
-Many options are listed as \fB+option\fP (\fB\-option\fP). A + turns
-the given behavior on; \- turns it off. Only the on behavior is
-described. Off is the default for each toggle option except
-\fBidle\fP. You can leave off the + sign if you like: ``xwrits
-+finger'' and ``xwrits finger'' are equivalent. Non-toggle options may
-be specified with arguments after an equal sign or with an argument
-following in the list. That is, ``xwrits breaktime=2'' and ``xwrits
-\-breaktime 2'' are equivalent.
+Options listed as ``\fB+option\fP (\fB\-option\fP)'' are toggles, which can
+be on or off. A + turns the option on; \- turns it off. Off is the default
+for most toggle options, and only the on behavior is described. You can
+leave off the + sign if you like: ``xwrits +finger'' and ``xwrits finger''
+are equivalent.
+.PP
+Many options take arguments. You can give these after an equal sign, as in
+``xwrits breaktime=2''. Non-optional arguments can also be given
+separately, as in ``xwrits breaktime 2''.
+.PP
+Time arguments are expressed in minutes. For example, ``2'' is 2 minutes,
+``2.5'' is 2 minutes 30 seconds. A colon can be used to specify seconds as
+well: ``2:05.4'' is 2 minutes 5.4 seconds, and ``:5'' is 5 seconds.
 
 .TP 5
 \fB\-display\fP \fIdisplay\fP
@@ -117,13 +119,25 @@ A clock will appear in the resting window showing how many minutes
 remain in the wrist break.
 '
 .TP 5
-\fB+clock\fP (\fB\-clock\fP)
+\fB+cheat\fP[=\fInum\fP] (\fB\-cheat\fP)
+Allows you to cheat during a break. You can type \fInum\fP keystrokes
+before xwrits cancels the break. Default for \fInum\fP is 5. (If you're
+using \fB+mouse\fP, mouse movements also count.)
+'
+.TP 5
+\fB+clock\fP (\fB\-clock\fP) [\fBc\fP]
 A clock will appear in the warning window showing how many minutes
 you've put off the wrist break.
 '
 .TP 5
 \fB+finger\fP (\fB\-finger\fP) [\fBf\fP]
 The warning window will be rude to you.
+'
+.TP 5
+\fB+finger\fP=\fIculture\fP
+The warning window will be rude to you, according to \fIculture\fP's idea
+of rudeness. Possible values for \fIculture\fP are `american' (the default)
+and `korean'.
 '
 .TP 5
 \fBflashtime\fP=\fItime\fP
@@ -225,7 +239,7 @@ Here is the way I run xwrits:
 .fi
 This looks pretty spectacular:
 .nf
-	xwrits t=0 b=:2 f fla=.5 m=.31 max=100 -i
+	xwrits t=0 b=:2 f fla=:.5 m=:.31 max=100 -i
 .fi
 Whee!!
 '
@@ -247,7 +261,8 @@ Xwrits does not use the X resource database at all.
 .PP
 More options might be nice. So might more careful screen locking and
 password protection. I would like to include rude finger gestures from
-other cultures, but I'm not sure how to render them.
+other cultures (see the GESTURES file in the distribution for gestures I
+know about so far).
 .PP
 Please send any bugs, comments, or suggestions to me.
 .PP

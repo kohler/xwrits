@@ -69,20 +69,22 @@ ensure_one_hand(void)
     XMapRaised(display, hands->w);
 }
 
+static int current_cheats;
+
 static int
 rest_x_loop(XEvent *e, struct timeval *now)
 {
-  int break_over;
-  break_over = xwTIMEGEQ(*now, break_over_time);
+  /* If the break is over, wake up. */
+  if (xwTIMEGEQ(*now, break_over_time))
+    return TRAN_AWAKE;
   
   if (e->type == ClientMessage && active_hands() == 0)
     /* Window manager deleted last xwrits window. Consider break over. */
-    return (break_over ? TRAN_AWAKE : TRAN_CANCEL);
-  
+    return TRAN_CANCEL;
   else if (e->type == KeyPress || e->type == MotionNotify) {
     last_key_time = *now;
-    return (break_over ? TRAN_AWAKE : TRAN_FAIL);
-    
+    current_cheats++;
+    return (current_cheats > max_cheats ? TRAN_FAIL : 0);
   } else
     return 0;
 }
@@ -97,6 +99,7 @@ rest(void)
   set_all_slideshows(hands, resting_slideshow);
   set_all_slideshows(icon_hands, resting_icon_slideshow);
   ensure_one_hand();
+  current_cheats = 0;
   
   xwGETTIME(now);
   if (!check_idle)

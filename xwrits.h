@@ -210,7 +210,7 @@ extern Gif_Stream *resting_slideshow, *resting_icon_slideshow;
 extern Gif_Stream *ready_slideshow, *ready_icon_slideshow;
 #define DEFAULT_FLASH_DELAY_SEC 2
 
-Gif_Image *get_built_in_image(const char *, int mono);
+Gif_Image *get_built_in_image(const char *);
 Gif_Stream *parse_slideshow(const char *, double, int mono);
 void set_slideshow(Hand *, Gif_Stream *, struct timeval *);
 void set_all_slideshows(Hand *, Gif_Stream *);
@@ -223,6 +223,7 @@ struct Picture {
   Pixmap pix;
   int clock_x_off;
   int clock_y_off;
+  Gif_Image *canonical;
 };
 
 extern Pixmap bars_pixmap;
@@ -248,6 +249,8 @@ extern int mouse_sensitivity;
 extern int last_mouse_x, last_mouse_y;
 extern Window last_mouse_root;
 
+extern int max_cheats;
+
 void watch_keystrokes(Window, struct timeval *);
 void register_keystrokes(Window);
 
@@ -256,6 +259,7 @@ void register_keystrokes(Window);
 /*  The high-level procedures						     */
 
 void error(const char *, ...);
+void warning(const char *, ...);
 
 void wait_for_break(void);
 
@@ -266,9 +270,9 @@ void wait_for_break(void);
 #define TRAN_LOCK	5
 #define TRAN_AWAKE	6
 
-extern struct timeval first_warning_time;
+extern struct timeval first_warn_time;
 
-int warning(int was_lock);
+int warn(int was_lock);
 int rest(void);
 int lock(void);
 

@@ -1,12 +1,43 @@
 Xwrits NEWS
 
+Version 2.8
+
+* Added the `+cheat' option to allow limited cheating during a break.
+
+* Extended `+finger' to `+finger=CULTURE', and included a rude Korean
+  gesture (`+finger=korean').
+
+* You can set the mouse motion detector's sensitivity with
+  `+mouse[=SENSITIVITY]'. Default sensitivity has been raised to 15 pixels.
+  Requested by Radoslaw Stachowiak <radek.stachowiak@alter.pl>.
+
+* Changed the way times are parsed for consistency. Now a fractional number
+  like `2.5' means 2.5 minutes, not 2.5 seconds. You can still get 2.5
+  seconds with `:2.5'. A clarification of the time situation was originally
+  requested by Sam Ockman <ockman@cs.stanford.edu>.
+
+* Fixed bugs in `+multiply': iconifying a multiplied warning window would
+  cause a crash, and new warning windows wouldn't have clocks attached.
+
+* Fixed bugs in picture loading code: multiple `flashtime' options had no
+  effect since 2.8b1.
+
+
 Version 2.8b2   4.Aug.1999
 
 * Xwrits can finally monitor your mouse movements with the `+mouse' option.
+  I've been meaning to implement this feature for years. It has been
+  requested by Radoslaw Stachowiak <radek.stachowiak@alter.pl>, Justin
+  Wells <justin@fever.semiotek.com>, Chris Brand
+  <chris_brand@raytheon.com>, Mark Lewis <mlewis@cgrg.ohio-state.edu>, Alex
+  Westner <westner@media.mit.edu>, Peter Boult <pjb@sagres.com.au>, Sam
+  Ockman <ockman@cs.stanford.edu>, and possibly others.
 
 * You can specify your own GIF pictures or animations for the warning,
   resting, and ready windows with the `--warning-picture',
-  `--rest-picture', and `--ready-picture' options.
+  `--rest-picture', and `--ready-picture' options. I've been meaning to
+  implement this feature for a while, too. Tom Murphy
+  <murphy@quixote.engr.sgi.com> also requested it.
 
 * Various code cleanups and some bug fixes.
 
@@ -15,8 +46,8 @@ Version 2.8b1   3.Aug.1999
 
 * Fixed bugs related to the count of how many hands were actively visible.
   This surfaced in several ways: too few multiplied windows, deleting
-  xwrits windows could cause a segmentation fault, and so forth. Bug found
-  by Darko Marinov <marinov@lcs.mit.edu>.
+  xwrits windows could cause a segmentation fault, and so forth. Bug
+  reported by Darko Marinov <marinov@lcs.mit.edu>.
 
 * Different `+top' behavior: now warning windows look at the window
   stacking order and try to keep themselves on top.
@@ -173,3 +204,8 @@ Version 2
   proprietary extensions. The GIF files are compiled into C files, then
   object files, and read from memory. This makes xwrits a much, much
   smaller executable, faster, and more portable.
+
+
+Version 1   Summer 1994
+
+* Original distribution.

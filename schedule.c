@@ -180,7 +180,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
   fd_set xfds;
   int pending;
   int ret_val = 0;
-
+  
   /* 26 May 1998: Changed logic to avoid race conditions. Now we always flush
      the output queue and check if there are any pending X events before
      entering select() to wait for data. I wouldn't have noticed this, since

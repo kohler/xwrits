@@ -1,6 +1,7 @@
 #include <config.h>
 #include "xwrits.h"
 #include <math.h>
+#include <assert.h>
 
 static int clock_displaying = 0;
 
@@ -8,11 +9,12 @@ static int clock_displaying = 0;
 static void
 pop_up_hand(Hand *h)
 {
+  assert(h && !h->is_icon);
   set_slideshow(h, ocurrent->slideshow, 0);
+  set_slideshow(h->icon, ocurrent->icon_slideshow, 0);
+  h->clock = ocurrent->clock;
   XMapRaised(display, h->w);
   XFlush(display);
-  if (clock_displaying)
-    draw_clock(h, 0);
 }
 
 
@@ -69,7 +71,7 @@ switch_options(Options *opt, struct timeval now)
 
 
 static int
-warning_alarm_loop(Alarm *a, struct timeval *now)
+warn_alarm_loop(Alarm *a, struct timeval *now)
 {
   switch (a->action) {
     
@@ -140,7 +142,7 @@ check_raise_window(Hand *h)
 }
 
 static int
-warning_x_loop(XEvent *e, struct timeval *now)
+warn_x_loop(XEvent *e, struct timeval *now)
 {
   Alarm *a;
   Hand *h;
@@ -183,13 +185,13 @@ warning_x_loop(XEvent *e, struct timeval *now)
 
 
 int
-warning(int was_lock)
+warn(int was_lock)
 {
   struct timeval now;
   int val;
   
   clock_displaying = 0;
-  clock_zero_time = first_warning_time;
+  clock_zero_time = first_warn_time;
   
   xwGETTIME(now);
   val = switch_options(ocurrent, now);
@@ -204,7 +206,7 @@ warning(int was_lock)
     schedule(a);
   }
   
-  val = loopmaster(warning_alarm_loop, warning_x_loop);
+  val = loopmaster(warn_alarm_loop, warn_x_loop);
   unschedule(A_FLASH | A_MULTIPLY | A_CLOCK | A_NEXT_OPTIONS | A_IDLE_CHECK);
   
   erase_all_clocks();

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "colorpic.c"
 #include "monopic.c"
@@ -15,35 +16,46 @@ Gif_Stream *current_slideshow = 0;
 
 #define NPICTURES 14
 
-static const char *built_in_picture_names[NPICTURES] = {
-  "&clench", "&spread", "&finger", "&korean",
-  "&resting", "&ready", "&locked", "&bars",
-  "&clenchicon", "&spreadicon", "&fingericon", "&koreanicon",
-  "&restingicon", "&readyicon"
+struct named_record {
+  const char *name;
+  Gif_Record *record;
+  Gif_Stream *gfs;
 };
 
-static Gif_Record *color_records[NPICTURES] = {
-  &clenchl_gif, &spreadl_gif, &fingerl_gif, &koreanl_gif,
-  &restl_gif, &okl_gif, &lock_gif, &bars_gif,
-  &clenchi_gif, &spreadi_gif, &fingeri_gif, 0,
-  &resti_gif, &oki_gif
-};
-static Gif_Record *mono_records[NPICTURES] = {
-  &clenchlm_gif, &spreadlm_gif, &fingerlm_gif, 0,
-  &restlm_gif, &oklm_gif, &lockm_gif, &barsm_gif,
-  &clenchim_gif, &spreadim_gif, &fingerim_gif, 0,
-  &restim_gif, &okim_gif
-};
+struct named_record built_in_pictures[] = {
+  /* normal pictures */
+  {"clench", &clenchl_gif, 0},		{"clenchicon", &clenchi_gif, 0},
+  {"spread", &spreadl_gif, 0},		{"spreadicon", &spreadi_gif, 0},
+  {"american", &fingerl_gif, 0},	{"americanicon", &fingeri_gif, 0},
+  {"resting", &restl_gif, 0},		{"restingicon", &resti_gif, 0},
+  {"ready", &okl_gif, 0},		{"readyicon", &oki_gif, 0},
+  {"locked", &lock_gif, 0},
+  {"bars", &bars_gif, 0},
 
-static Gif_Stream *color_streams[NPICTURES];
-static Gif_Stream *mono_streams[NPICTURES];
+  /* monochrome pictures */
+  {"clenchmono", &clenchlm_gif, 0},	{"clenchiconmono", &clenchim_gif, 0},
+  {"spreadmono", &spreadlm_gif, 0},	{"spreadiconmono", &spreadim_gif, 0},
+  {"americanmono", &fingerlm_gif, 0},	{"americaniconmono", &fingerim_gif, 0},
+  {"restingmono", &restlm_gif, 0},	{"restingiconmono", &restim_gif, 0},
+  {"readymono", &oklm_gif, 0},		{"readyiconmono", &okim_gif, 0},
+  {"lockedmono", &lockm_gif, 0},
+  {"barsmono", &barsm_gif, 0},
+
+  /* other cultures' finger gestures */
+  {"korean", &koreanl_gif, 0},		{"koreanicon", &koreani_gif, 0},
+
+  /* last */
+  {0, 0, 0}
+};
 
 
 static void
 free_picture(void *v)
 {
   Picture *p = (Picture *)v;
-  if (p->pix)
+  if (p->canonical)
+    Gif_DeleteImage(p->canonical);
+  else if (p->pix)
     XFreePixmap(display, p->pix);
   xfree(p);
 }
@@ -55,6 +67,7 @@ add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
   p->pix = None;
   p->clock_x_off = clock_x_off;
   p->clock_y_off = clock_y_off;
+  p->canonical = 0;
   
   gfi->user_data = p;
   gfi->free_user_data = free_picture;
@@ -62,38 +75,32 @@ add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
 
 
 Gif_Image *
-get_built_in_image(const char *name, int mono)
+get_built_in_image(const char *name)
 {
-  Gif_Stream **store;
-  Gif_Record **records;
+  struct named_record *nr;
   Gif_Stream *gfs;
-  int i;
+  int xoff;
   
-  for (i = 0; i < NPICTURES; i++)
-    if (strcmp(built_in_picture_names[i], name) == 0)
+  for (nr = built_in_pictures; nr->name; nr++)
+    if (strcmp(nr->name, name) == 0)
       goto found;
   return 0;
   
  found:
-  store = (mono ? mono_streams : color_streams);
-  if (store[i])
-    return store[i]->images[0];
+  if (nr->gfs)
+    return nr->gfs->images[0];
   
-  records = (mono ? mono_records : color_records);
-  if (!records[i])
-    return 0;
-  
-  gfs = Gif_ReadRecord(records[i]);
+  nr->gfs = gfs = Gif_FullReadRecord(nr->record, GIF_READ_COMPRESSED, 0, 0);
   if (!gfs)
     return 0;
   
-  add_picture(gfs->images[0], (strcmp(name, "&locked") == 0 ? 65 : 10), 10);
+  xoff = (strncmp(name, "locked", 6) == 0 ? 65 : 10);
+  add_picture(gfs->images[0], xoff, 10);
   if (!gfs->images[0]->local) {
     gfs->images[0]->local = gfs->global;
     gfs->global->refcount++;
   }
-  
-  store[i] = gfs;
+  gfs->images[0]->delay = 0;
   return gfs->images[0];
 }
 
@@ -104,6 +111,7 @@ Gif_Stream *
 parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 {
   char buf[BUFSIZ];
+  char name[BUFSIZ + 4];
   char *s;
   Gif_Stream *gfs;
   Gif_Image *gfi;
@@ -117,7 +125,7 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
   
   gfs = Gif_NewStream();
   gfs->loopcount = 0;
-
+  
   d = flash_rate_ratio * DEFAULT_FLASH_DELAY_SEC * 100;
   if (d < 0 || d > 0xFFFF)
     delay = 0xFFFF;
@@ -133,9 +141,46 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
     save = *s;
     *s = 0;
     
-    gfi = get_built_in_image(n, mono);
-    if (gfi) {
-      gfi->delay = delay;
+    if (n[0] == '&') {
+      /* built-in image */
+      strcpy(name, n + 1);
+      if (mono) strcat(name, "mono");
+      i = strlen(name);
+      gfi = get_built_in_image(name);
+      /* some images don't have monochromatic versions; fall back on color */
+      if (!gfi && i > 4 && strcmp(name + i - 4, "mono") == 0) {
+	name[i-4] = 0;
+	gfi = get_built_in_image(name);
+	if (gfi)
+	  warning("no monochrome version of built-in picture `%s'", name);
+	name[i-4] = 'm';
+      }
+      if (!gfi)
+	error("unknown built-in picture `%s'", name);
+      /* adapt delay */
+      if (!gfi->delay || gfi->delay == delay)
+	gfi->delay = delay;
+      else {
+	Gif_Image *ngfi = Gif_NewImage();
+	Picture *p = (Picture *)gfi->user_data;
+	assert(!gfi->image_data && gfi->compressed);
+	ngfi->local = gfi->local;
+	ngfi->local->refcount++;
+	ngfi->transparent = gfi->transparent;
+	ngfi->left = gfi->left;
+	ngfi->top = gfi->top;
+	ngfi->width = gfi->width;
+	ngfi->height = gfi->height;
+	ngfi->compressed = gfi->compressed;
+	ngfi->compressed_len = gfi->compressed_len;
+	ngfi->free_compressed = 0;
+	ngfi->delay = delay;
+	add_picture(ngfi, p->clock_x_off, p->clock_y_off);
+	((Picture *)ngfi->user_data)->canonical = gfi;
+	gfi->refcount++;
+	gfi = ngfi;
+      }
+      /* add image */
       Gif_AddImage(gfs, gfi);
       
     } else {
@@ -216,7 +261,8 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
   int i = 0;
   Alarm *a;
   struct timeval t;
-
+  
+  assert(gfs);
   if (h->slideshow == gfs)
     return;
   
@@ -261,7 +307,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, struct timeval *now)
 			 CWWidth | CWHeight, &wmch);
     XFree(xsh);
   }
-
+  
   h->loopcount = 0;
   h->slide = i;
   draw_slide(h);
