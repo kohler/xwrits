@@ -1,3 +1,4 @@
+/* -*- c-basic-offset: 2 -*- */
 #include <config.h>
 #include "xwrits.h"
 #include <stdlib.h>
@@ -6,6 +7,11 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <X11/Xatom.h>
+#ifdef HAVE_GETHOSTNAME
+# include <unistd.h>
+#elif HAVE_UNAME
+# include <sys/utsname.h>
+#endif
 
 #define NEW_HAND_TRIES 6
 
@@ -65,14 +71,39 @@ get_best_position(Port *port, int *xlist, int *ylist, int num,
   *rety = ylist[best];
 }
 
+static char *
+net_get_hostname(char *buf, size_t maxlen)
+{
+#ifdef HAVE_GETHOSTNAME
+  gethostname(buf, maxlen);
+  buf[maxlen - 1] = '\0';
+  return buf;
+#elif defined(HAVE_UNAME)
+  struct utsname name;
+  size_t len;
+  
+  uname(&name);
+  len = strlen(name.nodename);
+  if (len >= maxlen)
+    len = maxlen - 1;
+  strncpy(buf, name.nodename, len);
+  buf[len] = '\0';
+
+  return buf;
+#else
+  return 0;
+#endif
+}
+
 Hand *
 new_hand(Port *slave_port, int x, int y)
 {
   static XClassHint classh;
   static XSizeHints *xsh;
   static XWMHints *xwmh;
-  static XTextProperty window_name, icon_name;
+  static XTextProperty window_name, icon_name, hostname;
   static uint32_t *mwm_hints;
+  static char hostname_buf[256];
   Hand *nh = xwNEW(Hand);
   Hand *nh_icon = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
@@ -150,6 +181,13 @@ new_hand(Port *slave_port, int x, int y)
       mwm_hints[1] |= (1L << 3); /* MWM_FUNC_MINIMIZE */
       mwm_hints[2] |= (1L << 5); /* MWM_DECOR_MINIMIZE */
     }
+
+    /* Get current hostname. */
+    stringlist[0] = net_get_hostname(hostname_buf, 256);
+    if (stringlist[0])
+      XStringListToTextProperty((char **)stringlist, 1, &hostname);
+    else
+      hostname.value = 0;
   }
   
   /* create windows */
@@ -198,10 +236,19 @@ new_hand(Port *slave_port, int x, int y)
   XChangeProperty(port->display, nh->w, port->net_wm_desktop_atom,
 		  XA_CARDINAL, 32, PropModeReplace,
 		  (unsigned char *)property, 1);
+#if 0
   property[0] = port->net_wm_window_type_utility_atom;
   XChangeProperty(port->display, nh->w, port->net_wm_window_type_atom,
 		  XA_ATOM, 32, PropModeReplace,
 		  (unsigned char *)property, 1);
+#endif
+  if (hostname.value)
+    XSetWMClientMachine(port->display, nh->w, &hostname);
+  property[0] = getpid();
+  XChangeProperty(port->display, nh->w, port->net_wm_pid_atom,
+		  XA_CARDINAL, 32, PropModeReplace,
+		  (unsigned char *)property, 1);
+  
   
   XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);

@@ -271,10 +271,13 @@ notify_peers_rest(void)
 void
 mark_xwrits_window(Port *port, Window w)
 {
-  int scrap = port->permanent_hand->w;
+  uint32_t scrap = port->permanent_hand->w;
   assert(scrap);
   XChangeProperty(port->display, w, port->xwrits_window_atom,
 		  XA_INTEGER, 32, PropModeReplace,
+		  (unsigned char *)&scrap, 1);
+  XChangeProperty(port->display, w, port->wm_client_leader_atom,
+		  XA_WINDOW, 32, PropModeReplace,
 		  (unsigned char *)&scrap, 1);
 }
 
@@ -905,15 +908,15 @@ initialize_slave_port(Port *port)
     port->white = m->white;
     port->font = m->font;
     port->gfx = m->gfx;
-    port->wm_delete_window_atom = m->wm_delete_window_atom;
     port->wm_protocols_atom = m->wm_protocols_atom;
+    port->wm_delete_window_atom = m->wm_delete_window_atom;
+    port->wm_client_leader_atom = m->wm_client_leader_atom;
     port->mwm_hints_atom = m->mwm_hints_atom;
     port->net_wm_ping_atom = m->net_wm_ping_atom;
-    port->net_wm_name_atom = m->net_wm_name_atom;
-    port->net_wm_icon_name_atom = m->net_wm_icon_name_atom;
     port->net_wm_desktop_atom = m->net_wm_desktop_atom;
     port->net_wm_window_type_atom = m->net_wm_window_type_atom;
     port->net_wm_window_type_utility_atom = m->net_wm_window_type_utility_atom;
+    port->net_wm_pid_atom = m->net_wm_pid_atom;
     port->xwrits_window_atom = m->xwrits_window_atom;
     port->xwrits_notify_peer_atom = m->xwrits_notify_peer_atom;
     port->xwrits_break_atom = m->xwrits_break_atom;
@@ -1022,15 +1025,15 @@ initialize_port(int portno)
     (display, screen_number, port->visual, port->depth, port->colormap);
 
   /* set atoms */
-  port->wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
   port->wm_protocols_atom = XInternAtom(display, "WM_PROTOCOLS", False);
+  port->wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
+  port->wm_client_leader_atom = XInternAtom(display, "WM_CLIENT_LEADER", False);
   port->mwm_hints_atom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
   port->net_wm_ping_atom = XInternAtom(display, "_NET_WM_PING", False);
-  port->net_wm_name_atom = XInternAtom(display, "_NET_WM_NAME", False);
-  port->net_wm_icon_name_atom = XInternAtom(display, "_NET_WM_ICON_NAME", False);
   port->net_wm_desktop_atom = XInternAtom(display, "_NET_WM_DESKTOP", False);
   port->net_wm_window_type_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
   port->net_wm_window_type_utility_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE_UTILITY", False);
+  port->net_wm_pid_atom = XInternAtom(display, "_NET_WM_PID", False);
   port->xwrits_window_atom = XInternAtom(display, "XWRITS_WINDOW", False);
   port->xwrits_notify_peer_atom = XInternAtom(display, "XWRITS_NOTIFY_PEER", False);
   port->xwrits_break_atom = XInternAtom(display, "XWRITS_BREAK", False);

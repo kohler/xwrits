@@ -39,6 +39,12 @@ dnl
 AC_REPLACE_FUNCS(strerror)
 
 dnl
+dnl gethostname()
+dnl
+
+AC_CHECK_FUNCS(gethostname, uname)
+
+dnl
 dnl gettimeofday()
 dnl
 

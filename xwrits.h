@@ -65,15 +65,15 @@ struct Port {
   
   Gif_XContext *gfx;		/* GIF X context */
   
-  Atom wm_delete_window_atom;	/* atoms for window manager communication */
-  Atom wm_protocols_atom;
+  Atom wm_protocols_atom;	/* atoms for window manager communication */
+  Atom wm_delete_window_atom;
+  Atom wm_client_leader_atom;
   Atom mwm_hints_atom;
   Atom net_wm_ping_atom;
-  Atom net_wm_name_atom;
-  Atom net_wm_icon_name_atom;
   Atom net_wm_desktop_atom;
   Atom net_wm_window_type_atom;
   Atom net_wm_window_type_utility_atom;
+  Atom net_wm_pid_atom;
   Atom xwrits_window_atom;	/* atoms for communication with other xwrits */
   Atom xwrits_notify_peer_atom;
   Atom xwrits_break_atom;
