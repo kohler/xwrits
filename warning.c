@@ -82,8 +82,8 @@ warn_alarm_loop(Alarm *a, const struct timeval *now)
   switch (a->action) {
     
    case A_MULTIPLY:
-    if (active_hands() < ocurrent->max_hands)
-      pop_up_hand(new_hand(&ports[0], NEW_HAND_RANDOM, NEW_HAND_RANDOM));
+    if (active_hands() < ocurrent->max_hands * nports)
+      pop_up_hand(new_hand(NEW_HAND_RANDOM_PORT, NEW_HAND_RANDOM, NEW_HAND_RANDOM));
     xwADDTIME(a->timer, a->timer, ocurrent->multiply_delay);
     schedule(a);
     break;

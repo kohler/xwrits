@@ -76,7 +76,13 @@ new_hand(Port *port, int x, int y)
   Hand *nh_icon = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
   int height = ocurrent->slideshow->screen_height;
-  
+
+  /* check for random port, patch by Peter Maydell <maydell@tao-group.com> */
+  if (port == NEW_HAND_RANDOM_PORT) {
+      int portno = (rand() >> 4) % nports;
+      port = &ports[portno];
+  }
+
   /* is this the permanent hand? */
   if (!port->permanent_hand) {
     nh->permanent = 1;

@@ -244,6 +244,7 @@ int active_hands(void);
 
 #define NEW_HAND_CENTER	0x8000
 #define NEW_HAND_RANDOM	0x7FFF
+#define NEW_HAND_RANDOM_PORT ((Port *)0)
 Hand *new_hand(Port *, int x, int y);
 Hand *new_hand_subwindow(Port *, Window parent, int x, int y);
 void destroy_hand(Hand *);

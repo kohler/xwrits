@@ -949,7 +949,7 @@ int
 main(int argc, char *argv[])
 {
   Options *o;
-  int i, j;
+  int i, j, orig_nports;
   int lock_possible = 0;
   struct timeval now;
   struct timeval type_time;
@@ -1009,7 +1009,8 @@ main(int argc, char *argv[])
   /* set up displays */
   FD_ZERO(&x_socket_set);
   max_x_socket = 0;
-  for (i = 0; i < nports; i++) {
+  orig_nports = nports;
+  for (i = 0; i < orig_nports; i++) {
     Display *display = XOpenDisplay(ports[i].display_name);
     if (!display)
 	error("can't open display `%s'", ports[i].display_name);
