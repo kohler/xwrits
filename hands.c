@@ -274,7 +274,12 @@ destroy_hand(Hand *h)
 {
   Port *port = h->port;
   assert(!h->is_icon);
+  
   unschedule_data(A_FLASH, h, 0);
+  /* 29.Jan.2000 oops -- forgot to do this, it caused segfaults */
+  if (h->icon)
+    unschedule_data(A_FLASH, h->icon, 0);
+  
   if (h->permanent) {
     XEvent event;
     /* last remaining hand; don't destroy it, unmap it */

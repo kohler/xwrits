@@ -1,5 +1,12 @@
 Xwrits NEWS
 
+Version 2.11   29.Jan.2000
+
+* Fixed bug: destroying xwrits windows with the window manager could
+  corrupt memory and eventually cause a crash. Reported by Anders
+  Melchiorsen <and@kampsax.dtu.dk>.
+
+
 Version 2.10   5.Jan.2000
 
 * Xwrits can simultaneously monitor multiple displays (and report problems
