@@ -65,7 +65,7 @@ get_best_position(Port *port, int *xlist, int *ylist, int num,
 }
 
 Hand *
-new_hand(Port *port, int x, int y)
+new_hand(Port *slave_port, int x, int y)
 {
   static XClassHint classh;
   static XSizeHints *xsh;
@@ -76,12 +76,12 @@ new_hand(Port *port, int x, int y)
   Hand *nh_icon = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
   int height = ocurrent->slideshow->screen_height;
+  Port *port;
 
   /* check for random port, patch by Peter Maydell <maydell@tao-group.com> */
-  if (port == NEW_HAND_RANDOM_PORT) {
-      int portno = (rand() >> 4) % nports;
-      port = &ports[portno];
-  }
+  if (slave_port == NEW_HAND_RANDOM_PORT)
+      slave_port = ports[(rand() >> 4) % nports];
+  port = slave_port->master;
 
   /* is this the permanent hand? */
   if (!port->permanent_hand) {
@@ -92,21 +92,19 @@ new_hand(Port *port, int x, int y)
   
   /* set position and size */
   if (x == NEW_HAND_CENTER)
-    x = (port->width - width) / 2;
+    x = slave_port->left + (slave_port->width - width) / 2;
   if (y == NEW_HAND_CENTER)
-    y = (port->height - height) / 2;
+    y = slave_port->top + (slave_port->height - height) / 2;
   
   if (x == NEW_HAND_RANDOM || y == NEW_HAND_RANDOM) {
     int xs[NEW_HAND_TRIES], ys[NEW_HAND_TRIES], i;
-    int xdist = port->width - width;
-    int ydist = port->height - height;
-    int xrand = x == NEW_HAND_RANDOM;
-    int yrand = y == NEW_HAND_RANDOM;
+    int xdist = slave_port->width - width;
+    int ydist = slave_port->height - height;
+    int xrand = (x == NEW_HAND_RANDOM);
+    int yrand = (y == NEW_HAND_RANDOM);
     for (i = 0; i < NEW_HAND_TRIES; i++) {
-      if (xrand) xs[i] = (rand() >> 4) % xdist;
-      else xs[i] = x;
-      if (yrand) ys[i] = (rand() >> 4) % ydist;
-      else ys[i] = y;
+	xs[i] = (xrand ? slave_port->left + ((rand() >> 4) % xdist) : x);
+	ys[i] = (yrand ? slave_port->top + ((rand() >> 4) % ydist) : y);
     }
     get_best_position(port, xs, ys, NEW_HAND_TRIES, width, height, &x, &y);
   }
@@ -235,16 +233,27 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
   Hand *nh = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
   int height = ocurrent->slideshow->screen_height;
+  unsigned parent_width, parent_height;
+  port = port->master;
+
+  if (x == NEW_HAND_CENTER || y == NEW_HAND_CENTER || x == NEW_HAND_RANDOM
+      || y == NEW_HAND_RANDOM) {
+      /* get dimensions of 'parent' */
+      Window root;
+      int x, y;
+      unsigned bw, depth;
+      (void) XGetGeometry(port->display, parent, &root, &x, &y, &parent_width, &parent_height, &bw, &depth);
+  }
   
   if (x == NEW_HAND_CENTER)
-    x = (port->width - width) / 2;
+    x = (parent_width - width) / 2;
   if (y == NEW_HAND_CENTER)
-    y = (port->height - height) / 2;
+    y = (parent_height - height) / 2;
   
   if (x == NEW_HAND_RANDOM)
-    x = (rand() >> 4) % (port->width - width);
+    x = (rand() >> 4) % (parent_width - width);
   if (y == NEW_HAND_RANDOM)
-    y = (rand() >> 4) % (port->height - height);
+    y = (rand() >> 4) % (parent_height - height);
   
   {
     XSetWindowAttributes setattr;
@@ -343,7 +352,7 @@ active_hands(void)
   Hand *h;
   int i, n = 0;
   for (i = 0; i < nports; i++)
-    for (h = ports[i].hands; h; h = h->next)
+    for (h = ports[i]->hands; h; h = h->next)
       if (h->mapped || h->icon->mapped)
 	n++;
   return n;
@@ -436,15 +445,15 @@ unmap_all(void)
 {
   int i;
   for (i = 0; i < nports; i++) {
-    Hand *prev = 0, *trav = ports[i].hands;
+    Hand *prev = 0, *trav = ports[i]->hands;
     while (trav) {
       if (trav->permanent) {
 	prev = trav;
 	trav->slideshow = 0;
       }
       destroy_hand(trav);
-      trav = (prev == 0 ? ports[i].hands : prev->next);
+      trav = (prev == 0 ? ports[i]->hands : prev->next);
     }
-    XFlush(ports[i].display);
+    XFlush(ports[i]->display);
   }
 }

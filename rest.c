@@ -98,8 +98,8 @@ wait_for_break(const struct timeval *type_time)
   /* Clear slideshows */
   /* Do this now so later set_slideshows start from scratch. */
   for (i = 0; i < nports; i++) {
-    set_all_slideshows(ports[i].hands, 0);
-    set_all_slideshows(ports[i].icon_hands, 0);
+    set_all_slideshows(ports[i]->hands, 0);
+    set_all_slideshows(ports[i]->icon_hands, 0);
   }
   
   val = 0;
@@ -184,9 +184,9 @@ rest(void)
   /* set up pictures */
   /* Do this first so later set_slideshows start from scratch. */
   for (i = 0; i < nports; i++) {
-    set_all_slideshows(ports[i].hands, resting_slideshow);
-    set_all_slideshows(ports[i].icon_hands, resting_icon_slideshow);
-    ensure_one_hand(&ports[i]);
+    set_all_slideshows(ports[i]->hands, resting_slideshow);
+    set_all_slideshows(ports[i]->icon_hands, resting_icon_slideshow);
+    ensure_one_hand(ports[i]);
   }
   current_cheats = 0;
   
@@ -211,7 +211,7 @@ rest(void)
     a->timer.tv_sec += 5;
     schedule(a);
     for (i = 0; i < nports; i++)
-      ports[i].last_mouse_root = None;
+      ports[i]->last_mouse_root = None;
   }
   
   if (ocurrent->break_clock) {
@@ -223,7 +223,7 @@ rest(void)
   }
 
   for (i = 0; i < nports; i++)
-    XFlush(ports[i].display);
+    XFlush(ports[i]->display);
   tran = loopmaster(0, rest_x_loop);
   
   unschedule(A_FLASH | A_AWAKE | A_CLOCK);
@@ -252,12 +252,12 @@ ready(void)
 {
   int i;
   for (i = 0; i < nports; i++) {
-    set_all_slideshows(ports[i].hands, ready_slideshow);
-    set_all_slideshows(ports[i].icon_hands, ready_icon_slideshow);
-    ensure_one_hand(&ports[i]);
+    set_all_slideshows(ports[i]->hands, ready_slideshow);
+    set_all_slideshows(ports[i]->icon_hands, ready_icon_slideshow);
+    ensure_one_hand(ports[i]);
     if (ocurrent->beep)
-      XBell(ports[i].display, 0);
-    XFlush(ports[i].display);
+      XBell(ports[i]->display, 0);
+    XFlush(ports[i]->display);
   }
   loopmaster(0, ready_x_loop);
 }

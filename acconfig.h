@@ -21,6 +21,9 @@
 @TOP@
 @BOTTOM@
 
+/* Define if Xinerama is available. */
+#undef HAVE_XINERAMA
+
 #ifdef __cplusplus
 extern "C" {
 #endif

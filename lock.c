@@ -25,39 +25,40 @@ lock_hand_position(Port *port, int *x, int *y)
        width) caused arithmetic problems */
     
     if (port->width <= locked_slideshow->screen_width)
-	*x = 0;
+	*x = port->left;
     else if (bars_slideshow) {	/* Align image with bars. */
 	/* nbars = max x s.t. x*BARS_WIDTH <= port_width - lock_width */
 	int nbars = (port->width - locked_slideshow->screen_width) / bars_slideshow->screen_width;
-	*x = ((rand() >> 4) % (nbars + 1)) * bars_slideshow->screen_width;
+	*x = port->left + ((rand() >> 4) % (nbars + 1)) * bars_slideshow->screen_width;
     } else
-	*x = (rand() >> 4) % (port->width - locked_slideshow->screen_width);
+	*x = port->left + (rand() >> 4) % (port->width - locked_slideshow->screen_width);
 
     if (port->height <= locked_slideshow->screen_height)
-	*y = 0;
+	*y = port->top;
     else if (bars_slideshow)
 	/* Default monochromatic bars repeat every 4 pixels, and our
            monochromatic hands image is aligned on the 2nd pixel; thus "& ~0x3
            | 0x2" */
-	*y = (((rand() >> 4) % (port->height - locked_slideshow->screen_height)) & ~0x3) | 0x2;
+	*y = port->top + ((((rand() >> 4) % (port->height - locked_slideshow->screen_height)) & ~0x3) | 0x2);
     else
-	*y = (rand() >> 4) % (port->height - locked_slideshow->screen_height);
+	*y = port->top + (rand() >> 4) % (port->height - locked_slideshow->screen_height);
 }
 
 static void
 move_locks(void)
 {
-  int i, x, y;
-  struct timeval now;
-  xwGETTIME(now);
-  for (i = 0; i < nports; i++)
-    if (covers[i]) {
-      lock_hand_position(&ports[i], &x, &y);
-      XClearWindow(ports[i].display, lock_hands[i]->w);
-      XMoveWindow(ports[i].display, lock_hands[i]->w, x, y);
-      if (ocurrent->break_clock) draw_clock(lock_hands[i], &now);
-      XFlush(ports[i].display);
-    }
+    int i, x, y;
+    struct timeval now;
+    xwGETTIME(now);
+    for (i = 0; i < nports; i++)
+	if (covers[i]) {
+	    lock_hand_position(ports[i], &x, &y);
+	    XClearWindow(ports[i]->display, lock_hands[i]->w);
+	    XMoveWindow(ports[i]->display, lock_hands[i]->w, x, y);
+	    if (ocurrent->break_clock)
+		draw_clock(lock_hands[i], &now);
+	    XFlush(ports[i]->display);
+	}
 }
 
 static void
@@ -67,8 +68,8 @@ find_message_boundaries(Port *port, const char *message,
   int length = strlen(message);
   *w = XTextWidth(port->font, message, length);
   *h = port->font->ascent + port->font->descent;
-  *x = (port->width - *w) / 2;
-  *y = (port->height - *h) / 2;
+  *x = port->left + (port->width - *w) / 2;
+  *y = port->top + (port->height - *h) / 2;
 }
 
 static void
@@ -88,15 +89,15 @@ draw_message(const char *message)
   for (i = 0; i < nports; i++)
     if (covers[i]) {
       if (cur_message[0] && !redraw) {
-	find_message_boundaries(&ports[i], cur_message, &x, &y, &w, &h);
-	XClearArea(ports[i].display, covers[i], x, y, w, h, False);
-	XClearArea(ports[i].display, lock_hands[i]->w,
+	find_message_boundaries(ports[i], cur_message, &x, &y, &w, &h);
+	XClearArea(ports[i]->display, covers[i], x, y, w, h, False);
+	XClearArea(ports[i]->display, lock_hands[i]->w,
 		   x - lock_hands[i]->x, y - lock_hands[i]->y, w, h, False);
       }
       if (message) {
-	find_message_boundaries(&ports[i], message, &x, &y, &w, &h);
-	XDrawString(ports[i].display, covers[i], ports[i].white_gc,
-		    x, y + ports[i].font->ascent, message, length);
+	find_message_boundaries(ports[i], message, &x, &y, &w, &h);
+	XDrawString(ports[i]->display, covers[i], ports[i]->white_gc,
+		    x, y + ports[i]->font->ascent, message, length);
       }
     }
 
@@ -222,8 +223,8 @@ lock(void)
   /* clear slideshows */
   /* Do this first so later set_slideshows start from scratch. */
   for (i = 0; i < nports; i++) {
-    set_all_slideshows(ports[i].hands, 0);
-    set_all_slideshows(ports[i].icon_hands, 0);
+    set_all_slideshows(ports[i]->hands, 0);
+    set_all_slideshows(ports[i]->icon_hands, 0);
   }
 
   /* calculate break time */
@@ -244,45 +245,45 @@ lock(void)
     XSetWindowAttributes setattr;
     unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect
       | CWBorderPixel | CWColormap;
-    if (!ports[i].bars_pixmap) {
-      setattr.background_pixel = ports[i].black;
+    if (!ports[i]->bars_pixmap) {
+      setattr.background_pixel = ports[i]->black;
       cwmask |= CWBackPixel;
     } else {
-      setattr.background_pixmap = ports[i].bars_pixmap;
+      setattr.background_pixmap = ports[i]->bars_pixmap;
       cwmask |= CWBackPixmap;
     }
     setattr.backing_store = NotUseful;
     setattr.save_under = False;
     setattr.override_redirect = True;
-    setattr.colormap = ports[i].colormap;
+    setattr.colormap = ports[i]->colormap;
     setattr.border_pixel = 0;
     covers[i] = XCreateWindow
-      (ports[i].display, ports[i].root_window,
-       0, 0, ports[i].width, ports[i].height, 0,
-       ports[i].depth, InputOutput, ports[i].visual, cwmask, &setattr);
-    XSelectInput(ports[i].display, covers[i],
+      (ports[i]->display, ports[i]->root_window,
+       ports[i]->left, ports[i]->top, ports[i]->width, ports[i]->height, 0,
+       ports[i]->depth, InputOutput, ports[i]->visual, cwmask, &setattr);
+    XSelectInput(ports[i]->display, covers[i],
 		 ButtonPressMask | ButtonReleaseMask | KeyPressMask
 		 | VisibilityChangeMask | ExposureMask);
-    mark_xwrits_window(&ports[i], covers[i]);
-    XMapRaised(ports[i].display, covers[i]);
-    XSync(ports[i].display, False);
+    mark_xwrits_window(ports[i], covers[i]);
+    XMapRaised(ports[i]->display, covers[i]);
+    XSync(ports[i]->display, False);
   }
 
   /* grab keyboard */
   successful_grabs = 0;
   for (i = 0; i < nports; i++) {
-    XWindowEvent(ports[i].display, covers[i], ExposureMask, &event);
-    if (XGrabKeyboard(ports[i].display, covers[i], True,
+    XWindowEvent(ports[i]->display, covers[i], ExposureMask, &event);
+    if (XGrabKeyboard(ports[i]->display, covers[i], True,
 		      GrabModeAsync, GrabModeAsync, CurrentTime)
 	== GrabSuccess) {
       int x, y;
-      lock_hand_position(&ports[i], &x, &y);
-      lock_hands[i] = new_hand_subwindow(&ports[i], covers[i], x, y);
+      lock_hand_position(ports[i], &x, &y);
+      lock_hands[i] = new_hand_subwindow(ports[i], covers[i], x, y);
       set_slideshow(lock_hands[i], locked_slideshow, 0);
-      XMapRaised(ports[i].display, lock_hands[i]->w);
+      XMapRaised(ports[i]->display, lock_hands[i]->w);
       successful_grabs++;
     } else {
-      XDestroyWindow(ports[i].display, covers[i]);
+      XDestroyWindow(ports[i]->display, covers[i]);
       covers[i] = None;
       lock_hands[i] = 0;
     }
@@ -317,10 +318,10 @@ lock(void)
   erase_all_clocks();
   for (i = 0; i < nports; i++)
     if (covers[i]) {
-      XUngrabKeyboard(ports[i].display, CurrentTime);
+      XUngrabKeyboard(ports[i]->display, CurrentTime);
       destroy_hand(lock_hands[i]);
-      XDestroyWindow(ports[i].display, covers[i]);
-      XFlush(ports[i].display);
+      XDestroyWindow(ports[i]->display, covers[i]);
+      XFlush(ports[i]->display);
     }
   assert(tran == TRAN_AWAKE || tran == TRAN_FAIL);
   return tran;

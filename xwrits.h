@@ -36,15 +36,19 @@ struct Port {
 
   int port_number;		/* 0 <= port_number < nports */
   
-  char *display_name;		/* name of display */
+  const char *display_name;	/* name of display */
   Display *display;		/* display pointer */
-  int display_unique;		/* is this the only Port with display? */
+  int display_unique;		/* is this only master Port with display? */
   int x_socket;			/* socket of X connection */
   
   int screen_number;		/* screen number */
   Window root_window;		/* root window of screen */
+  int left;			/* left edge of display (Xinerama) */
+  int top;			/* top edge of display (Xinerama) */
   int width;			/* width of root window */
   int height;			/* height of root window */
+
+  struct Port *master;		/* points to master Port, if this is a slave */
 
   Drawable drawable;		/* drawable corresponding to visual */
   Visual *visual;		/* visual used for new windows */
@@ -87,7 +91,7 @@ struct Port {
 };
 
 extern int nports;
-extern Port *ports;
+extern Port **ports;
 
 extern fd_set x_socket_set;
 extern int max_x_socket;

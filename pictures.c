@@ -60,7 +60,7 @@ free_picture(void *v)
   else
     for (i = 0; i < nports; i++)
       if (p->pix[i])
-	XFreePixmap(ports[i].display, p->pix[i]);
+	XFreePixmap(ports[i]->display, p->pix[i]);
   xfree(p);
 }
 

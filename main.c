@@ -6,6 +6,9 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <X11/Xatom.h>
+#ifdef HAVE_XINERAMA
+#include <X11/extensions/Xinerama.h>
+#endif
 
 static Options onormal;
 Options *ocurrent;
@@ -31,7 +34,7 @@ Gif_Stream *bars_slideshow;
 static const char *bars_slideshow_text = 0;
 
 int nports;
-Port *ports;
+Port **ports;
 
 fd_set x_socket_set;
 int max_x_socket;
@@ -170,29 +173,48 @@ message(const char *format, ...)
 
 /* ports and peers */
 
+static Port *
+add_port(const char *display_name, Display *display, int screen_number,
+	 Port *master)
+{
+    Port *p = (Port *)xmalloc(sizeof(Port));
+    ports = (Port **)xrealloc(ports, sizeof(Port *) * (nports + 1));
+    if (!ports || !p)
+	error("out of memory!");
+    ports[nports] = p;
+    memset(p, 0, sizeof(Port));
+    p->display_name = display_name;
+    p->display = display;
+    p->screen_number = screen_number;
+    p->master = (master ? master : p);
+    p->port_number = nports;
+    nports++;
+    return ports[nports - 1];
+}
+
 Port *
 find_port(Display *display, Window window)
 {
-  int screen_number, i;
+    int screen_number, i;
 
-  /* first, look using only 'display' */
-  for (i = 0; i < nports; i++)
-    if (ports[i].display == display && ports[i].display_unique)
-      return &ports[i];
+    /* first, look using only 'display' */
+    for (i = 0; i < nports; i++)
+	if (ports[i]->display == display && ports[i]->display_unique)
+	    return ports[i]->master;
 
-  /* if display not unique (or not found), try 'screen_number' also */
-  screen_number = 0;
-  if (window) {
-    XWindowAttributes attr;
-    if (XGetWindowAttributes(display, window, &attr) != 0)
-      screen_number = XScreenNumberOfScreen(attr.screen);
-  }
-  for (i = 0; i < nports; i++)
-    if (ports[i].display == display && ports[i].screen_number == screen_number)
-      return &ports[i];
+    /* if display not unique (or not found), try 'screen_number' also */
+    screen_number = 0;
+    if (window) {
+	XWindowAttributes attr;
+	if (XGetWindowAttributes(display, window, &attr) != 0)
+	    screen_number = XScreenNumberOfScreen(attr.screen);
+    }
+    for (i = 0; i < nports; i++)
+	if (ports[i]->display == display && ports[i]->screen_number == screen_number)
+	    return ports[i]->master;
 
-  /* nothing found */
-  return 0;
+    /* nothing found */
+    return 0;
 }
 
 void
@@ -224,19 +246,19 @@ notify_peers_rest(void)
 {
   int i, j;
   for (i = 0; i < nports; i++)
-    for (j = 0; j < ports[i].npeers; j++)
-      if (check_xwrits_window(&ports[i], ports[i].peers[j])) {
+    for (j = 0; j < ports[i]->npeers; j++)
+      if (check_xwrits_window(ports[i], ports[i]->peers[j])) {
 	XEvent e;
 	e.xclient.type = ClientMessage;
-	e.xclient.window = ports[i].peers[j];
-	e.xclient.message_type = ports[i].xwrits_break_atom;
+	e.xclient.window = ports[i]->peers[j];
+	e.xclient.message_type = ports[i]->xwrits_break_atom;
 	e.xclient.format = 32;
 	e.xclient.data.l[0] = 1;
-	XSendEvent(ports[i].display, ports[i].peers[j], True, 0, &e);
+	XSendEvent(ports[i]->display, ports[i]->peers[j], True, 0, &e);
       } else {
 	/* remove peer */
-	ports[i].peers[j] = ports[i].peers[ ports[i].npeers - 1 ];
-	ports[i].npeers--;
+	ports[i]->peers[j] = ports[i]->peers[ ports[i]->npeers - 1 ];
+	ports[i]->npeers--;
 	j--;
       }
 }
@@ -618,13 +640,10 @@ parse_options(int pargc, char **pargv)
       o->clock = optparse_yesno;
     
     else if (optparse(s, "display", 1, "ss", &arg)) {
-      if (nports == 1 && ports[0].display_name == 0)
-	ports[0].display_name = arg;
-      else {
-	nports++;
-	ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
-	ports[nports-1].display_name = arg;
-      }
+      if (nports == 1 && ports[0]->display_name == 0)
+	ports[0]->display_name = arg;
+      else
+	add_port(arg, 0, 0, 0);
     
     } else if (optparse(s, "finger", 1, "tS", &arg)
 	      || optparse(s, "flipoff", 1, "tS", &arg)) {
@@ -859,6 +878,40 @@ default_settings(void)
 #endif
 
 static void
+initialize_slave_port(Port *port)
+{
+    Port *m = port->master;
+    assert(m->port_number < port->port_number);
+    port->x_socket = m->x_socket;
+    port->root_window = m->root_window;
+    port->display_unique = 0;
+    port->visual = m->visual;
+    port->depth = m->depth;
+    port->colormap = m->colormap;
+    port->black = m->black;
+    port->white = m->white;
+    port->font = m->font;
+    port->gfx = m->gfx;
+    port->wm_delete_window_atom = m->wm_delete_window_atom;
+    port->wm_protocols_atom = m->wm_protocols_atom;
+    port->mwm_hints_atom = m->mwm_hints_atom;
+    port->xwrits_window_atom = m->xwrits_window_atom;
+    port->xwrits_notify_peer_atom = m->xwrits_notify_peer_atom;
+    port->xwrits_break_atom = m->xwrits_break_atom;
+    port->hands = port->icon_hands = port->permanent_hand = 0;
+    port->drawable = m->drawable;
+    port->clock_fore_gc = m->clock_fore_gc;
+    port->clock_hand_gc = m->clock_hand_gc;
+    port->white_gc = m->white_gc;
+    port->peers = 0;
+    port->npeers = 0;
+    port->peers_capacity = 0;
+    port->icon_width = port->icon_height = 0;
+    port->last_mouse_root = None;
+    port->bars_pixmap = None;
+}
+
+static void
 initialize_port(int portno)
 {
   XVisualInfo visi_template;
@@ -866,23 +919,26 @@ initialize_port(int portno)
   XVisualInfo *v;
   XVisualInfo *best_v = 0;
   VisualID default_visualid;
-  Port *port = &ports[portno];
+  Port *port = ports[portno];
   Display *display = port->display;
   int screen_number = port->screen_number;
 
   /* check that relevant fields have been initialized */
-  assert(display && screen_number >= 0 && screen_number < ScreenCount(display));
+  assert(display && screen_number >= 0 && screen_number < ScreenCount(display) && port->port_number == portno);
+  
+  /* initialize slaves specially */
+  if (port->master != port) {
+      initialize_slave_port(port);
+      return;
+  }
   
   /* initialize Port fields */
-  port->display_unique = 1;
-  for (i = 0; i < nports && port->display_unique; i++)
-    if (i != portno && ports[i].display == display)
-      port->display_unique = 0;
   port->x_socket = ConnectionNumber(display);
   port->root_window = RootWindow(display, screen_number);
-  port->width = DisplayWidth(display, screen_number);
-  port->height = DisplayHeight(display, screen_number);
-  port->port_number = portno;
+  port->display_unique = 1;
+  for (i = 0; i < nports && port->display_unique; i++)
+      if (i != portno && ports[i]->display == display && ports[i]->master == ports[i])
+	  port->display_unique = 0;
 
   /* set X socket */
   FD_SET(port->x_socket, &x_socket_set);
@@ -922,7 +978,8 @@ initialize_port(int portno)
     
   }
 
-  if (v) XFree(v);
+  if (v)
+      XFree(v);
   
   /* set up black_pixel and white_pixel */
   {
@@ -1089,36 +1146,55 @@ main(int argc, char *argv[])
   init_scheduler();
   
   srand((getpid() + 1) * time(0));
-  
-  nports = 1;
-  ports = (Port *)xmalloc(sizeof(Port));
+
+  add_port(0, 0, 0, 0);
   
   /* parse options. remove first argument = program name */
   default_settings();  
   parse_options(argc - 1, argv + 1);
 
-  /* check displays, including multiscreen
-     NB: Must find true 'nports' value before continuing. */
+  /* At this point, all ports have 'display_name' valid and everything else
+     invalid. Open displays, check multiscreen */
   orig_nports = nports;
   for (i = 0; i < orig_nports; i++) {
-      Display *display = XOpenDisplay(ports[i].display_name);
+      Display *display = XOpenDisplay(ports[i]->display_name);
       if (!display)
-	  error("can't open display `%s'", ports[i].display_name);
-      ports[i].display = display;
+	  error("can't open display `%s'", ports[i]->display_name);
+      ports[i]->display = display;
       if (!multiscreen)
-	  ports[i].screen_number = DefaultScreen(display);
+	  ports[i]->screen_number = DefaultScreen(display);
       else if (ScreenCount(display) > 0) {
-	  ports[i].screen_number = 0;
-	  nports += ScreenCount(display) - 1;
-	  ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
-	  for (j = 1; j < ScreenCount(display); j++) {
-	      ports[nports - j].display = display;
-	      ports[nports - j].display_name = ports[i].display_name;
-	      ports[nports - j].screen_number = j;
-	  }
+	  ports[i]->screen_number = 0;
+	  for (j = 1; j < ScreenCount(display); j++)
+	      add_port(ports[i]->display_name, ports[i]->display, j, 0);
       }
   }
 
+  /* Now check screen dimensions and Xinerama, if available. */
+  orig_nports = nports;
+  for (i = 0; i < orig_nports; i++) {
+      Port *p = ports[i];
+#ifdef HAVE_XINERAMA
+      int j, nxsi;
+      XineramaScreenInfo *xsi = XineramaQueryScreens(p->display, &nxsi);
+      if (xsi) {
+	  for (j = 0; j < nxsi; j++) {
+	      Port *q = (j == 0 ? p : add_port(p->display_name, p->display, p->screen_number, p));
+	      q->left = xsi[i].x_org;
+	      q->top = xsi[i].y_org;
+	      q->width = xsi[i].width;
+	      q->height = xsi[i].height;
+	  }
+	  XFree(xsi);
+      } else {
+#endif
+      p->width = DisplayWidth(p->display, p->screen_number);
+      p->height = DisplayHeight(p->display, p->screen_number);
+#ifdef HAVE_XINERAMA
+      }
+#endif
+  }
+  
   /* check global options */
   if (strlen(lock_password) >= MAX_PASSWORD_SIZE)
     error("password too long");
@@ -1173,7 +1249,7 @@ main(int argc, char *argv[])
     if (bars_slideshow_text) {
       bars_slideshow = parse_slideshow(bars_slideshow_text, 1, force_mono);
       for (i = 0; i < nports; i++)
-        ports[i].bars_pixmap = Gif_XImage(ports[i].gfx, bars_slideshow, 0);
+        ports[i]->bars_pixmap = Gif_XImage(ports[i]->gfx, bars_slideshow, 0);
     }
   }
   
@@ -1181,7 +1257,8 @@ main(int argc, char *argv[])
   xwGETTIME(now);
   XSetErrorHandler(x_error_handler);
   for (i = 0; i < nports; i++)
-    watch_keystrokes(&ports[i], ports[i].root_window, &now);
+      if (ports[i]->master == ports[i])
+	  watch_keystrokes(ports[i], ports[i]->root_window, &now);
   
   /* start mouse checking */
   if (check_mouse) {

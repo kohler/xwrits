@@ -18,6 +18,19 @@ pop_up_hand(Hand *h)
   XFlush(h->port->display);
 }
 
+static void
+ensure_slave_port_hand(Port *p)
+{
+    Hand *h;
+    for (h = p->master->hands; h; h = h->next)
+	if (h->x >= p->left && h->x < p->left + p->width
+	    && h->y >= p->top && h->y < p->top + p->height) {
+	    pop_up_hand(h);
+	    return;
+	}
+    (void) new_hand(p, NEW_HAND_CENTER, NEW_HAND_CENTER);
+}
+
 
 static int
 switch_options(Options *opt, const struct timeval *option_switch_time,
@@ -30,8 +43,8 @@ switch_options(Options *opt, const struct timeval *option_switch_time,
   ocurrent = opt;
 
   for (i = 0; i < nports; i++) {
-    set_all_slideshows(ports[i].hands, opt->slideshow);
-    set_all_slideshows(ports[i].icon_hands, opt->icon_slideshow);
+    set_all_slideshows(ports[i]->hands, opt->slideshow);
+    set_all_slideshows(ports[i]->icon_hands, opt->icon_slideshow);
   }
   
   if (opt->multiply) {
@@ -54,13 +67,13 @@ switch_options(Options *opt, const struct timeval *option_switch_time,
   }
 
   for (i = 0; i < nports; i++) {
-    for (h = ports[i].hands; h; h = h->next)
+    for (h = ports[i]->hands; h; h = h->next)
       if ((opt->never_iconify && !h->mapped) ||
 	  (!opt->appear_iconified && h->icon->mapped))
-	XMapRaised(ports[i].display, h->w);
-    if (opt->beep)
-      XBell(ports[i].display, 0);
-    XFlush(ports[i].display);
+	XMapRaised(ports[i]->display, h->w);
+    if (opt->beep && ports[i]->master == ports[i])
+      XBell(ports[i]->display, 0);
+    XFlush(ports[i]->display);
   }
   
   if (opt->next) {
@@ -241,7 +254,10 @@ warn(int was_lock, Options *onormal)
     goto done;
 
   for (i = 0; i < nports; i++)
-    pop_up_hand(ports[i].hands);
+      if (ports[i]->hands)
+	  pop_up_hand(ports[i]->hands);
+      else
+	  ensure_slave_port_hand(ports[i]);
   
   if (check_idle) {
     Alarm *a = new_alarm(A_IDLE_CHECK);

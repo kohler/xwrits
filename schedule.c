@@ -263,20 +263,22 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	 unsigned mask;
 	 int i;
 	 for (i = 0; i < nports; i++) {
-	   XQueryPointer(ports[i].display, ports[i].root_window, &root, &child,
-			 &root_x, &root_y, &win_x, &win_y, &mask);
-	   if (root != ports[i].last_mouse_root
-	       || root_x < ports[i].last_mouse_x - mouse_sensitivity
-	       || root_x > ports[i].last_mouse_x + mouse_sensitivity
-	       || root_y < ports[i].last_mouse_y - mouse_sensitivity
-	       || root_y > ports[i].last_mouse_y + mouse_sensitivity) {
+	   if (ports[i]->master != ports[i])
+	     continue;
+	   XQueryPointer(ports[i]->display, ports[i]->root_window, &root,
+			 &child, &root_x, &root_y, &win_x, &win_y, &mask);
+	   if (root != ports[i]->last_mouse_root
+	       || root_x < ports[i]->last_mouse_x - mouse_sensitivity
+	       || root_x > ports[i]->last_mouse_x + mouse_sensitivity
+	       || root_y < ports[i]->last_mouse_y - mouse_sensitivity
+	       || root_y > ports[i]->last_mouse_y + mouse_sensitivity) {
 	     XEvent event;
 	     event.type = MotionNotify; /* skeletal MotionNotify event */
-	     if (x_looper && ports[i].last_mouse_root)
+	     if (x_looper && ports[i]->last_mouse_root)
 	       ret_val = x_looper(&event, &now);
-	     ports[i].last_mouse_root = root;
-	     ports[i].last_mouse_x = root_x;
-	     ports[i].last_mouse_y = root_y;
+	     ports[i]->last_mouse_root = root;
+	     ports[i]->last_mouse_x = root_x;
+	     ports[i]->last_mouse_y = root_y;
 	   }
 	 }
 	 xwADDTIME(a->timer, a->timer, check_mouse_time);
@@ -302,7 +304,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
       timeoutptr = 0;
 
     for (i = pending = 0; !pending && i < nports; i++)
-      pending = XPending(ports[i].display);
+      pending = XPending(ports[i]->display);
     if (!pending) {
       int result;
       xfds = x_socket_set;
@@ -326,12 +328,14 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
     
     /* Handle X events. */
     for (i = 0; i < nports; i++)
-      while (XPending(ports[i].display)) {
+      while (XPending(ports[i]->display)) {
 	XEvent event;
-	XNextEvent(ports[i].display, &event);
+	XNextEvent(ports[i]->display, &event);
 	default_x_processing(&event);
-	if (x_looper) ret_val = x_looper(&event, &now);
-	if (ret_val != 0) return ret_val;
+	if (x_looper)
+	    ret_val = x_looper(&event, &now);
+	if (ret_val != 0)
+	    return ret_val;
       }
   }
 }

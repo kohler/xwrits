@@ -105,17 +105,16 @@ draw_clock(Hand *h, const struct timeval *now)
 void
 draw_all_clocks(const struct timeval *now)
 {
-  Hand *h;
-  int i;
-  int sec = now_to_clock_sec(now);
-  for (i = 0; i < nports; i++) {
-    for (h = ports[i].hands; h; h = h->next) {
-      if (h->mapped)
-	draw_1_clock(h, sec);
-      h->clock = 1;
+    Hand *h;
+    int i, sec = now_to_clock_sec(now);
+    for (i = 0; i < nports; i++) {
+	for (h = ports[i]->hands; h; h = h->next) {
+	    if (h->mapped)
+		draw_1_clock(h, sec);
+	    h->clock = 1;
+	}
+	XFlush(ports[i]->display);
     }
-    XFlush(ports[i].display);
-  }
 }
 
 
@@ -141,12 +140,12 @@ erase_clock(Hand *hand)
 void
 erase_all_clocks(void)
 {
-  Hand *h;
-  int i;
-  for (i = 0; i < nports; i++)
-    for (h = ports[i].hands; h; h = h->next) {
-      if (h->mapped && h->clock)
-	erase_clock(h);
-      h->clock = 0;
-    }
+    Hand *h;
+    int i;
+    for (i = 0; i < nports; i++)
+	for (h = ports[i]->hands; h; h = h->next) {
+	    if (h->mapped && h->clock)
+		erase_clock(h);
+	    h->clock = 0;
+	}
 }

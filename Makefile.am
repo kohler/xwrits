@@ -5,10 +5,10 @@ bin_PROGRAMS = xwrits
 noinst_PROGRAMS = giftoc
 man_MANS = xwrits.1
 
-INCLUDES = $(X_CFLAGS)
+CFLAGS = @CFLAGS@ @X_CFLAGS@
 
 LDADD = @LIBOBJS@
-xwrits_LDADD = $(LDADD) @X_LIBS@ @X_PRE_LIBS@ -lX11 @X_EXTRA_LIBS@ -lm
+xwrits_LDADD = $(LDADD) @X_LIBS@ @X_PRE_LIBS@ -lX11 @X_EXT_LIBS@ @X_EXTRA_LIBS@ -lm
 
 xwrits_SOURCES = fmalloc.c \
 		gif.h giffunc.c gifread.c gifx.h gifx.c \
