@@ -63,7 +63,9 @@ rpm: dist
 	buildarch=`rpm --showrc | awk '/^build arch/ { print $$4; }'` ; \
 	mkdir -p /tmp/rpm-xw/SOURCES /tmp/rpm-xw/RPMS/$$buildarch \
 	/tmp/rpm-xw/BUILD ; \
-	echo 'topdir: /tmp/rpm-xw' > /tmp/rpm-xw/rc ; \
+	echo 'include: /usr/lib/rpm/rpmrc' > /tmp/rpm-xw/rc ; \
+	echo 'macrofiles: /usr/lib/rpm/macros:/tmp/rpm-xw/macros' >> /tmp/rpm-xw/rc ; \
+	echo '%_topdir /tmp/rpm-xw' > /tmp/rpm-xw/macros ; \
 	cp logo.gif $(PACKAGE)-$(VERSION).tar.gz /tmp/rpm-xw/SOURCES ; \
 	rpm --rcfile /tmp/rpm-xw/rc -bb rpm.spec ; \
 	cp /tmp/rpm-xw/RPMS/$$buildarch/*.rpm .

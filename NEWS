@@ -1,6 +1,6 @@
 Xwrits NEWS
 
-Version 2.10
+Version 2.10   5.Jan.2000
 
 * Xwrits can simultaneously monitor multiple displays (and report problems
   on all of them). Just give the `display' option multiple times.
