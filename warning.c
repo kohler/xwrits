@@ -254,5 +254,6 @@ warn(int was_lock, Options *onormal)
  done:
   unschedule(A_FLASH | A_MULTIPLY | A_CLOCK | A_NEXT_OPTIONS | A_IDLE_CHECK);
   erase_all_clocks();
+  assert(val == TRAN_CANCEL || val == TRAN_REST || val == TRAN_LOCK);
   return val;
 }

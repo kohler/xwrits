@@ -945,6 +945,88 @@ initialize_port(int portno, Display *display, int screen_number)
 
 /* main! */
 
+typedef enum {
+    ST_NORMAL_WAIT, ST_FIRST_WARN, ST_WARN, ST_CANCEL_WAIT,
+    ST_REST, ST_LOCK, ST_AWAKE
+} XwritsState;
+
+void
+main_loop(void)
+{
+    XwritsState s = ST_NORMAL_WAIT;
+    int tran;
+    int was_lock = 0;
+
+    while (1) {
+	switch (s) {
+
+	  case ST_NORMAL_WAIT:
+	    ocurrent = &onormal;
+	    tran = wait_for_break(&normal_type_time);
+	    assert(tran == TRAN_WARN || tran == TRAN_REST);
+	    if (tran == TRAN_WARN)
+		s = ST_FIRST_WARN;
+	    break;
+
+	  case ST_FIRST_WARN:
+	    xwGETTIME(first_warn_time);
+	    was_lock = 0;
+	    s = ST_WARN;
+	    break;
+
+	  case ST_WARN:
+	    /* warn() will figure out current options by time */
+	    tran = warn(was_lock, &onormal);
+	    assert(tran == TRAN_CANCEL || tran == TRAN_REST || tran == TRAN_LOCK);
+	    if (tran == TRAN_CANCEL)
+		s = ST_CANCEL_WAIT;
+	    else if (tran == TRAN_LOCK)
+		s = ST_LOCK;
+	    else if (tran == TRAN_REST)
+		s = ST_REST;
+	    break;
+
+	  case ST_CANCEL_WAIT:
+	    tran = wait_for_break(&ocurrent->cancel_type_time);
+	    assert(tran == TRAN_WARN || tran == TRAN_REST);
+	    if (tran == TRAN_WARN)
+		s = ST_WARN;
+	    else
+		s = ST_NORMAL_WAIT;
+	    break;
+
+	  case ST_REST:
+	    was_lock = 0;
+	    tran = rest();
+	    assert(tran == TRAN_AWAKE || tran == TRAN_CANCEL || tran == TRAN_FAIL);
+	    if (tran == TRAN_AWAKE)
+		s = ST_AWAKE;
+	    else if (tran == TRAN_CANCEL)
+		s = ST_CANCEL_WAIT;
+	    else if (tran == TRAN_FAIL)
+		s = ST_WARN;
+	    break;
+
+	  case ST_LOCK:
+	    was_lock = 1;
+	    tran = lock();
+	    assert(tran == TRAN_AWAKE || tran == TRAN_FAIL);
+	    if (tran == TRAN_AWAKE)
+		s = ST_AWAKE;
+	    else if (tran == TRAN_FAIL)
+		s = ST_WARN;
+	    break;
+
+	  case ST_AWAKE:
+	    ready();
+	    unmap_all();
+	    s = ST_NORMAL_WAIT;
+	    break;
+	    
+	}
+    }
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -952,7 +1034,6 @@ main(int argc, char *argv[])
   int i, j, orig_nports;
   int lock_possible = 0;
   struct timeval now;
-  struct timeval type_time;
   
   xwGETTIMEOFDAY(&genesis_time);
   init_scheduler();
@@ -1050,43 +1131,7 @@ main(int argc, char *argv[])
   }
   
   /* main loop */
-  ocurrent = &onormal;		/* start with normal options */
-  type_time = normal_type_time;
-  
-  while (1) {
-    int tran, was_lock;
-    
-    /* wait for break */
-    tran = wait_for_break(&type_time);
-    if (tran == TRAN_REST) {
-      type_time = normal_type_time; /* reset to normal type time */
-      continue;
-    }
-    
-    /* warn */
-    xwGETTIME(first_warn_time);
-    tran = was_lock = 0;
-    while (tran != TRAN_AWAKE && tran != TRAN_CANCEL) {
-      /* warn() will figure out current options by time */
-      tran = warn(was_lock, &onormal);
-      if (tran == TRAN_REST) {
-	was_lock = 0;
-	tran = rest();
-      } else if (tran == TRAN_LOCK) {
-	was_lock = 1;
-	tran = lock();
-      }
-    }
-    
-    /* done with break? */
-    if (tran == TRAN_AWAKE) {
-      ready();
-      type_time = normal_type_time; /* reset to normal type time */
-    } else			/* tran == TRAN_CANCEL */
-      type_time = ocurrent->cancel_type_time;
-    
-    unmap_all();
-  }
+  main_loop();
   
   return 0;
 }

@@ -307,5 +307,6 @@ lock(void)
       XDestroyWindow(ports[i].display, covers[i]);
       XFlush(ports[i].display);
     }
+  assert(tran == TRAN_AWAKE || tran == TRAN_FAIL);
   return tran;
 }

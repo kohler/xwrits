@@ -124,6 +124,7 @@ wait_for_break(const struct timeval *type_time)
   }
   
   unschedule(A_FLASH | A_AWAKE);
+  assert(val == TRAN_WARN || val == TRAN_REST);
   return val;
 }
 
@@ -227,6 +228,7 @@ rest(void)
   
   unschedule(A_FLASH | A_AWAKE | A_CLOCK);
   erase_all_clocks();
+  assert(tran == TRAN_CANCEL || tran == TRAN_AWAKE || tran == TRAN_FAIL);
   return tran;
 }
 
