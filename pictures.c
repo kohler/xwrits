@@ -44,7 +44,7 @@ struct named_record built_in_pictures[] = {
 
   /* other cultures' finger gestures */
   {"korean", &koreanl_gif, 0},		{"koreanicon", &koreani_gif, 0},
-  {"german", 0, 0, "korean"},		{"germanicon", 0, 0, "koreanicon"},
+  {"german", &germanl_gif, 0},		{"germanicon", 0, 0, "koreanicon"},
   {"japanese", 0, 0, "korean"},		{"japaneseicon", 0, 0, "koreanicon"},
   {"russian", 0, 0, "korean"},		{"russianicon", 0, 0, "koreanicon"},
 
@@ -108,7 +108,7 @@ get_built_in_image(const char *name)
 
   /* built-in images are all loop-forever. don't change the GIFs because it
      makes the executable bigger */
-  gfs->loopcount = 0;
+  if (gfs->loopcount < 0) gfs->loopcount = 0;
   
   return gfs;
 }
@@ -188,6 +188,16 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
       gfi->delay = (d < MIN_DELAY ? MIN_DELAY : (u_int16_t)d);
     /* add image */
     Gif_AddImage(gfs, gfi);
+  }
+  
+  /* add multiple times if it has a loop count, up to a max of 20 loops */
+  if (gfs->nimages != 0 && add->loopcount > 0) {
+    int loop = (add->loopcount <= 20 ? add->loopcount : 20);
+    int first = gfs->nimages - add->nimages;
+    int j;
+    for (i = 0; i < loop; i++)
+      for (j = 0; j < add->nimages; j++)
+	Gif_AddImage(gfs, gfs->images[first + j]);
   }
 }
 

@@ -1,5 +1,11 @@
 Xwrits NEWS
 
+Version 2.9
+
+* `german' is now its own beast: an animated gesture suggested by Andreas
+  Stenger <Andreas.Stenger@smallworld.de>.
+
+
 Version 2.9b1   10.Aug.1999
 
 * Added `+quota' option. With `+quota=TIME' on, if you leave your

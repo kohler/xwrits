@@ -109,7 +109,7 @@ Appearance:\n\
   +clock              Show how long you have ignored the warning window.\n\
   +finger             Be rude.\n\
   +finger=CULTURE     Be rude according to CULTURE. Choices: `american',\n\
-                      `korean' (synonyms `german', `japanese', `russian').\n\
+                      `korean' (synonyms `japanese', `russian'), `german'.\n\
   flashtime=RATE      Flash the warning window at RATE (default 2 sec).\n\
   +iconified          Warning windows appear as icons.\n\
   maxhands=NUM        Maximum number of warning windows is NUM (default 25).\n\
