@@ -5,6 +5,7 @@
 #include <math.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <X11/Xatom.h>
 
 #define NEW_HAND_TRIES 6
 
@@ -76,6 +77,7 @@ new_hand(Port *slave_port, int x, int y)
   Hand *nh_icon = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
   int height = ocurrent->slideshow->screen_height;
+  uint32_t property[2];
   Port *port;
 
   /* check for random port, patch by Peter Maydell <maydell@tao-group.com> */
@@ -182,9 +184,24 @@ new_hand(Port *slave_port, int x, int y)
   XSetWMProperties(port->display, nh->w, &window_name, &icon_name,
 		   NULL, 0, xsh, xwmh, &classh);
   XSetWMProtocols(port->display, nh->w, &port->wm_delete_window_atom, 1);
+
+  /* window manager properties, including GNOME/KDE hints */
   XChangeProperty(port->display, nh->w, port->mwm_hints_atom,
 		  port->mwm_hints_atom, 32, PropModeReplace,
 		  (unsigned char *)mwm_hints, 4);
+  property[0] = port->wm_delete_window_atom;
+  property[1] = port->net_wm_ping_atom;
+  XChangeProperty(port->display, nh->w, port->wm_protocols_atom,
+		  XA_ATOM, 32, PropModeReplace,
+		  (unsigned char *)property, 2);
+  property[0] = 0xFFFFFFFFU;
+  XChangeProperty(port->display, nh->w, port->net_wm_desktop_atom,
+		  XA_CARDINAL, 32, PropModeReplace,
+		  (unsigned char *)property, 1);
+  property[0] = port->net_wm_window_type_utility_atom;
+  XChangeProperty(port->display, nh->w, port->net_wm_window_type_atom,
+		  XA_ATOM, 32, PropModeReplace,
+		  (unsigned char *)property, 1);
   
   XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);

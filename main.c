@@ -1,3 +1,4 @@
+/* -*- c-basic-offset: 2 -*- */
 #include <config.h>
 #include "xwrits.h"
 #include <stdlib.h>
@@ -383,8 +384,14 @@ default_x_processing(XEvent *e)
     if (h) {
       if (e->xclient.message_type == port->wm_protocols_atom
 	  && (Atom)(e->xclient.data.l[0]) == port->wm_delete_window_atom) {
+	/* window manager delete */
 	e->type = Xw_DeleteWindow;
 	destroy_hand(h);
+      } else if (e->xclient.message_type == port->wm_protocols_atom
+		 && (Atom)(e->xclient.data.l[0]) == port->net_wm_ping_atom) {
+	/* window manager pinging us to make sure we're still alive */
+	e->xclient.window = port->root_window;
+	XSendEvent(port->display, port->root_window, True, 0, e);
       } else if (e->xclient.message_type == port->xwrits_break_atom
 		 && e->xclient.data.l[0] != 0)
 	e->type = Xw_TakeBreak;
@@ -514,7 +521,9 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     if (*arg++ != *opt++) return 0;
     unique--;
   }
-  if (unique > 0) return 0;
+  /* 4.Sep.2002 - Prevent inappropriate identification of an option (could
+     mistake --helpcdsainhfds for --help). */
+  if (unique > 0 || (*arg && *arg != '=')) return 0;
   
   if (*arg == '=') {
     arg++;
@@ -899,6 +908,12 @@ initialize_slave_port(Port *port)
     port->wm_delete_window_atom = m->wm_delete_window_atom;
     port->wm_protocols_atom = m->wm_protocols_atom;
     port->mwm_hints_atom = m->mwm_hints_atom;
+    port->net_wm_ping_atom = m->net_wm_ping_atom;
+    port->net_wm_name_atom = m->net_wm_name_atom;
+    port->net_wm_icon_name_atom = m->net_wm_icon_name_atom;
+    port->net_wm_desktop_atom = m->net_wm_desktop_atom;
+    port->net_wm_window_type_atom = m->net_wm_window_type_atom;
+    port->net_wm_window_type_utility_atom = m->net_wm_window_type_utility_atom;
     port->xwrits_window_atom = m->xwrits_window_atom;
     port->xwrits_notify_peer_atom = m->xwrits_notify_peer_atom;
     port->xwrits_break_atom = m->xwrits_break_atom;
@@ -1010,6 +1025,12 @@ initialize_port(int portno)
   port->wm_delete_window_atom = XInternAtom(display, "WM_DELETE_WINDOW", False);
   port->wm_protocols_atom = XInternAtom(display, "WM_PROTOCOLS", False);
   port->mwm_hints_atom = XInternAtom(display, "_MOTIF_WM_HINTS", False);
+  port->net_wm_ping_atom = XInternAtom(display, "_NET_WM_PING", False);
+  port->net_wm_name_atom = XInternAtom(display, "_NET_WM_NAME", False);
+  port->net_wm_icon_name_atom = XInternAtom(display, "_NET_WM_ICON_NAME", False);
+  port->net_wm_desktop_atom = XInternAtom(display, "_NET_WM_DESKTOP", False);
+  port->net_wm_window_type_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+  port->net_wm_window_type_utility_atom = XInternAtom(display, "_NET_WM_WINDOW_TYPE_UTILITY", False);
   port->xwrits_window_atom = XInternAtom(display, "XWRITS_WINDOW", False);
   port->xwrits_notify_peer_atom = XInternAtom(display, "XWRITS_NOTIFY_PEER", False);
   port->xwrits_break_atom = XInternAtom(display, "XWRITS_BREAK", False);
