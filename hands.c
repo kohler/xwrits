@@ -378,13 +378,16 @@ draw_slide(Hand *h)
 {
   Gif_Stream *gfs;
   Gif_Image *gfi;
-  Port *port = h->port;
+  Port *port;
   Picture *p;
 
-  assert(h && h->slideshow);
+  if (!h || !h->slideshow)
+    return;
+
   gfs = h->slideshow;
   gfi = gfs->images[h->slide];
   p = (Picture *)gfi->user_data;
+  port = h->port;
   
   if (!p->pix[port->port_number])
     ensure_picture(port, gfs, h->slide);
