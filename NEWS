@@ -1,8 +1,11 @@
 Xwrits NEWS
 
-Version 2.7.3
+Version 2.7.3   28.Dec.1998
 
 * Updated GIF library to 0.99; moved to config.h-based configuration.
+
+* Use the failing-malloc library to avoid problems with some systems' bad
+  realloc() definitions.
 
 
 Version 2.7.2   16.Dec.1998

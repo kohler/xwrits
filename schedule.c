@@ -148,7 +148,7 @@ destroy_alarm(Alarm *adestroy)
   for (a = alarms; a; a = a->next)
     if (a->next == adestroy)
       a->next = adestroy->next;
-  free(adestroy);
+  xfree(adestroy);
 }
 
 
@@ -177,7 +177,7 @@ unschedule_data(int actions, void *data)
       Alarm *n = a->next;
       if (prev) prev->next = n;
       else alarms = n;
-      free(a);
+      xfree(a);
       a = n;
       continue;
     }
@@ -257,7 +257,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	
       }
       
-      if (!a->scheduled) free(a);
+      if (!a->scheduled) xfree(a);
       if (ret_val != 0) return ret_val;
     }
     

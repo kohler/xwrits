@@ -332,7 +332,7 @@ destroy_hand(Hand *h)
   if (h->next) h->next->prev = h->prev;
   active_hands--;
   unschedule_data(A_FLASH | A_RAISE, h);
-  free(h);
+  xfree(h);
 }
 
 
@@ -708,7 +708,7 @@ check_options(Options *o)
     /* If the next set of options is supposed to appear before this one,
        replace this one with the next set. Iterate. */
     *o = *p;
-    free(p);
+    xfree(p);
   }
 }
 

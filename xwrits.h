@@ -24,9 +24,9 @@ typedef struct Alarm Alarm;
 #define EXTERNFUNCTION		extern
 #endif
 
-#define xwNEW(typ)		(typ *)malloc(sizeof(typ))
-#define xwNEWARR(typ,num)	(typ *)malloc(sizeof(typ) * (num))
-#define xwREARRAY(var,typ,num)	var = (typ *)realloc(var, sizeof(typ) * (num))
+#define xwNEW(typ)		(typ *)xmalloc(sizeof(typ))
+#define xwNEWARR(typ,num)	(typ *)xmalloc(sizeof(typ) * (num))
+#define xwREARRAY(var,typ,num)	var = (typ *)xrealloc(var, sizeof(typ) * (num))
 
 
 /*****************************************************************************/

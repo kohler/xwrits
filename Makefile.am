@@ -10,7 +10,8 @@ INCLUDES = $(X_CFLAGS)
 LDADD = @LIBOBJS@
 xwrits_LDADD = $(LDADD) @X_LIBS@ @X_PRE_LIBS@ -lX11 @X_EXTRA_LIBS@ -lm
 
-xwrits_SOURCES = gif.h giffunc.c gifread.c gifx.h gifx.c \
+xwrits_SOURCES = fmalloc.c \
+		gif.h giffunc.c gifread.c gifx.h gifx.c \
 		xwrits.h clock.c lock.c main.c pictures.c rest.c \
 		schedule.c warning.c
 
@@ -51,6 +52,8 @@ dist-hook:
 	cp -p $(srcdir)/mono/*.gif $(distdir)/mono
 
 srclinks:
+	for i in fmalloc.c ; do \
+	ln -sf ~/src/edlib/$$i $$i ; done
 	for i in gif.h giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
 	ln -sf ~/src/giflib/$$i $$i ; done
 

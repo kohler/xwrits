@@ -25,6 +25,13 @@
 extern "C" {
 #endif
 
+/* Use the clean-failing malloc library in fmalloc.c */
+#define xmalloc(s)		fail_die_malloc((s),__FILE__,__LINE__)
+#define xrealloc(p,s)		fail_die_realloc((p),(s),__FILE__,__LINE__)
+#define xfree			free
+void *fail_die_malloc(int, const char *, int);
+void *fail_die_realloc(void *, int, const char *, int);
+
 /* Prototype strerror() if we don't have it. */
 #ifndef HAVE_STRERROR
 char *strerror(int errno);
