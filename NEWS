@@ -1,5 +1,14 @@
 Xwrits NEWS
 
+Version 2.7.2   16.Dec.1998
+
+* Another bug fix in code for adjusting break length (sometimes it wouldn't
+  notice that a break should be over, and would incorrectly start
+  flashing when you typed).
+
+* Finally, real `--help'!
+
+
 Version 2.7.1   9.Dec.1998
 
 * Fixed bug where breaks would often be dramatically shortened for no good
@@ -27,9 +36,6 @@ Version 2.6.5   6.Oct.1998
 Version 2.6.4   26.Sep.1998
 
 * Added `--help' (well, `help') to conform to GNU program behavior standards.
-
-* Added `make uninstall' target and enabled `./configure's program name
-  transformations.
 
 * Makefiles: Added `make uninstall' target, enabled `./configure's
   program name transformations, made VPATH builds possible.

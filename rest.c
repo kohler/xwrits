@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 static struct timeval wait_over_time;
+static struct timeval break_over_time;
 
 
 static int
@@ -71,21 +72,27 @@ ensure_one_hand(void)
 static int
 rest_x_loop(XEvent *e)
 {
+  struct timeval now;
+  int break_over;
+  xwGETTIME(now);
+  break_over = xwTIMEGEQ(now, break_over_time);
+  
   if (e->type == ClientMessage)
     /* Window manager deleted only xwrits window. Consider break over. */
-    return TRAN_CANCEL;
+    return (break_over ? TRAN_AWAKE : TRAN_CANCEL);
+  
   else if (e->type == KeyPress) {
-    xwGETTIME(last_key_time);
-    return TRAN_FAIL;
+    last_key_time = now;
+    return (break_over ? TRAN_AWAKE : TRAN_FAIL);
+    
   } else
     return 0;
 }
 
-
 int
 rest(void)
 {
-  struct timeval now, finish;
+  struct timeval now;
   Alarm *a;
   int tran;
   
@@ -94,14 +101,14 @@ rest(void)
   
   xwGETTIME(now);
   if (!check_idle)
-    xwADDTIME(finish, now, break_delay);
+    xwADDTIME(break_over_time, now, break_delay);
   else
-    xwADDTIME(finish, last_key_time, break_delay);
-  if (xwTIMEGEQ(now, finish))
+    xwADDTIME(break_over_time, last_key_time, break_delay);
+  if (xwTIMEGEQ(now, break_over_time))
     return TRAN_AWAKE;
   
   a = new_alarm(A_AWAKE);
-  a->timer = finish;
+  a->timer = break_over_time;
   schedule(a);
   
   if (ocurrent->break_clock) {

@@ -61,7 +61,7 @@ determine_wm_deltas(Hand *h)
 static void
 short_usage(void)
 {
-  fprintf(stderr, "Usage: xwrits [options]\n\
+  fprintf(stderr, "Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [options...]\n\
 Type xwrits --help for more information.\n");
   exit(1);
 }
@@ -74,14 +74,44 @@ usage(void)
 `Xwrits' reminds you to take wrist breaks, which should help you prevent or\n\
 manage a repetitive stress injury. It runs on X.\n\
 \n\
-Usage: xwrits [display=d] [typetime=time] [breaktime=time] [after=time]\n\
-              [+/-beep] [+/-breakclock] [+/-clock] [+/-finger] [flashtime=time]\n\
-              [+/-flipoff] [help] [+/-iconified] [-/+idle[=time]]\n\
-              [+/-lock[=time]] [maxhands=#] [mono] [+/-multiply[=time]]\n\
-              [+/-noiconify] [password=password] [+/-top] [version]\n\
+Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [options...]\n\
+\n\
+All options may be abbreviated to their unique prefixes. You can type\n\
+`--OPTION', `OPTION', or `+OPTION': they act equivalently. Some options can be\n\
+turned off with `-OPTION'; these are shown as `+/-OPTION', and only `+OPTION's\n\
+effect is described.\n\
+\n\
+General options:\n\
+  --display DISPLAY     Monitor the X display DISPLAY.\n\
+  --help                Print this message and exit.\n\
+  --version             Print version number and exit.\n\
+  --mono                Use monochrome pictures.\n\
+  +/-idle               Pay attention to your typing patterns (on by default).\n\
+\n");
+  printf("\
+Break characteristics:\n\
+  --typetime=DURATION   Type for DURATION, (also: `t=DURATION')\n\
+  --breaktime=DURATION  then take a break for DURATION. (also: `b=DURATION')\n\
+  +/-lock               Lock the keyboard during the break.\n\
+  --password=PW         Set the password for unlocking the keyboard.\n\
+\n\
+Appearance options:\n\
+  +/-finger             Be rude.\n\
+  --flashtime=RATE      Flash the warning window at RATE.\n\
+  +/-beep               Beep when the warning window appears.\n\
+  +/-clock              Show how long you have ignored the warning window.\n\
+  +/-multiply=PERIOD    Make a new warning window every PERIOD,\n\
+  --maxhands=NUM        up to a maximum of NUM windows (default: 25).\n\
+  +/-iconified          Warning windows appear as icons.\n\
+  +/-noiconify          Don't let anyone iconify the warning window.\n\
+  +/-top                Keep the warning windows on top of the window stack.\n\
+  --after=TIME          Change behavior if warning window is ignored for TIME;\n\
+                        options following `--after' give new behavior.\n\
+  +/-breakclock         Show how much time remains during the break.\n\
 \n\
 Report bugs to <eddietwo@lcs.mit.edu>.\n");
 }
+
 
 
 void
@@ -345,7 +375,6 @@ window_to_hand(Window w)
       break;
   return h;
 }
-
 
 Hand *
 icon_window_to_hand(Window w)
