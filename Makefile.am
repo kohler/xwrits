@@ -40,7 +40,7 @@ colorpic.c: $(COLOR_PIC) giftoc
 monopic.c: $(MONO_PIC) giftoc
 	./giftoc -makename -dir $(srcdir) $(MONO_PIC) > $@
 
-EXTRA_DIST = xwrits.1 logo.gif rpm.spec
+EXTRA_DIST = GESTURES xwrits.1 logo.gif rpm.spec
 MOSTLYCLEANFILES = colorpic.c monopic.c
 
 dist-hook:
