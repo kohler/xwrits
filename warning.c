@@ -241,7 +241,7 @@ warn(int was_lock, Options *onormal)
     goto done;
 
   for (i = 0; i < nports; i++)
-    find_one_hand(ports[i], 1);
+    pop_up_hand(find_one_hand(ports[i], 1));
   
   if (check_idle) {
     Alarm *a = new_alarm(A_IDLE_CHECK);
