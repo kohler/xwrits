@@ -1,9 +1,12 @@
 Xwrits NEWS
 
-Version 2.20
+Version 2.20   17.Apr.2002
 
 * Add `title' option. Suggested, and patch provided, by Dale Thatcher
   <xwrits@dalethatcher.com>.
+
+* Finally fix `--multiscreen' option. Thanks to Orion Hodson
+  <hodson@icir.org> for lending his multihead machine.
 
 
 Version 2.19   8.Feb.2002
