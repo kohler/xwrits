@@ -142,7 +142,7 @@ warning_x_loop(XEvent *e)
    case KeyPress:
     if ((a = grab_alarm(IdleCheck))) {
       xwGETTIME(last_key_time);
-      xwADDTIME(a->timer, last_key_time, idle_check_delay);
+      xwADDTIME(a->timer, last_key_time, idle_time);
       schedule(a);
     }
     break;
@@ -163,9 +163,9 @@ warning(int lockfailed)
   if (val == WarnLock) return val;
   pop_up_hand(hands);
   
-  if (check_idle && !xwTIMELEQ0(idle_check_delay)) {
+  if (check_idle && !xwTIMELEQ0(idle_time)) {
     Alarm *a = new_alarm(IdleCheck);
-    xwADDTIME(a->timer, last_key_time, idle_check_delay);
+    xwADDTIME(a->timer, last_key_time, idle_time);
     schedule(a);
   }
   

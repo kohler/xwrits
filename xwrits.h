@@ -264,15 +264,9 @@ void load_needed_pictures(Window, int, int force_mono);
 /*****************************************************************************/
 /*  Idle processing							     */
 
-<<<<<<< xwrits.h
 extern struct timeval register_keystrokes_delay;
 extern struct timeval register_keystrokes_gap;
 extern struct timeval idle_time;
-=======
-extern struct timeval idle_select_delay;
-extern struct timeval idle_gap_delay;
-extern struct timeval idle_check_delay;
->>>>>>> 1.7
 extern int check_idle;
 
 void watch_keystrokes(Window, struct timeval *);

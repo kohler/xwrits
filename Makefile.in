@@ -51,7 +51,7 @@ main.o: main.c
 
 pictures.o: pictures.c color/gifs.c mono/gifs.c
 giftoc: giftoc.c
-	$(CC) $(CFLAGS) -o giftoc giftoc.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o giftoc giftoc.c
 
 COLOR_PIX = color/bars.gif color/lock.gif \
 	color/clenchl.gif color/spreadl.gif color/fingerl.gif color/restl.gif \
@@ -77,6 +77,7 @@ srclinks:
 
 versionize:
 	perl -pi~ -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.man
+	perl -pi~ -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\d.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" rpm.spec
 
 #####
 # Cleaning and distribution
@@ -88,12 +89,12 @@ distclean: mostlyclean
 	rm -f Makefile config.status config.log config.cache
 realclean: distclean
 
-dist:
+$(PACKAGE)-$(VERSION).tar.gz:
 	rm -rf $(PACKAGE)-$(VERSION)
 	mkdir -m 0777 $(PACKAGE)-$(VERSION)
 	cp Makefile.in README NEWS INSTALL configure configure.in install-sh \
 	gif.h.in giffunc.c gifread.c gifx.h gifx.c giftoc.c \
-	xwrits.h xwrits.man \
+	xwrits.h xwrits.man logo.gif rpm.spec \
 	pictures.c clock.c lock.c rest.c schedule.c warning.c rest.c main.c \
 	$(PACKAGE)-$(VERSION)
 	mkdir -m 0777 $(PACKAGE)-$(VERSION)/color
@@ -102,3 +103,19 @@ dist:
 	cp $(MONO_PIX) $(PACKAGE)-$(VERSION)/mono
 	gtar czf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION)
 	rm -r $(PACKAGE)-$(VERSION)
+dist:
+	@rm -f $(PACKAGE)-$(VERSION).tar.gz
+	@make $(PACKAGE)-$(VERSION).tar.gz
+
+rpm: $(PACKAGE)-$(VERSION).tar.gz
+	buildarch=`rpm --showrc | awk '/^build arch/ { print $$4; }'` ; \
+	mkdir -p /tmp/rpmb/SOURCES /tmp/rpmb/RPMS/$$buildarch \
+	/tmp/rpmb/BUILD ; \
+	echo 'topdir: /tmp/rpmb' > /tmp/rpmb/rc ; \
+	cp logo.gif $(PACKAGE)-$(VERSION).tar.gz /tmp/rpmb/SOURCES ; \
+	rpm --rcfile /tmp/rpmb/rc -bb rpm.spec ; \
+	cp /tmp/rpmb/RPMS/$$buildarch/*.rpm .
+	rm -rf /tmp/rpmb
+
+.PHONY: all install srclinks versionize dist rpm \
+	clean mostlyclean distclean realclean

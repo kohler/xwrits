@@ -17,7 +17,7 @@ Options *ocurrent;
 struct timeval genesis_time;
 struct timeval type_delay;
 struct timeval break_delay;
-struct timeval idle_check_delay;
+struct timeval idle_time;
 static struct timeval zero = {0, 0};
 
 static struct timeval flash_delay;
@@ -403,7 +403,7 @@ default_x_processing(XEvent *e)
     {
       struct timeval now;
       xwGETTIME(now);
-      watch_keystrokes_create(e->xcreatewindow.window, &now);
+      watch_keystrokes(e->xcreatewindow.window, &now);
       break;
     }
     
@@ -411,6 +411,11 @@ default_x_processing(XEvent *e)
     /* We must unschedule any IdleSelect events for fear of selecting input
        on a destroyed window. There may be a race condition here... */
     unschedule_data(IdleSelect, (void *)e->xdestroywindow.window);
+    break;
+    
+   case MappingNotify:
+    /* Should listen to X mapping events! */
+    XRefreshKeyboardMapping(&e->xmapping);
     break;
     
   }
@@ -591,7 +596,7 @@ parse_options(int pargc, char **pargv)
       
     } else if (optparse(s, "iconified", 2, "t"))
       o->appear_iconified = optparse_yesno;
-    else if (optparse(s, "idle", 1, "tT", &idle_check_delay))
+    else if (optparse(s, "idle", 1, "tT", &idle_time))
       check_idle = optparse_yesno;
     
     else if (optparse(s, "lock", 1, "tT", &o->lock_bounce_delay))
@@ -757,7 +762,7 @@ default_settings(void)
   /* Keystroke registration functions */
   SET_TIME(register_keystrokes_delay, 1, 0);
   SET_TIME(register_keystrokes_gap, 0, 10000);
-  SET_TIME(idle_check_delay, 0, 0);
+  SET_TIME(idle_time, 0, 0);
   check_idle = 1;
 
   /* Clock tick time functions */
@@ -815,12 +820,12 @@ main(int argc, char *argv[])
   load_needed_pictures(hand->w, lock_possible, force_mono);
   init_clock(hand->w);
   
-  if (check_idle && xwTIMELEQ0(idle_check_delay)) {
+  if (check_idle && xwTIMELEQ0(idle_time)) {
     double time = 0.3 * (break_delay.tv_sec +
 			(break_delay.tv_usec / (double)MICRO_PER_SEC));
     long integral_time = (long)(floor(time));
-    idle_check_delay.tv_sec = integral_time;
-    idle_check_delay.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
+    idle_time.tv_sec = integral_time;
+    idle_time.tv_usec = (long)(MICRO_PER_SEC * (time - integral_time));
   }
   
   if (check_idle) {
