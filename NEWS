@@ -4,6 +4,9 @@ Version 2.6.4   26.Sep.1998
 
 * Added `--help' (well, `help') to conform to GNU program behavior standards.
 
+* Added `make uninstall' target and enabled `./configure's program name
+  transformations.
+
 
 Version 2.6.3   7.Sep.1998
 

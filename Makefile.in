@@ -19,16 +19,15 @@ manext		= 1
 CC		= @CC@ $(PROFILING)
 CCLINKER	= @CC@ $(PROFILING)
 CFLAGS		= @CFLAGS@
-CPPFLAGS	= @X_CFLAGS@ @DEFS@
+CPPFLAGS	= @DEFS@ @X_CFLAGS@ -I.
 PROFILING	= 
 LDFLAGS		= @LDFLAGS@
-LIBS		= @X_LIBS@ @X_PRE_LIBS@ -lX11 -lm @X_EXTRA_LIBS@
-RM		= /bin/rm -f
-MV		= /bin/mv
+LIBS		= @X_LIBS@ @X_PRE_LIBS@ -lX11 -lm @X_EXTRA_LIBS@ @LIBS@
 
 INSTALL		= @INSTALL@
 INSTALL_PROGRAM	= @INSTALL_PROGRAM@
 INSTALL_DATA	= @INSTALL_DATA@
+PROG_TRANSFORM	= @program_transform_name@
 
 PROGRAMS	= xwrits
 OBJS		= giffunc.o gifread.o gifx.o pictures.o schedule.o warning.o \
@@ -39,10 +38,6 @@ all: $(PROGRAMS)
 xwrits: $(OBJS)
 	$(CCLINKER) $(CFLAGS) -o xwrits $(OBJS) $(LDFLAGS) $(LIBS)
 
-install: $(PROGRAMS)
-	$(INSTALL_PROGRAM) xwrits $(bindir)/xwrits
-	$(INSTALL_DATA) xwrits.man $(mandir)/xwrits.$(manext)
-
 main.o: main.c
 	$(CC) $(CPPFLAGS) -DVERSION='"$(VERSION)"' $(CFLAGS) -c $<
 
@@ -50,8 +45,9 @@ main.o: main.c
 # Making pictures
 
 pictures.o: pictures.c color/gifs.c mono/gifs.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
 giftoc: giftoc.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o giftoc giftoc.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o giftoc $<
 
 COLOR_PIX = color/bars.gif color/lock.gif \
 	color/clenchl.gif color/spreadl.gif color/fingerl.gif color/restl.gif \
@@ -62,14 +58,26 @@ MONO_PIX = mono/barsm.gif mono/lockm.gif \
 	mono/oklm.gif mono/clenchim.gif mono/spreadim.gif mono/fingerim.gif \
 	mono/restim.gif mono/okim.gif
 
-color/gifs.c: giftoc $(COLOR_PIX)
-	cd color ; ../giftoc -makename bars.gif lock.gif \
-	clenchl.gif spreadl.gif fingerl.gif restl.gif okl.gif \
-	clenchi.gif spreadi.gif fingeri.gif resti.gif oki.gif > gifs.c
-mono/gifs.c: giftoc $(MONO_PIX)
-	cd mono ; ../giftoc -makename barsm.gif lockm.gif \
-	clenchlm.gif spreadlm.gif fingerlm.gif restlm.gif oklm.gif \
-	clenchim.gif spreadim.gif fingerim.gif restim.gif okim.gif > gifs.c
+color/gifs.c: $(COLOR_PIX) giftoc
+	id=$(srcdir)/color ; ./giftoc -makename $$id/bars.gif $$id/lock.gif \
+	$$id/clenchl.gif $$id/spreadl.gif $$id/fingerl.gif $$id/restl.gif \
+	$$id/okl.gif $$id/clenchi.gif $$id/spreadi.gif $$id/fingeri.gif \
+	$$id/resti.gif $$id/oki.gif > $@
+mono/gifs.c: $(MONO_PIX) giftoc
+	id=$(srcdir)/mono ; ./giftoc -makename $$id/barsm.gif $$id/lockm.gif \
+	$$id/clenchlm.gif $$id/spreadlm.gif $$id/fingerlm.gif $$id/restlm.gif \
+	$$id/oklm.gif $$id/clenchim.gif $$id/spreadim.gif $$id/fingerim.gif \
+	$$id/restim.gif $$id/okim.gif > $@
+
+
+install: $(PROGRAMS)
+	$(INSTALL_PROGRAM) xwrits $(bindir)/`echo xwrits|sed '$(PROG_TRANSFORM)'`
+	$(INSTALL_DATA) $(srcdir)/xwrits.man $(mandir)/`echo xwrits|sed '$(PROG_TRANSFORM)'`.$(manext)
+
+uninstall:
+	rm -f $(bindir)/`echo xwrits|sed '$(PROG_TRANSFORM)'`
+	rm -f $(mandir)/`echo xwrits|sed '$(PROG_TRANSFORM)'`.$(manext)
+
 
 srclinks:
 	for i in gif.h.in giffunc.c gifread.c giftoc.c gifx.h gifx.c ; do \
@@ -86,7 +94,7 @@ clean:
 	rm -f $(PROGRAMS) *.o giftoc color/gifs.c mono/gifs.c core *.core
 mostlyclean: clean
 distclean: mostlyclean
-	rm -f Makefile config.status config.log config.cache
+	rm -f Makefile gif.h config.status config.log config.cache
 realclean: distclean
 
 $(PACKAGE)-$(VERSION).tar.gz:
@@ -117,5 +125,5 @@ rpm: $(PACKAGE)-$(VERSION).tar.gz
 	cp /tmp/rpmb/RPMS/$$buildarch/*.rpm .
 	rm -rf /tmp/rpmb
 
-.PHONY: all install srclinks versionize dist rpm \
+.PHONY: all install uninstall srclinks versionize dist rpm \
 	clean mostlyclean distclean realclean
