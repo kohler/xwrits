@@ -50,6 +50,7 @@ int max_cheats;
 static int allow_cheats;
 
 static int force_mono = 0;
+static int multiscreen = 0;
 
 
 static void
@@ -78,6 +79,7 @@ explicitly with `-OPTION'.\n\
 General options:\n\
   --display DISPLAY   Monitor the X display DISPLAY. You can monitor more than\n\
                       one display by giving this option multiple times.\n\
+  --multiscreen       Open every screen for each DISPLAY.\n\
   --help              Print this message and exit.\n\
   --version           Print version number and exit.\n\
 \n");
@@ -423,15 +425,24 @@ optparse(char *arg, char *option, int unique, char *format, ...)
   va_start(val, format);
   
   /* Allow for long options. --[option] is equivalent to [option]. */
-  if (arg[0] == '-' && arg[1] == '-')
+  if (arg[0] == '-' && arg[1] == '-' && isalnum(arg[2]))
     arg += 2;
-  
+
   if (*format == 't') {
-    /* Toggle switch. -[option] means off; +[option] or [option] means on.
-       Arguments must be given with = syntax. */
-    if (*arg == '-') optparse_yesno = 0, arg++;
-    else if (*arg == '+') optparse_yesno = 1, arg++;
-    else optparse_yesno = 1;
+      /* Toggle switch. -[option] means off; +[option] or [option] means on.
+	 Arguments must be given with = syntax. */
+
+      /* Allow --no-WHATEVER as well as +WHATEVER. */
+      optparse_yesno = 1;
+      if (arg[0] == '-' && arg[1] == 'n' && arg[2] == 'o' && arg[3] == '-')
+	  arg++;
+      while (arg[0]== 'n' && arg[1] == 'o' && arg[2] == '-' && isalnum(arg[3]))
+	  optparse_yesno = !optparse_yesno, arg += 3;
+      
+      if (arg[0] == '-')
+	  optparse_yesno = 0, arg++;
+      else if (arg[0] == '+')
+	  optparse_yesno = 1, arg++;
     
   } else if (*format == 's') {
     /* Set option. -[option], +[option] and [option] are acceptable.
@@ -617,6 +628,8 @@ parse_options(int pargc, char **pargv)
       check_mouse = optparse_yesno;
     else if (optparse(s, "multiply", 1, "tT", &o->multiply_delay))
       o->multiply = optparse_yesno;
+    else if (optparse(s, "multiscreen", 6, "t"))
+	multiscreen = optparse_yesno;
     else if (optparse(s, "maxhands", 2, "si", &o->max_hands))
       ;
     
@@ -803,13 +816,14 @@ default_settings(void)
 #endif
 
 static void
-initialize_port(Port *port, Display *display, int screen_number)
+initialize_port(int portno, Display *display, int screen_number)
 {
   XVisualInfo visi_template;
   int nv, i;
   XVisualInfo *v;
   XVisualInfo *best_v = 0;
   VisualID default_visualid;
+  Port *port = &ports[portno];
   
   /* initialize Port fields */
   port->display = display;
@@ -818,6 +832,12 @@ initialize_port(Port *port, Display *display, int screen_number)
   port->root_window = RootWindow(display, screen_number);
   port->width = DisplayWidth(display, screen_number);
   port->height = DisplayHeight(display, screen_number);
+  port->port_number = portno;
+
+  /* set X socket */
+  FD_SET(port->x_socket, &x_socket_set);
+  if (port->x_socket > max_x_socket)
+      max_x_socket = port->x_socket;
   
   /* choose the Visual */
   default_visualid = DefaultVisual(display, screen_number)->visualid;
@@ -929,7 +949,7 @@ int
 main(int argc, char *argv[])
 {
   Options *o;
-  int i;
+  int i, j;
   int lock_possible = 0;
   struct timeval now;
   struct timeval type_time;
@@ -991,12 +1011,20 @@ main(int argc, char *argv[])
   max_x_socket = 0;
   for (i = 0; i < nports; i++) {
     Display *display = XOpenDisplay(ports[i].display_name);
-    if (!display) error("can't open display `%s'", ports[i].display_name);
-    initialize_port(&ports[i], display, DefaultScreen(display));
-    ports[i].port_number = i;
-    FD_SET(ports[i].x_socket, &x_socket_set);
-    if (ports[i].x_socket > max_x_socket)
-      max_x_socket = ports[i].x_socket;
+    if (!display)
+	error("can't open display `%s'", ports[i].display_name);
+    if (!multiscreen)
+	initialize_port(i, display, DefaultScreen(display));
+    else
+	for (j = 0; j < ScreenCount(display); j++)
+	    if (j == 0)
+		initialize_port(i, display, j);
+	    else {
+		nports++;
+		ports = (Port *)xrealloc(ports, sizeof(Port) * nports);
+		ports[nports-1].display_name = ports[i].display_name;
+		initialize_port(nports-1, display, j);
+	    }
   }
 
   /* initialize pictures using first hand */

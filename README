@@ -1,4 +1,4 @@
-XWRITS VERSION 2.11
+XWRITS VERSION 2.17
 ===================
 
 ABOUT XWRITS
@@ -29,7 +29,7 @@ details.
 COPYRIGHT
 ---------
    Source and pictures copyright 1994-2001 Eddie Kohler:
-kohler@aciri.org and http://www.pdos.lcs.mit.edu/~eddietwo/
+kohler@icir.org and http://www.icir.org/kohler/
 
    This package is distributed under the GNU General Public License, Version
 2, or, at your discretion, any later version. The GNU General Public License
@@ -46,4 +46,4 @@ BUGS, SUGGESTIONS, ETC.
 -----------------------
    Please write me if you have trouble building or running xwrits, or if
 you have any suggestions, or if you know some rude finger gestures not
-listed in `GESTURES'. Again that email address is: kohler@aciri.org
+listed in `GESTURES'. Again that email address is: kohler@icir.org

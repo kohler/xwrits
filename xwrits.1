@@ -1,5 +1,5 @@
 .\" -*- mode: nroff -*-
-.ds V 2.16
+.ds V 2.17
 .ds E " \-\- 
 .if t .ds E \(em
 '
@@ -52,31 +52,30 @@ well as a longer break every hour. To use xwrits this way, just run two
 xwrits processes, one for the microbreaks and one for the longer breaks.
 '
 .SH ESCALATION
-It is easy to put the warning window aside ``for 5 minutes'' and
-ignore it for fifty. Xwrits can escalate its activity over time,
-making it harder to ignore.
+It is easy to put the warning window aside ``for 5 minutes'' and ignore it
+for fifty. The \fBafter\fP=\fIdelay\fP option causes xwrits to escalate its
+activity over time, making it harder to ignore.
 .PP
-This is done with the \fBafter\fP=\fIdelay-time\fP option. All options
-following \fBafter\fP only apply after you have ignored the warning window
-for \fIdelay-time\fP. In other words, xwrits's behavior escalates after
-\fIdelay-time\fP. For instance, with this command line,
+Options following \fBafter\fP come into effect after you have ignored the
+warning window for \fIdelay\fP. In other words, xwrits's behavior escalates
+after \fIdelay\fP. For instance, with this command line,
 .nf
 	xwrits flashtime=:2 after=10 flashtime=:.03
 .fi
 the warning window will begin flashing very quickly if it is ignored
 for 10 minutes.
 .PP
-Any options specified preceding an \fBafter\fP option also apply
-following it. You may explicitly cancel such options, however. For
-example:
+Any options preceding an \fBafter\fP option also apply following it, unless
+you explicitly cancel them. For example:
 .nf
 	xwrits +finger after=10 -finger
 .fi
 .PP
-You may have more than one \fBafter\fP option. This creates a
-series of escalations.
+Multiple \fBafter\fP options create a series of escalations. \fIDelay\fP
+arguments are cumulative, so ``after=10 after=10'' means the same as
+``after=20''.
 .PP
-One interesting use for \fBafter\fP is to make a break longer depending on
+One interesting use for \fBafter\fP is to make a break's length depend on
 how long you waited to take it. For example:
 .nf
 	xwrits break=5 after=10 break=7
@@ -94,7 +93,7 @@ Options listed as ``\fB+option\fP (\fB\-option\fP)'' are toggles, which can
 be on or off. A + turns the option on; \- turns it off. Off is the default
 for most toggle options, and only the on behavior is described. You can
 leave off the + sign if you like: ``xwrits +finger'' and ``xwrits finger''
-are equivalent.
+are equivalent. Or you can say ``\-no\-finger'' instead of ``\-finger''.
 .PP
 Many options take arguments. You can give these after an equal sign, as in
 ``xwrits breaktime=2''. Non-optional arguments can also be given
@@ -106,12 +105,19 @@ is 2 minutes 5.4 seconds, and ``:5'' is 5 seconds.
 
 .TP 5
 \fB\-display\fP \fIdisplay\fP
-Specify the X display. 
-.B Xwrits
-monitors this display for keystrokes and mouse movements, and displays
-windows on it. You can simultaneously monitor more than one display by
-giving this option multiple times; for example, ``xwrits display :0.0
-display fun-orgy:0.0''.
+'
+Specify the X display. Xwrits monitors this display for keystrokes and
+mouse movements, and displays windows on it. You can simultaneously monitor
+more than one display by giving this option multiple times; for example,
+``xwrits display :0.0 display fun-orgy:0.0''.
+'
+.TP 5
+\fB+multiscreen\fP (\fB\-multiscreen\fP)
+'
+When this option is on, xwrits will open every available screen on each
+specified
+.IR display .
+Useful for multihead displays.
 '
 .TP 5
 \fBtypetime\fP=\fItime\fP [\fBt\fP]
@@ -142,11 +148,10 @@ remain in the wrist break.
 '
 .TP 5
 \fBcanceltime\fP=\fItime\fP [\fBct\fP]
-Allow typing for \fItime\fP after a break is cancelled. You cancel a
-break by deleting all
-.BR xwrits
-windows with your window manager. This time should probably be less than
-the regular type time. Default is 10 minutes.
+'
+Allow typing for \fItime\fP after a break is cancelled. You cancel a break
+by deleting all xwrits windows with your window manager. This time should
+probably be less than the regular type time. Default is 10 minutes.
 '
 .TP 5
 \fB+cheat\fP[=\fInum\fP] (\fB\-cheat\fP)
