@@ -79,7 +79,7 @@ srclinks:
 # Cleaning and distribution
 
 clean:
-	rm -f $(PROGRAMS) *.o color/gifs.c mono/gifs.c core
+	rm -f $(PROGRAMS) *.o giftoc color/gifs.c mono/gifs.c core *.core
 mostlyclean: clean
 distclean: mostlyclean
 	rm -f Makefile config.status config.log config.cache
