@@ -29,6 +29,7 @@ int screen_number;
 Window root_window;
 Visual *visual;
 Colormap colormap;
+unsigned long black_pixel, white_pixel;
 int depth;
 int display_width, display_height;
 XFontStruct *font;
@@ -693,6 +694,17 @@ choose_visual(void)
       colormap = DefaultColormap(display, screen_number);
     
   }
+
+  /* set up black_pixel and white_pixel */
+  {
+    XColor color;
+    color.red = color.green = color.blue = 0;
+    XAllocColor(display, colormap, &color);
+    black_pixel = color.pixel;
+    color.red = color.green = color.blue = 0xFFFF;
+    XAllocColor(display, colormap, &color);
+    white_pixel = color.pixel;
+  }
   
   if (v) XFree(v);
 }
@@ -725,8 +737,10 @@ main(int argc, char *argv[])
   xwSETTIME(idle_select_delay, DefaultIdleselectdelay, 0);
   xwSETTIME(idle_gap_delay, DefaultIdlegapdelay, DefaultIdlegapdelayUsec);
   check_idle = 1;
-  
-  xwSETTIME(clock_tick, 1, 0);
+
+  /* 15 seconds seems like a reasonable clock tick time, even though it'll
+     redraw the same hands 4 times. */
+  xwSETTIME(clock_tick, 15, 0);
   
   default_pictures();
   

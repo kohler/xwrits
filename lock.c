@@ -161,7 +161,7 @@ lock(void)
     XSetWindowAttributes setattr;
     unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect;
     if (!barspix) {
-      setattr.background_pixel = BlackPixel(display, screen_number);
+      setattr.background_pixel = black_pixel;
       cwmask |= CWBackPixel;
     } else {
       setattr.background_pixmap = barspix;
@@ -188,7 +188,7 @@ lock(void)
   if (!gc) {
     XGCValues gcv;
     gcv.font = font->fid;
-    gcv.foreground = WhitePixel(display, screen_number);
+    gcv.foreground = white_pixel;
     gc = XCreateGC(display, cover, GCFont | GCForeground, &gcv);
   }
   

@@ -1,21 +1,34 @@
+Version 2.6b7
+
+* Clock improvements: fixed problem with black-on-black clock on 24-plane
+  displays (it had to do with visual selection: WhitePixel wasn't white since
+  the Visual was not the default). Also improved clock appearance and made it
+  appear more like when it's supposed to.
+
+
 Version 2.6b6
 
 * Improved the configure script to use <sys/types.h> for u_int32_t, etc.
   when possible.
+
 * Fixed bug in gifx.c: on a 24-plane display, any picture came out all black.
   (The problem: implementation-specific behavior of <<; specifically,
   I expected 1<<32 == 0 for 32-bit ints.)
+
 * Added visual searching: xwrits will now use a TrueColor visual if available.
+
 
 Version 2.6b4
 
 * Updated GIF library to 0.9, the version used in Gifsicle. This has
   temporarily broken support for monochrome displays, but will hopefully
   fix other bugs some people have experienced.
+
 
 Version 2.6b3
 
 * Fixed installation and improved the configure script.
+
 
 Version 2.6b2
 

@@ -34,6 +34,7 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
 {
   Hand *h;
   Alarm *a;
+  int need_refresh = 0;
   
   ocurrent = opt;
   
@@ -46,17 +47,21 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
   } else unschedule(Multiply);
   
   if (opt->clock && !clock_displaying) {
+    draw_clock(&now);
     a = new_alarm(Clock);
-    a->timer = now;
+    xwADDTIME(a->timer, now, clock_tick);
     schedule(a);
     clock_displaying = 1;
+    need_refresh = 1;
   } else if (!opt->clock && clock_displaying) {
     unschedule(Clock);
     erase_clock();
-    refresh_hands();
     clock_displaying = 0;
+    need_refresh = 1;
   }
-  
+
+  if (active_hands == 0)
+    need_refresh = 0;
   for (h = hands; h; h = h->next)
     if ((opt->never_iconify && !h->mapped) ||
 	(opt->top && h->mapped) ||
@@ -72,6 +77,9 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
   
   if (opt->beep)
     XBell(display, 0);
+
+  if (need_refresh)
+    refresh_hands();
   
   XFlush(display);
   
@@ -89,7 +97,7 @@ switch_options(Options *opt, struct timeval now, int lockfailed)
 
 
 static int
-warningalarmloop(Alarm *a, struct timeval *now)
+warning_alarm_loop(Alarm *a, struct timeval *now)
 {
   switch (a->action) {
     
@@ -112,7 +120,7 @@ warningalarmloop(Alarm *a, struct timeval *now)
 
 
 static int
-warningxloop(XEvent *e)
+warning_x_loop(XEvent *e)
 {
   Alarm *a;
   switch (e->type) {
@@ -161,7 +169,7 @@ warning(int lockfailed)
     schedule(a);
   }
   
-  val = loopmaster(warningalarmloop, warningxloop);
+  val = loopmaster(warning_alarm_loop, warning_x_loop);
   unschedule(Flash | Raise | Multiply | Clock | NextOptions | IdleCheck);
   
   return val;

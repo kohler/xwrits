@@ -39,6 +39,7 @@ extern int x_socket;
 extern int display_width, display_height;
 extern int wm_delta_x, wm_delta_y;
 extern XFontStruct *font;
+extern unsigned long black_pixel, white_pixel;
 
 int default_x_processing(XEvent *);
 int x_error_handler(Display *, XErrorEvent *);

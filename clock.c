@@ -4,29 +4,33 @@
 
 #define ClockWidth 30
 #define ClockHeight 30
-#define ClockHour 8.3
-#define ClockMin 12.3
-#define HandWidth 1.2
-#define HandOffset 1.2
+#define ClockHour 7.3
+#define ClockMin 11
+#define HandWidth 1.5
+#define HandOffset 1.5
 
-static GC clockforegc;
-static GC clockbackgc;
-static GC clockhandgc;
+static GC clock_fore_gc;
+static GC clock_back_gc;
+static GC clock_hand_gc;
 
 struct timeval clock_zero_time;
 struct timeval clock_tick;
 
 
 static void
-draw_hand(Picture *p, int xin, int yin, int handlength,
-	 int value, int valuecycle)
+draw_hand(Picture *p, int xin, int yin, int hand_length,
+	  int value, int value_cycle)
 {
-  double sinv = sin(value * 2 * M_PI / valuecycle);
-  double cosv = cos(value * 2 * M_PI / valuecycle);
-  XPoint points[4];
-  
+  double sinv = sin(value * 2 * M_PI / value_cycle);
+  double cosv = cos(value * 2 * M_PI / value_cycle);
+
+  XDrawLine(display, p->large, clock_hand_gc, xin, yin,
+	    (int)(xin + hand_length * sinv), (int)(yin - hand_length * cosv));
+
+#if 0
   double x = xin - HandOffset * sinv + 1;
   double y = yin + HandOffset * cosv + 1;
+  XPoint points[4];
   points[0].x = (int)(x + HandWidth * cosv);
   points[0].y = (int)(y + HandWidth * sinv);
   points[1].x = (int)(x + handlength * sinv);
@@ -34,9 +38,8 @@ draw_hand(Picture *p, int xin, int yin, int handlength,
   points[2].x = (int)(x - HandWidth * cosv);
   points[2].y = (int)(y - HandWidth * sinv);
   points[4] = points[0];
-  XDrawLine(display, p->large, clockhandgc, x, y, points[1].x, points[1].y);
-  
-  /*XDrawLines(display, p->large, clockforegc, points, 3, CoordModeOrigin);*/
+  XDrawLines(display, p->large, clock_fore_gc, points, 3, CoordModeOrigin);
+#endif
 }
 
 
@@ -51,28 +54,19 @@ draw_1_clock(Picture *p, int seconds)
   x = p->clock_x_off;
   y = p->clock_y_off;
   
-  XFillArc(display, p->large, clockbackgc, x, y, ClockWidth,
+  XFillArc(display, p->large, clock_back_gc, x, y, ClockWidth,
 	   ClockHeight, 0, 23040);
-  XDrawArc(display, p->large, clockforegc, x, y, ClockWidth,
+  XDrawArc(display, p->large, clock_fore_gc, x, y, ClockWidth,
 	   ClockHeight, 0, 23040);
   x += ClockWidth / 2;
   y += ClockHeight / 2;
-  /*min = (seconds + 29) / SecPerMin;*/
-  min = seconds;
+  min = (seconds + 5) / SecPerMin;
   hour = min / MinPerHr;
   min %= MinPerHr;
   
   if (hour)
     draw_hand(p, x, y, ClockHour, hour, HrPerCycle);
   draw_hand(p, x, y, ClockMin, min, MinPerHr);
-
-  /*
-    XDrawLine(display, p->large, clockforegc, x, y,
-	      (int)(x + ClockHour * sin(hour * 2 * M_PI / HrPerCycle)),
-	      (int)(y - ClockHour * cos(hour * 2 * M_PI / HrPerCycle)));
-  XDrawLine(display, p->large, clockforegc, x, y,
-	    (int)(x + ClockMin * sin(min * 2 * M_PI / MinPerHr)),
-	    (int)(y - ClockMin * cos(min * 2 * M_PI / MinPerHr)));*/
 }
 
 
@@ -96,8 +90,8 @@ erase_1_clock(Picture *p)
 {
   p->clock = 0;
   if (!p->large) return;
-  XSetForeground(display, clockbackgc, p->background);
-  XFillRectangle(display, p->large, clockbackgc,
+  XSetForeground(display, clock_back_gc, p->background);
+  XFillRectangle(display, p->large, clock_back_gc,
 		 p->clock_x_off - 1, p->clock_y_off - 1,
 		 ClockWidth + 11, ClockHeight + 11);
 }
@@ -111,7 +105,7 @@ erase_clock(void)
     Picture *p = current_slideshow->picture[i];
     if (p->clock) erase_1_clock(p);
   }
-  XSetForeground(display, clockbackgc, WhitePixel(display, screen_number));
+  XSetForeground(display, clock_back_gc, white_pixel);
 }
 
 
@@ -121,21 +115,18 @@ init_clock(Drawable drawable)
   XGCValues gcv;
   XFontStruct *font;
   
-  gcv.foreground = BlackPixel(display, screen_number);
+  gcv.foreground = black_pixel;
   gcv.line_width = 3;
   gcv.cap_style = CapRound;
   font = XLoadQueryFont(display,
 			"-adobe-helvetica-bold-r-normal--*-140-75-75-*");
   if (!font) font = XLoadQueryFont(display, "fixed");
   gcv.font = font->fid;
-  clockforegc = XCreateGC(display, drawable, GCForeground | GCLineWidth |
-			  GCCapStyle | GCFont, &gcv);
+  clock_fore_gc = XCreateGC(display, drawable, GCForeground | GCLineWidth |
+			    GCCapStyle | GCFont, &gcv);
+
+  clock_hand_gc = clock_fore_gc;
   
-  gcv.line_width = 2;
-  gcv.cap_style = CapButt;
-  clockhandgc = XCreateGC(display, drawable, GCForeground | GCLineWidth |
-			  GCCapStyle | GCFont, &gcv);
-  
-  gcv.foreground = WhitePixel(display, screen_number);
-  clockbackgc = XCreateGC(display, drawable, GCForeground, &gcv);
+  gcv.foreground = white_pixel;
+  clock_back_gc = XCreateGC(display, drawable, GCForeground, &gcv);
 }
