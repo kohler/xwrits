@@ -1,21 +1,19 @@
+PACKAGE		= xwrits
+VERSION		= @VERSION@
+
 .SUFFIXES:
 .SUFFIXES: .c .o
 
 .c.o:
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
 
-VERSION		= @VERSION@
-
 SHELL		= /bin/sh
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
 VPATH		= @srcdir@
 srcdir		= @srcdir@
-# Directory to install xwrits in.
 bindir		= @bindir@
-# Directory to install man pages in.
 mandir		= @mandir@/man$(manext)
-# Number to put on the man page filename.
 manext		= 1
 
 CC		= @CC@ $(PROFILING)
@@ -31,8 +29,6 @@ MV		= /bin/mv
 INSTALL		= @INSTALL@
 INSTALL_PROGRAM	= @INSTALL_PROGRAM@
 INSTALL_DATA	= @INSTALL_DATA@
-
-PACKAGE		= xwrits
 
 PROGRAMS	= xwrits
 OBJS		= giffunc.o gifread.o gifx.o pictures.o schedule.o warning.o \
