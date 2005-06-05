@@ -28,19 +28,14 @@ details.
 
 COPYRIGHT
 ---------
-   Source and pictures copyright 1994-2001 Eddie Kohler:
-kohler@icir.org and http://www.icir.org/kohler/
+   Source and pictures copyright 1994-2005 Eddie Kohler:
+kohler@cs.ucla.edu and http://www.cs.ucla.edu/~kohler/
 
    This package is distributed under the GNU General Public License, Version
 2, or, at your discretion, any later version. The GNU General Public License
-is available via the Web at <http://www.gnu.org/copyleft/gpl.html>. The GPL
+is available via the Web at <http://www.gnu.org/licenses/gpl.html>. The GPL
 is designed to allow you to alter and redistribute the package, as long as
 you do not deny that freedom to others.
-
-   Xwrits uses the currently-patented GIF file format to store its images.
-It is, nevertheless, compatible with the GPL, because only GIF
-writing/compression is patented, not GIF reading. Xwrits is not distributed
-with, and does not link with, any GIF writing or compression code.
 
 BUGS, SUGGESTIONS, ETC.
 -----------------------
