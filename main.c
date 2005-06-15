@@ -57,6 +57,8 @@ struct timeval quota_allotment;
 int max_cheats;
 static int allow_cheats;
 
+static int run_once;
+
 int verbose;
 
 static int force_mono = 0;
@@ -108,6 +110,8 @@ Break characteristics:\n\
   +cheat[=NUM]        Allow NUM keystrokes before cancelling a break.\n\
   canceltime=TIME, ct=TIME  Allow typing for TIME after a break is cancelled\n\
                       (default 10 minutes).\n\
+  +once               Quit after the warning window is clicked on. Useful for\n\
+                      setting alarms.\n\
 \n");
   printf("\
 Appearance:\n\
@@ -653,7 +657,12 @@ parse_options(int pargc, char **pargv)
       ;
     else if (optparse(s, "cheat", 2, "tI", &max_cheats))
       allow_cheats = optparse_yesno;
-    else if (optparse(s, "clock", 1, "t"))
+    else if (optparse(s, "once", 2, "tI", &run_once)) {
+	if (optparse_yesno && run_once < 0)
+	    run_once = 1;
+	else if (!optparse_yesno)
+	    run_once = 0;
+    } else if (optparse(s, "clock", 1, "t"))
       o->clock = optparse_yesno;
     
     else if (optparse(s, "display", 1, "ss", &arg)) {
@@ -883,6 +892,9 @@ default_settings(void)
   xwSETTIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
   onormal.next = 0;
   onormal.prev = 0;
+
+  /* how many times to run? */
+  run_once = -1;
 }
 
 
@@ -1133,6 +1145,8 @@ main_loop(void)
 	    break;
 
 	  case ST_REST:
+	    if (run_once > 0 && run_once == 1)
+		exit(0);
 	    was_lock = 0;
 	    tran = rest();
 	    assert(tran == TRAN_AWAKE || tran == TRAN_CANCEL || tran == TRAN_FAIL);
@@ -1155,6 +1169,8 @@ main_loop(void)
 	    break;
 
 	  case ST_AWAKE:
+	    if (run_once > 0 && --run_once == 0)
+		exit(0);
 	    ready();
 	    unmap_all();
 	    s = ST_NORMAL_WAIT;
