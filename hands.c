@@ -95,6 +95,14 @@ net_get_hostname(char *buf, size_t maxlen)
 #endif
 }
 
+static struct {
+  int flags;
+  int functions;
+  int decorations;
+  int input_mode;
+  int status;
+} mwm_hints;
+
 Hand *
 new_hand(Port *slave_port, int x, int y)
 {
@@ -102,7 +110,6 @@ new_hand(Port *slave_port, int x, int y)
   static XSizeHints *xsh;
   static XWMHints *xwmh;
   static XTextProperty window_name, icon_name, hostname;
-  static uint32_t *mwm_hints;
   static char hostname_buf[256];
   Hand *nh = xwNEW(Hand);
   Hand *nh_icon = xwNEW(Hand);
@@ -167,19 +174,19 @@ new_hand(Port *slave_port, int x, int y)
        handles or maximize button, no Resize or Maximize entries in window
        menu. The constitution of the property itself was inferred from data
        in <Xm/MwmUtil.h> and output of xprop. */
-    mwm_hints = xwNEWARR(uint32_t, 4);
-    mwm_hints[0] = (1L << 0) | (1L << 1);
+    mwm_hints.flags = (1L << 0) | (1L << 1);
     /* flags = MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS */
-    mwm_hints[1] = (1L << 2) | (1L << 5);
+    mwm_hints.functions = (1L << 2) | (1L << 5);
     /* functions = MWM_FUNC_MOVE | MWM_FUNC_CLOSE */
-    mwm_hints[2] = (1L << 1) | (1L << 3) | (1L << 4);
+    mwm_hints.decorations = (1L << 1) | (1L << 3) | (1L << 4);
     /* decorations = MWM_DECOR_BORDER | MWM_DECOR_TITLE | MWM_DECOR_MENU */
-    mwm_hints[3] = ~(0L);
+    mwm_hints.input_mode = ~(0L);
+    mwm_hints.status = 0;
     
     /* Add MINIMIZE options only if the window might be iconifiable */
     if (!ocurrent->never_iconify) {
-      mwm_hints[1] |= (1L << 3); /* MWM_FUNC_MINIMIZE */
-      mwm_hints[2] |= (1L << 5); /* MWM_DECOR_MINIMIZE */
+      mwm_hints.functions |= (1L << 3); /* MWM_FUNC_MINIMIZE */
+      mwm_hints.decorations |= (1L << 5); /* MWM_DECOR_MINIMIZE */
     }
 
     /* Get current hostname. */
@@ -226,7 +233,7 @@ new_hand(Port *slave_port, int x, int y)
   /* window manager properties, including GNOME/KDE hints */
   XChangeProperty(port->display, nh->w, port->mwm_hints_atom,
 		  port->mwm_hints_atom, 32, PropModeReplace,
-		  (unsigned char *)mwm_hints, 4);
+		  (unsigned char *)&mwm_hints, sizeof(mwm_hints) / 4);
   property[0] = port->wm_delete_window_atom;
   property[1] = port->net_wm_ping_atom;
   XChangeProperty(port->display, nh->w, port->wm_protocols_atom,
