@@ -1,4 +1,4 @@
-XWRITS VERSION 2.22
+XWRITS VERSION 2.24
 ===================
 
 ABOUT XWRITS
@@ -28,14 +28,14 @@ details.
 
 COPYRIGHT
 ---------
-   Source and pictures copyright 1994-2005 Eddie Kohler:
+   Source and pictures copyright 1994-2006 Eddie Kohler:
 kohler@cs.ucla.edu and http://www.cs.ucla.edu/~kohler/
 
-   This package is distributed under the GNU General Public License, Version
-2, or, at your discretion, any later version. The GNU General Public License
-is available via the Web at <http://www.gnu.org/licenses/gpl.html>. The GPL
-is designed to allow you to alter and redistribute the package, as long as
-you do not deny that freedom to others.
+   This package is distributed under the GNU General Public License,
+Version 2 (and only Version 2). The GNU General Public License is available
+via the Web at <http://www.gnu.org/licenses/gpl2.html>. The GPL is designed
+to allow you to alter and redistribute the package, as long as you do not
+deny that freedom to others.
 
 BUGS, SUGGESTIONS, ETC.
 -----------------------

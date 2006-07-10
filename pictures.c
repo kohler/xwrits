@@ -253,7 +253,7 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 	name[i-4] = 0;
 	add = get_built_in_image(name);
 	if (add)
-	  warning("no monochrome version of built-in picture `%s'", name);
+	  warning("no monochrome version of built-in picture '%s'", name);
 	name[i-4] = 'm';
       }
       if (add) {		/* add images */

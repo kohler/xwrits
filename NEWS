@@ -1,6 +1,12 @@
 Xwrits NEWS
 
-Version 2.23
+Version 2.24   9.Jul.2006
+
+* Support MWM hints on 64-bit platforms.  Bug report and initial patches
+  from Jeff Layton.
+
+
+Version 2.23   21.Jun.2006
 
 * Support '+once[=COUNT]' option.  Patch by Anne Elizabeth Dudfield the
   Rad.

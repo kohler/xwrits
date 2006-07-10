@@ -69,7 +69,7 @@ static void
 short_usage(void)
 {
   fprintf(stderr, "Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [OPTION]...\n\
-Try `xwrits --help' for more information.\n");
+Try 'xwrits --help' for more information.\n");
   exit(1);
 }
 
@@ -78,15 +78,15 @@ static void
 usage(void)
 {
   printf("\
-`Xwrits' reminds you to take wrist breaks, which should help you prevent or\n\
+'Xwrits' reminds you to take wrist breaks, which should help you prevent or\n\
 manage a repetitive stress injury. It runs on X.\n\
 \n\
 Usage: xwrits [-display DISPLAY] [typetime=TIME] [breaktime=TIME] [OPTION]...\n\
 \n\
 All options may be abbreviated to their unique prefixes. The three forms\n\
-`OPTION', `--OPTION', and `+OPTION' are equivalent. Options listed as\n\
-`+OPTION' can be on or off; they are normally off, and you can turn them off\n\
-explicitly with `-OPTION'.\n\
+'OPTION', '--OPTION', and '+OPTION' are equivalent. Options listed as\n\
+'+OPTION' can be on or off; they are normally off, and you can turn them off\n\
+explicitly with '-OPTION'.\n\
 \n\
 General options:\n\
   --display DISPLAY   Monitor the X display DISPLAY. You can monitor more than\n\
@@ -116,13 +116,13 @@ Break characteristics:\n\
   printf("\
 Appearance:\n\
   after=TIME          Change behavior if warning window is ignored for TIME.\n\
-                      Options following `after' give new behavior.\n\
+                      Options following 'after' give new behavior.\n\
   +beep               Beep when the warning window appears.\n\
   +breakclock         Show how much time remains during the break.\n\
   +clock              Show how long you have ignored the warning window.\n\
   +finger             Be rude.\n\
-  +finger=CULTURE     Be rude according to CULTURE. Choices: `american',\n\
-                      `korean' (synonyms `japanese', `russian'), `german',\n\
+  +finger=CULTURE     Be rude according to CULTURE. Choices: 'american',\n\
+                      'korean' (synonyms 'japanese', 'russian'), 'german',\n\
                       or the name of any GIF file.\n\
   flashtime=RATE      Flash the warning window at RATE (default 2 sec).\n\
   +iconified          Warning windows appear as icons.\n\
@@ -131,7 +131,7 @@ Appearance:\n\
   +mono               Use monochrome pictures.\n\
   +multiply=PERIOD    Make a new warning window every PERIOD.\n\
   +noiconify          Don't let anyone iconify the warning window.\n\
-  ready-picture=GIF-FILE, okp=GIF-FILE   Show GIF animation on the `OK' window.\n\
+  ready-picture=GIF-FILE, okp=GIF-FILE   Show GIF animation on the 'OK' window.\n\
   rest-picture=GIF-FILE, rp=GIF-FILE     Show GIF animation on resting window.\n\
   title=TITLE         Set xwrits window title to TITLE.\n\
   +top                Keep the warning windows on top of the window stack.\n\
@@ -465,7 +465,7 @@ strtointerval(char *s, char **stores, struct timeval *iv)
     sec += strtod(s+1, &s);
     ok = 1;
   } else if (*s == ':' && s[1] == 0)
-    /* accept `MINUTES:' */
+    /* accept 'MINUTES:' */
     s++;
 
   /* return */
@@ -638,10 +638,10 @@ parse_options(int pargc, char **pargv)
       ;
     else if (optparse(s, "breaktime", 1, "st", &o->break_time)) {
       if (o->prev && !breaktime_warn_context) {
-	warning("meaning of `breaktime' following `after' has changed");
-	message("(You can specify `breaktime' multiple times, to lengthen a break");
+	warning("meaning of 'breaktime' following 'after' has changed");
+	message("(You can specify 'breaktime' multiple times, to lengthen a break");
 	message("if you ignore xwrits for a while. In previous versions, there was");
-	message("one global `breaktime'.)");
+	message("one global 'breaktime'.)");
 	breaktime_warn_context = 1;
       } else
 	breaktime_warn_context = 1;
@@ -750,7 +750,7 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "version", 1, "s")) {
       printf("LCDF Xwrits %s\n", VERSION);
       printf("\
-Copyright (C) 1994-2002 Eddie Kohler\n\
+Copyright (C) 1994-2006 Eddie Kohler\n\
 This is free software; see the source for copying conditions.\n\
 There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");
@@ -1205,7 +1205,7 @@ main(int argc, char *argv[])
   for (i = 0; i < orig_nports; i++) {
       Display *display = XOpenDisplay(ports[i]->display_name);
       if (!display)
-	  error("can't open display `%s'", ports[i]->display_name);
+	  error("can't open display '%s'", ports[i]->display_name);
       ports[i]->display = display;
       if (!multiscreen)
 	  ports[i]->screen_number = DefaultScreen(display);

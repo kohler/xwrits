@@ -82,7 +82,7 @@ void
 register_keystrokes(Port *port, Window w)
 {
   /* Before I only selected KeyPress if someone else had selected KeyPress on
-     the window (indicated by the `or' of all_event_masks and
+     the window (indicated by the 'or' of all_event_masks and
      do_not_propagate_mask). That seems obviously wrong! What if they only
      selected KeyRelease? What if they selected KeyPress later? So I've
      removed it. Hopefully this won't cause any strange behavior. */
