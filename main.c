@@ -43,7 +43,6 @@ XErrorHandler old_x_error_handler;
 
 int check_idle;
 struct timeval idle_time;
-struct timeval warn_idle_time;
 
 int check_mouse;
 int mouse_sensitivity;
@@ -292,13 +291,13 @@ check_xwrits_window(Port *port, Window w)
   Atom actual_type;
   int actual_format;
   unsigned long nitems, bytes_after;
-  long *prop;
+  union { unsigned char *uc; long *l; } prop;
   if (XGetWindowProperty(port->display, w, port->xwrits_window_atom,
 			 0, 1, False, XA_INTEGER,
 			 &actual_type, &actual_format, &nitems, &bytes_after,
-			 (unsigned char **)&prop) == Success) {
-    Window xwrits_window = (actual_format ? *prop : None);
-    XFree((unsigned char *)prop);
+			 &prop.uc) == Success) {
+    Window xwrits_window = (actual_format ? *prop.l : None);
+    XFree(prop.uc);
     return xwrits_window;
   } else
     return None;
@@ -767,7 +766,7 @@ particular purpose.\n");
 
 /* option checking */
 
-static void
+void
 set_fraction_time(struct timeval *result, struct timeval in, double fraction)
 {
   double d = fraction * (in.tv_sec + (in.tv_usec / (double)MICRO_PER_SEC));
@@ -1124,13 +1123,15 @@ main_loop(void)
 	  case ST_WARN:
 	    /* warn() will figure out current options by time */
 	    tran = warn(was_lock, &onormal);
-	    assert(tran == TRAN_CANCEL || tran == TRAN_REST || tran == TRAN_LOCK);
+	    assert(tran == TRAN_CANCEL || tran == TRAN_REST || tran == TRAN_LOCK || tran == TRAN_AWAKE);
 	    if (tran == TRAN_REST)
 		s = ST_REST;
 	    else if (tran == TRAN_CANCEL)
 		s = ST_CANCEL_WAIT;
 	    else if (tran == TRAN_LOCK)
 		s = ST_LOCK;
+	    else if (tran == TRAN_AWAKE)
+		s = ST_AWAKE;
 	    break;
 
 	  case ST_CANCEL_WAIT:
@@ -1247,11 +1248,8 @@ main(int argc, char *argv[])
   
   /* default for idle_time and warn_idle_time is based on break_delay;
      otherwise, warn_idle_time == idle_time */
-  if (check_idle && xwTIMELEQ0(idle_time)) {
+  if (check_idle && xwTIMELEQ0(idle_time))
     idle_time = onormal.break_time;
-    set_fraction_time(&warn_idle_time, idle_time, 0.3);
-  } else
-    warn_idle_time = idle_time;
   
   /* check quota */
   if (check_quota && check_idle && xwTIMEGEQ(quota_time, onormal.break_time)) {

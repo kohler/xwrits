@@ -312,7 +312,6 @@ extern struct timeval last_key_time;	/* time of last keystroke/equivalent */
 
 extern int check_idle;			/* check for idle periods? */
 extern struct timeval idle_time;	/* idle period of idle_time = break */
-extern struct timeval warn_idle_time;	/* " during warning */
 
 extern int check_mouse;			/* pay attention to mouse movement? */
 extern struct timeval check_mouse_time;	/* next time to check mouse pos */
@@ -427,5 +426,7 @@ extern struct timeval genesis_time;
 		(result).tv_sec--; \
 		(result).tv_usec += MICRO_PER_SEC; \
 	} } while (0)
+
+void set_fraction_time(struct timeval *result, struct timeval in, double fraction);
 
 #endif

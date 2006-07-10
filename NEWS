@@ -1,5 +1,11 @@
 Xwrits NEWS
 
+Version 2.25   10.Jul.2006
+
+* Change behavior of '+idle=TIME' when a warning window pops up.  Requested
+  by Bernhard Reiter.
+
+
 Version 2.24   9.Jul.2006
 
 * Xwrits hand windows appear on all desktops, even after the first break.

@@ -1,9 +1,9 @@
 Summary: Reminds you take wrist breaks
 
 Name: xwrits
-Version: 2.24
+Version: 2.25
 Release: 1
-Source: http://www.lcdf.org/xwrits/xwrits-2.24.tar.gz
+Source: http://www.lcdf.org/xwrits/xwrits-2.25.tar.gz
 
 Icon: logo.gif
 URL: http://www.lcdf.org/xwrits/

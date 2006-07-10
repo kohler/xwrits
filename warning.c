@@ -5,6 +5,7 @@
 #include <X11/Xatom.h>
 
 static int clock_displaying = 0;
+static struct timeval this_warn_time;
 
 
 static void
@@ -76,6 +77,18 @@ switch_options(Options *opt, const struct timeval *option_switch_time,
 }
 
 
+static void
+schedule_warn_idle(Alarm *a)
+{
+    set_fraction_time(&a->timer, ocurrent->break_time, 0.3);
+    if (xwTIMEGT(last_key_time, this_warn_time))
+	xwADDTIME(a->timer, a->timer, last_key_time);
+    else
+	xwADDTIME(a->timer, a->timer, this_warn_time);
+    schedule(a);
+}
+
+
 static int
 warn_alarm_loop(Alarm *a, const struct timeval *now)
 {
@@ -92,7 +105,8 @@ warn_alarm_loop(Alarm *a, const struct timeval *now)
     return switch_options(ocurrent->next, now, now);
     
    case A_IDLE_CHECK:
-    return TRAN_REST;
+     /* Take a real rest if idle time completes */
+     return (a->data1 == (void *) 0 ? TRAN_REST : TRAN_AWAKE);
     
   }
   return 0;
@@ -189,8 +203,10 @@ warn_x_loop(XEvent *e, const struct timeval *now)
    case KeyPress:
    case MotionNotify:
     last_key_time = *now;
-    if ((a = grab_alarm(A_IDLE_CHECK))) {
-      xwADDTIME(a->timer, last_key_time, warn_idle_time);
+    if ((a = grab_alarm_data(A_IDLE_CHECK, (void *) 0, (void *) 0)))
+      schedule_warn_idle(a);
+    if ((a = grab_alarm_data(A_IDLE_CHECK, (void *) 1, (void *) 0))) {
+      xwADDTIME(a->timer, last_key_time, idle_time);
       schedule(a);
     }
     break;
@@ -212,20 +228,20 @@ warn_x_loop(XEvent *e, const struct timeval *now)
 int
 warn(int was_lock, Options *onormal)
 {
-  struct timeval now, option_switch_time;
+  struct timeval option_switch_time;
   int i, val;
   
   clock_displaying = 0;
   clock_zero_time = first_warn_time;
 
   /* find correct options based on elapsed time since first_warn_time */
-  xwGETTIME(now);
+  xwGETTIME(this_warn_time);
   ocurrent = onormal;
   option_switch_time = first_warn_time;
   while (ocurrent->next) {
     struct timeval next;
     xwADDTIME(next, option_switch_time, ocurrent->next_delay);
-    if (xwTIMEGT(next, now))
+    if (xwTIMEGT(next, this_warn_time))
       break;
     option_switch_time = next;
     ocurrent = ocurrent->next;
@@ -234,7 +250,7 @@ warn(int was_lock, Options *onormal)
   /* switch to those options */
   /* This will always set_slideshows: good -- later set_slideshows will start
      from scratch. */
-  val = switch_options(ocurrent, &option_switch_time, &now);
+  val = switch_options(ocurrent, &option_switch_time, &this_warn_time);
 
   /* lock now if we should */
   if (val == TRAN_LOCK && !was_lock)
@@ -242,11 +258,17 @@ warn(int was_lock, Options *onormal)
 
   for (i = 0; i < nports; i++)
     pop_up_hand(find_one_hand(ports[i], 1));
-  
-  if (check_idle) {
-    Alarm *a = new_alarm(A_IDLE_CHECK);
-    xwADDTIME(a->timer, last_key_time, warn_idle_time);
-    schedule(a);
+
+  /* 10.Jul.2006 -- always do warn-time idle checking, even if not check_idle
+     (Bernhard Reiter) */
+  {
+    Alarm *a = new_alarm_data(A_IDLE_CHECK, (void *) 0, (void *) 0);
+    schedule_warn_idle(a);
+    if (check_idle) {
+      a = new_alarm_data(A_IDLE_CHECK, (void *) 1, (void *) 0);
+      xwADDTIME(a->timer, last_key_time, idle_time);
+      schedule(a);
+    }
   }
   
   val = loopmaster(warn_alarm_loop, warn_x_loop);
@@ -254,6 +276,6 @@ warn(int was_lock, Options *onormal)
  done:
   unschedule(A_FLASH | A_MULTIPLY | A_CLOCK | A_NEXT_OPTIONS | A_IDLE_CHECK);
   erase_all_clocks();
-  assert(val == TRAN_CANCEL || val == TRAN_REST || val == TRAN_LOCK);
+  assert(val == TRAN_CANCEL || val == TRAN_REST || val == TRAN_LOCK || val == TRAN_AWAKE);
   return val;
 }
