@@ -246,6 +246,7 @@ struct Hand {
   
   unsigned is_icon: 1;
   unsigned mapped: 1;
+  unsigned withdrawn: 1;
   unsigned configured: 1;
   unsigned obscured: 1;
   unsigned clock: 1;
@@ -265,6 +266,7 @@ void destroy_hand(Hand *);
 Hand *find_one_hand(Port *, int mapped);
 
 Hand *window_to_hand(Port *, Window, int allow_icon);
+void hand_map_raised(Hand *);
 
 void draw_slide(Hand *);
 

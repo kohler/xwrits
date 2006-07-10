@@ -2,6 +2,12 @@ Xwrits NEWS
 
 Version 2.24   9.Jul.2006
 
+* Xwrits hand windows appear on all desktops, even after the first break.
+  The freedesktop.org standard requires you tell the window manager about
+  the all-desktops property *every time* the window reappears.  Thanks to
+  Zach Beane for a patch that inspired this search.  Previously reported by
+  Stephen A. Lawrence and Andy Feery.
+
 * Support MWM hints on 64-bit platforms.  Bug report and initial patches
   from Jeff Layton.
 

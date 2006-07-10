@@ -14,7 +14,7 @@ pop_up_hand(Hand *h)
   set_slideshow(h, ocurrent->slideshow, 0);
   set_slideshow(h->icon, ocurrent->icon_slideshow, 0);
   h->clock = ocurrent->clock;
-  XMapRaised(h->port->display, h->w);
+  hand_map_raised(h);
   XFlush(h->port->display);
 }
 
@@ -57,7 +57,7 @@ switch_options(Options *opt, const struct timeval *option_switch_time,
     for (h = ports[i]->hands; h; h = h->next)
       if ((opt->never_iconify && !h->mapped) ||
 	  (!opt->appear_iconified && h->icon->mapped))
-	XMapRaised(ports[i]->display, h->w);
+	hand_map_raised(h);
     if (opt->beep && ports[i]->master == ports[i])
       XBell(ports[i]->display, 0);
     XFlush(ports[i]->display);
@@ -163,7 +163,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
      Port *port = find_port(e->xunmap.display, e->xunmap.window);
      h = window_to_hand(port, e->xunmap.window, 1);
      if (h && h->is_icon && ocurrent->never_iconify)
-       XMapRaised(port->display, h->icon->w);
+       hand_map_raised(h->icon);
      break;
    }
    

@@ -117,7 +117,7 @@ new_hand(Port *slave_port, int x, int y)
   Hand *nh_icon = xwNEW(Hand);
   int width = ocurrent->slideshow->screen_width;
   int height = ocurrent->slideshow->screen_height;
-  uint32_t property[2];
+  unsigned long property[2];
   Port *port;
 
   /* check for random port, patch by Peter Maydell <maydell@tao-group.com> */
@@ -241,6 +241,7 @@ new_hand(Port *slave_port, int x, int y)
   XChangeProperty(port->display, nh->w, port->wm_protocols_atom,
 		  XA_ATOM, 32, PropModeReplace,
 		  (unsigned char *)property, 2);
+  /* 9.Jul.2006 -- see also hand_map_raised below */
   property[0] = 0xFFFFFFFFU;
   XChangeProperty(port->display, nh->w, port->net_wm_desktop_atom,
 		  XA_CARDINAL, 32, PropModeReplace,
@@ -272,12 +273,14 @@ new_hand(Port *slave_port, int x, int y)
   nh->root_child = nh->w;
   nh->is_icon = 0;
   nh->mapped = 0;
+  nh->withdrawn = 0;
   nh->configured = 0;
   nh->slideshow = 0;
   nh->clock = 0;
   nh->toplevel = 1;
 
-  if (port->hands) port->hands->prev = nh;
+  if (port->hands)
+    port->hands->prev = nh;
   nh->next = port->hands;
   nh->prev = 0;
   port->hands = nh;
@@ -287,12 +290,14 @@ new_hand(Port *slave_port, int x, int y)
   nh_icon->root_child = nh->w;
   nh_icon->is_icon = 1;
   nh_icon->mapped = 0;
+  nh_icon->withdrawn = 0;
   nh_icon->configured = 0;
   nh_icon->slideshow = 0;
   nh_icon->clock = 0;
   nh_icon->permanent = 0;
   nh_icon->toplevel = 1;
-  if (port->icon_hands) port->icon_hands->prev = nh_icon;
+  if (port->icon_hands)
+    port->icon_hands->prev = nh_icon;
   nh_icon->next = port->icon_hands;
   nh_icon->prev = 0;
   port->icon_hands = nh_icon;
@@ -359,6 +364,7 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
   nh->root_child = nh->w;
   nh->is_icon = 0;
   nh->mapped = 0;
+  nh->withdrawn = 0;
   nh->configured = 0;
   nh->slideshow = 0;
   nh->clock = 0;
@@ -399,6 +405,10 @@ destroy_hand(Hand *h)
 	       SubstructureRedirectMask | SubstructureNotifyMask, &event);
     /* mark hand as unmapped now */
     h->mapped = h->icon->mapped = 0;
+    /* 9.Jul.2006 -- _NET_WM_DESKTOP must be reset after the window is
+         withdrawn! The freedesktop.org standards require this. So mark the
+         window as withdrawn as well. */
+    h->withdrawn = 1;
   } else {
     if (h->icon) {
       Hand *ih = h->icon;
@@ -532,6 +542,26 @@ unmap_all(void)
 }
 
 
+/* map a hand window, keeping track of the _NET_WM_DESKTOP property */
+
+void
+hand_map_raised(Hand *h)
+{
+    if (h->withdrawn) {
+	/* 9.Jul.2006 -- freedesktop.org says that the all-desktops property
+             gets reset every withdraw, so reset it */
+	unsigned long property[1];
+	property[0] = 0xFFFFFFFFU;
+	XChangeProperty(h->port->display, h->w, h->port->net_wm_desktop_atom,
+			XA_CARDINAL, 32, PropModeReplace,
+			(unsigned char *)property, 1);
+	h->withdrawn = 0;
+    }
+    XMapRaised(h->port->display, h->w);
+}
+
+
+
 /* search for some hand on a given port, which might be a slave, or have
    slaves */
 
@@ -560,6 +590,6 @@ find_one_hand(Port *port, int mapped)
     }
     
     if (mapped && !acceptable->mapped)
-	XMapRaised(port->display, acceptable->w);
+	hand_map_raised(acceptable);
     return acceptable;
 }
