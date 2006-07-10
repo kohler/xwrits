@@ -11,6 +11,9 @@ Version 2.24   9.Jul.2006
 * Support MWM hints on 64-bit platforms.  Bug report and initial patches
   from Jeff Layton.
 
+* Avoid infinite error recursion when windows are closed on +multiscreen.
+  Bug reported in April 2004 by Chris Jones.
+
 
 Version 2.23   21.Jun.2006
 

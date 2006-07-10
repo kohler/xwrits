@@ -423,9 +423,7 @@ default_x_processing(XEvent *e)
     /* We must unschedule any IdleSelect events for fear of selecting input on
        a destroyed window. There is a race condition here because X
        communication is asynchronous. */
-    port = find_port(display, e->xdestroywindow.window);
-    unschedule_data(A_IDLE_SELECT, (void *)port,
-		    (void *)e->xdestroywindow.window);
+    unschedule_data(A_IDLE_SELECT, (void *) e->xdestroywindow.window);
     if (verbose)
 	fprintf(stderr, "Window 0x%x: destroyed\n", (unsigned)e->xdestroywindow.window);
     break;

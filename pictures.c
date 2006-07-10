@@ -313,7 +313,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
     return;
   else if (!gfs) {
     h->slideshow = 0;
-    unschedule_data(A_FLASH, h, 0);
+    unschedule_data(A_FLASH, h);
     return;
   }
   

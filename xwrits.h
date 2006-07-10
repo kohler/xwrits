@@ -214,8 +214,8 @@ void destroy_alarm(Alarm *);
 
 void init_scheduler(void);
 void schedule(Alarm *);
-#define unschedule(i)	unschedule_data((i), 0, 0)
-void unschedule_data(int, void *, void *);
+#define unschedule(i)	unschedule_data((i), 0)
+void unschedule_data(int, void *);
 
 int loopmaster(Alarmloopfunc, Xloopfunc);
 

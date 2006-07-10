@@ -39,7 +39,7 @@ x_error_handler(Display *d, XErrorEvent *error)
        I don't think there's any way of working around this. */
     if (error->error_code == BadWindow) {
 	Window window = (Window)error->resourceid;
-	unschedule_data(A_IDLE_SELECT, (void *)find_port(error->display, window), (void *)window);
+	unschedule_data(A_IDLE_SELECT, (void *) window);
     }
     return 0;
 }
@@ -68,7 +68,7 @@ watch_keystrokes(Port *port, Window w, const struct timeval *now)
   /* This code ensures that at least register_keystrokes_delay elapses before
      we listen for KeyPress events on the window. We want to wait so we can
      make sure the window selects them first. */
-  a = new_alarm_data(A_IDLE_SELECT, (void *)port, (void *)w);
+  a = new_alarm_data(A_IDLE_SELECT, (void *)w, (void *)port);
   xwADDTIME(a->timer, *now, register_keystrokes_delay);
   schedule(a);
   
@@ -176,15 +176,13 @@ schedule(Alarm *newalarm)
 }
 
 void
-unschedule_data(int actions, void *data1, void *data2)
+unschedule_data(int actions, void *data1)
 {
   Alarm *a = alarm_sentinel.next;
   while (a != &alarm_sentinel) {
     Alarm *n = a->next;
     
-    if ((a->action & actions) != 0
-	&& (a->data1 == data1 || data1 == 0)
-	&& (a->data2 == data2 || data2 == 0)) {
+    if ((a->action & actions) != 0 && (a->data1 == data1 || data1 == 0)) {
       a->prev->next = n;
       n->prev = a->prev;
       xfree(a);
@@ -257,7 +255,7 @@ loopmaster(Alarmloopfunc alarm_looper, Xloopfunc x_looper)
 	break;
 	
        case A_IDLE_SELECT:
-	register_keystrokes((Port *)a->data1, (Window)a->data2);
+	register_keystrokes((Port *)a->data2, (Window)a->data1);
 	break;
 	
        case A_MOUSE: {
