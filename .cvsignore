@@ -1,5 +1,18 @@
-Makefile.in aclocal.m4 stamp-h.in config.h.in
-Makefile configure config.log config.cache config.status stamp-h* config.h
+.deps
+Makefile
+Makefile.in
+aclocal.m4
+autom4te*
+colorpic.c
+config.cache
+config.h
+config.h.in
+config.log
+config.status
+configure
+giftoc
+monopic.c
+stamp-h*
+stamp-h.in
 xwrits
-giftoc colorpic.c monopic.c
-autom4te* .deps
+xwrits-*.tar.gz
