@@ -27,21 +27,21 @@ switch_options(Options *opt, const struct timeval *option_switch_time,
   Hand *h;
   Alarm *a;
   int i;
-  
+
   ocurrent = opt;
 
   for (i = 0; i < nports; i++) {
     set_all_slideshows(ports[i]->hands, opt->slideshow);
     set_all_slideshows(ports[i]->icon_hands, opt->icon_slideshow);
   }
-  
+
   if (opt->multiply) {
     a = new_alarm(A_MULTIPLY);
     xwADDTIME(a->timer, *now, opt->multiply_delay);
     schedule(a);
   } else
     unschedule(A_MULTIPLY);
-  
+
   if (opt->clock && !clock_displaying) {
     draw_all_clocks(now);
     a = new_alarm(A_CLOCK);
@@ -63,13 +63,13 @@ switch_options(Options *opt, const struct timeval *option_switch_time,
       XBell(ports[i]->display, 0);
     XFlush(ports[i]->display);
   }
-  
+
   if (opt->next) {
     a = new_alarm(A_NEXT_OPTIONS);
     xwADDTIME(a->timer, *option_switch_time, opt->next_delay);
     schedule(a);
   }
-  
+
   if (opt->lock)
     return TRAN_LOCK;
   else
@@ -93,21 +93,21 @@ static int
 warn_alarm_loop(Alarm *a, const struct timeval *now)
 {
   switch (a->action) {
-    
+
    case A_MULTIPLY:
     if (active_hands() < ocurrent->max_hands * nports)
       pop_up_hand(new_hand(NEW_HAND_RANDOM_PORT, NEW_HAND_RANDOM, NEW_HAND_RANDOM));
     xwADDTIME(a->timer, a->timer, ocurrent->multiply_delay);
     schedule(a);
     break;
-    
+
    case A_NEXT_OPTIONS:
     return switch_options(ocurrent->next, now, now);
-    
+
    case A_IDLE_CHECK:
      /* Take a real rest if idle time completes */
      return (a->data1 == (void *) 0 ? TRAN_REST : TRAN_AWAKE);
-    
+
   }
   return 0;
 }
@@ -125,11 +125,11 @@ check_raise_window(Hand *h)
   unsigned border, depth;
   Hand *trav;
   int bad_overlap;
-  
+
   /* find our geometry */
   XGetGeometry(port->display, h->root_child, &root, &hx, &hy,
 	       (unsigned *)&hwidth, (unsigned *)&hheight, &border, &depth);
-  
+
   /* find our position in the stacking order */
   if (!XQueryTree(port->display, port->root_window, &root, &parent,
 		  &children, &nchildren)) {
@@ -139,7 +139,7 @@ check_raise_window(Hand *h)
   for (i = 0; i < nchildren; i++)
     if (children[i] == h->root_child)
       break;
-  
+
   /* examine higher windows in the stacking order */
   bad_overlap = 0;
   for (i++; i < nchildren && !bad_overlap; i++) {
@@ -160,7 +160,7 @@ check_raise_window(Hand *h)
     bad_overlap = 1;
    overlap_ok: ;
   }
-  
+
   if (children)
     XFree(children);
   return bad_overlap;
@@ -172,7 +172,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
   Alarm *a;
   Hand *h;
   switch (e->type) {
-    
+
    case MapNotify: {
      Port *port = find_port(e->xunmap.display, e->xunmap.window);
      h = window_to_hand(port, e->xunmap.window, 1);
@@ -180,13 +180,13 @@ warn_x_loop(XEvent *e, const struct timeval *now)
        hand_map_raised(h->icon);
      break;
    }
-   
+
    case Xw_DeleteWindow:
     /* Check for window manager deleting last xwrits window */
     if (active_hands() == 0)
       return TRAN_CANCEL;
     break;
-    
+
    case ButtonPress:
     /* OK; we can rest now. */
     /* 10.Aug.1999 - treat the mouse click as a keypress */
@@ -199,7 +199,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
     /* informed that a peer is resting */
     last_key_time = *now;
     return TRAN_REST;
-    
+
    case KeyPress:
    case MotionNotify:
     last_key_time = *now;
@@ -210,7 +210,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
       schedule(a);
     }
     break;
-    
+
    case VisibilityNotify: {
      Port *port = find_port(e->xvisibility.display, e->xvisibility.window);
      h = window_to_hand(port, e->xvisibility.window, 0);
@@ -219,7 +219,7 @@ warn_x_loop(XEvent *e, const struct timeval *now)
 	 XRaiseWindow(port->display, h->w);
      break;
    }
-   
+
   }
   return 0;
 }
@@ -230,7 +230,7 @@ warn(int was_lock, Options *onormal)
 {
   struct timeval option_switch_time;
   int i, val;
-  
+
   clock_displaying = 0;
   clock_zero_time = first_warn_time;
 
@@ -270,7 +270,7 @@ warn(int was_lock, Options *onormal)
       schedule(a);
     }
   }
-  
+
   val = loopmaster(warn_alarm_loop, warn_x_loop);
 
  done:

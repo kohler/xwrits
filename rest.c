@@ -12,26 +12,26 @@ static int
 wait_x_loop(XEvent *e, const struct timeval *now)
 {
   struct timeval diff;
-  
+
   if (e->type == KeyPress || e->type == MotionNotify
       || e->type == ButtonPress) {
     xwSUBTIME(diff, *now, last_key_time);
     last_key_time = *now;
-    
+
     /* if check_idle is on, long idle periods are the same as breaks */
     if (check_idle && xwTIMEGEQ(diff, idle_time))
       return TRAN_REST;
-    
+
     /* if check_quota is on, mini-breaks add up over time */
     if (check_quota && xwTIMEGEQ(diff, quota_time)) {
       xwADDTIME(quota_allotment, quota_allotment, diff);
       if (check_idle && xwTIMEGEQ(quota_allotment, idle_time))
 	return TRAN_REST;
     }
-    
+
     /* wake up if time to warn */
     return (xwTIMEGEQ(*now, wait_over_time) ? TRAN_WARN : 0);
-    
+
   } else
     return 0;
 }
@@ -50,19 +50,19 @@ adjust_wait_time(struct timeval *wait_began_time, const struct timeval *type_tim
      + break delay */
   xwADDTIME(break_end_time, *wait_began_time, *type_time);
   xwADDTIME(break_end_time, break_end_time, ocurrent->break_time);
-  
+
   /* Find the length of this break */
   xwSUBTIME(this_break_time, ocurrent->break_time, quota_allotment);
   if (xwTIMEGEQ(ocurrent->min_break_time, this_break_time))
     this_break_time = ocurrent->min_break_time;
-  
+
   /* Subtract to find when we should start warning */
   xwSUBTIME(break_end_time, break_end_time, this_break_time);
-  
+
   /* Check against wait_over_time; if <=, wait is over */
   if (xwTIMEGEQ(wait_over_time, break_end_time))
     return TRAN_WARN;
-  
+
   /* Set wait_over_time and return 0 -- we still need to wait */
   wait_over_time = break_end_time;
   return 0;
@@ -89,7 +89,7 @@ wait_for_break(const struct timeval *type_time)
     set_all_slideshows(ports[i]->hands, 0);
     set_all_slideshows(ports[i]->icon_hands, 0);
   }
-  
+
   val = 0;
   while (val != TRAN_WARN && val != TRAN_REST) {
     /* If !check_idle, we want to appear even if no keystroke happens, so
@@ -100,17 +100,17 @@ wait_for_break(const struct timeval *type_time)
       unschedule(A_AWAKE);
       schedule(a);
     }
-    
+
     /* Wait */
     val = loopmaster(0, wait_x_loop);
     if (val == TRAN_AWAKE) val = TRAN_WARN; /* patch A_AWAKE case */
-    
+
     /* Adjust the wait time if necessary */
     assert(val == TRAN_WARN || val == TRAN_REST);
     if (val == TRAN_WARN && check_quota)
       val = adjust_wait_time(&wait_began_time, type_time);
   }
-  
+
   unschedule(A_FLASH | A_AWAKE);
   assert(val == TRAN_WARN || val == TRAN_REST);
   return val;
@@ -128,7 +128,7 @@ rest_x_loop(XEvent *e, const struct timeval *now)
   /* If the break is over, wake up. */
   if (xwTIMEGEQ(*now, break_over_time))
     return TRAN_AWAKE;
-  
+
   if (e->type == Xw_DeleteWindow && active_hands() == 0)
     /* Window manager deleted last xwrits window. Consider break over. */
     return TRAN_CANCEL;
@@ -145,7 +145,7 @@ void
 calculate_break_time(struct timeval *break_over_time, const struct timeval *now)
 {
   struct timeval this_break_time;
-  
+
   /* determine length of this break. usually break_time; can be different if
      check_quota is on */
   this_break_time = ocurrent->break_time;
@@ -154,7 +154,7 @@ calculate_break_time(struct timeval *break_over_time, const struct timeval *now)
     if (xwTIMEGEQ(ocurrent->min_break_time, this_break_time))
       this_break_time = ocurrent->min_break_time;
   }
-  
+
   /* determine when to end the break */
   if (!check_idle)
     xwADDTIME(*break_over_time, *now, this_break_time);
@@ -177,11 +177,11 @@ rest(void)
     find_one_hand(ports[i], 1);
   }
   current_cheats = 0;
-  
+
   /* calculate time when break is over */
   xwGETTIME(now);
   calculate_break_time(&break_over_time, &now);
-  
+
   /* if break already over, return */
   if (xwTIMEGEQ(now, break_over_time))
     return TRAN_AWAKE;
@@ -190,7 +190,7 @@ rest(void)
   a = new_alarm(A_AWAKE);
   a->timer = break_over_time;
   schedule(a);
-  
+
   /* reschedule mouse position query timing: allow 5 seconds for people to
      jiggle the mouse before we save its position */
   if (check_mouse) {
@@ -201,7 +201,7 @@ rest(void)
     for (i = 0; i < nports; i++)
       ports[i]->last_mouse_root = None;
   }
-  
+
   if (ocurrent->break_clock) {
     clock_zero_time = break_over_time;
     draw_all_clocks(&now);
@@ -213,7 +213,7 @@ rest(void)
   for (i = 0; i < nports; i++)
     XFlush(ports[i]->display);
   tran = loopmaster(0, rest_x_loop);
-  
+
   unschedule(A_FLASH | A_AWAKE | A_CLOCK);
   erase_all_clocks();
   assert(tran == TRAN_CANCEL || tran == TRAN_AWAKE || tran == TRAN_FAIL);

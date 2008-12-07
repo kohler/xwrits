@@ -81,7 +81,7 @@ net_get_hostname(char *buf, size_t maxlen)
 #elif defined(HAVE_UNAME)
   struct utsname name;
   size_t len;
-  
+
   uname(&name);
   len = strlen(name.nodename);
   if (len >= maxlen)
@@ -131,13 +131,13 @@ new_hand(Port *slave_port, int x, int y)
     port->permanent_hand = nh;
   } else
     nh->permanent = 0;
-  
+
   /* set position and size */
   if (x == NEW_HAND_CENTER)
     x = slave_port->left + (slave_port->width - width) / 2;
   if (y == NEW_HAND_CENTER)
     y = slave_port->top + (slave_port->height - height) / 2;
-  
+
   if (x == NEW_HAND_RANDOM || y == NEW_HAND_RANDOM) {
     int xs[NEW_HAND_TRIES], ys[NEW_HAND_TRIES], i;
     int xdist = slave_port->width - width;
@@ -153,7 +153,7 @@ new_hand(Port *slave_port, int x, int y)
 
   if (!port->icon_width)
     get_icon_size(port);
-  
+
   if (!xwmh) {
     const char *stringlist[2];
     stringlist[0] = ocurrent->window_title;
@@ -162,16 +162,16 @@ new_hand(Port *slave_port, int x, int y)
     XStringListToTextProperty((char **)stringlist, 1, &icon_name);
     classh.res_name = "xwrits";
     classh.res_class = "XWrits";
-    
+
     xsh = XAllocSizeHints();
     xsh->flags = USPosition | PMinSize | PMaxSize;
     xsh->min_width = xsh->max_width = width;
     xsh->min_height = xsh->max_height = height;
-    
+
     xwmh = XAllocWMHints();
     xwmh->flags = InputHint | StateHint | IconWindowHint;
     xwmh->input = True;
-    
+
     /* Silly hackery to get the MWM appearance *just right*: ie., no resize
        handles or maximize button, no Resize or Maximize entries in window
        menu. The constitution of the property itself was inferred from data
@@ -184,7 +184,7 @@ new_hand(Port *slave_port, int x, int y)
     /* decorations = MWM_DECOR_BORDER | MWM_DECOR_TITLE | MWM_DECOR_MENU */
     mwm_hints.inputMode = ~(0L);
     mwm_hints.status = 0;
-    
+
     /* Add MINIMIZE options only if the window might be iconifiable */
     if (!ocurrent->never_iconify) {
       mwm_hints.functions |= (1L << 3); /* MWM_FUNC_MINIMIZE */
@@ -198,7 +198,7 @@ new_hand(Port *slave_port, int x, int y)
     else
       hostname.value = 0;
   }
-  
+
   /* create windows */
   {
     XSetWindowAttributes setattr;
@@ -210,18 +210,18 @@ new_hand(Port *slave_port, int x, int y)
     setattr.background_pixel = 0;
     setattr_mask = CWColormap | CWBorderPixel | CWBackPixel | CWBackingStore
       | CWSaveUnder;
-    
+
     nh->w = XCreateWindow
       (port->display, port->root_window,
        x, y, width, height, 0,
        port->depth, InputOutput, port->visual, setattr_mask, &setattr);
-    
+
     xwmh->icon_window = nh_icon->w = XCreateWindow
       (port->display, port->root_window,
        x, y, port->icon_width, port->icon_height, 0,
        port->depth, InputOutput, port->visual, setattr_mask, &setattr);
   }
-  
+
   /* set XWRITS_WINDOW property early to minimize races */
   mark_xwrits_window(port, nh->w);
 
@@ -258,12 +258,12 @@ new_hand(Port *slave_port, int x, int y)
   XChangeProperty(port->display, nh->w, port->net_wm_pid_atom,
 		  XA_CARDINAL, 32, PropModeReplace,
 		  (unsigned char *)property, 1);
-  
-  
+
+
   XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
   XSelectInput(port->display, nh_icon->w, StructureNotifyMask);
-  
+
   nh->port = port;
   nh->icon = nh_icon;
   nh->x = x;			/* will be set correctly */
@@ -301,7 +301,7 @@ new_hand(Port *slave_port, int x, int y)
   nh_icon->next = port->icon_hands;
   nh_icon->prev = 0;
   port->icon_hands = nh_icon;
-  
+
   return nh;
 }
 
@@ -322,17 +322,17 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
       unsigned bw, depth;
       (void) XGetGeometry(port->display, parent, &root, &x, &y, &parent_width, &parent_height, &bw, &depth);
   }
-  
+
   if (x == NEW_HAND_CENTER)
     x = (parent_width - width) / 2;
   if (y == NEW_HAND_CENTER)
     y = (parent_height - height) / 2;
-  
+
   if (x == NEW_HAND_RANDOM)
     x = (rand() >> 4) % (parent_width - width);
   if (y == NEW_HAND_RANDOM)
     y = (rand() >> 4) % (parent_height - height);
-  
+
   {
     XSetWindowAttributes setattr;
     unsigned long setattr_mask;
@@ -343,7 +343,7 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
     setattr.background_pixel = 0;
     setattr_mask = CWColormap | CWBorderPixel | CWBackPixel | CWBackingStore
       | CWSaveUnder;
-    
+
     nh->w = XCreateWindow
       (port->display, parent,
        x, y, width, height, 0,
@@ -354,7 +354,7 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
 
   XSelectInput(port->display, nh->w, ButtonPressMask | StructureNotifyMask
 	       | KeyPressMask | VisibilityChangeMask | ExposureMask);
-  
+
   nh->port = port;
   nh->icon = 0;
   nh->x = x;			/* will be set correctly */
@@ -374,7 +374,7 @@ new_hand_subwindow(Port *port, Window parent, int x, int y)
   nh->next = port->hands;
   nh->prev = 0;
   port->hands = nh;
-  
+
   return nh;
 }
 
@@ -386,12 +386,12 @@ destroy_hand(Hand *h)
 {
   Port *port = h->port;
   assert(!h->is_icon);
-  
+
   unschedule_data(A_FLASH, h);
   /* 29.Jan.2000 oops -- forgot to do this, it caused segfaults */
   if (h->icon)
     unschedule_data(A_FLASH, h->icon);
-  
+
   if (h->permanent) {
     XEvent event;
     /* last remaining hand; don't destroy it, unmap it */
@@ -468,17 +468,17 @@ ensure_picture(Port *port, Gif_Stream *gfs, int n)
   Picture *p, *last_p, *last_last_p;
   int i;
   int picn = port->port_number;
-  
+
   for (i = 0; i < n; i++) {
     p = (Picture *)gfs->images[i]->user_data;
     if (!p->pix[picn])		/* no picture cached for earlier image */
       ensure_picture(port, gfs, i);
   }
-  
+
   p = (Picture *)gfi->user_data;
   last_p = (n > 0 ? (Picture *)gfs->images[n-1]->user_data : 0);
   last_last_p = (n > 1 ? (Picture *)gfs->images[n-2]->user_data : 0);
-  
+
   /* reuse pixmaps from other streams */
   if (p->canonical && gfi->transparent < 0 && gfi->left == 0 && gfi->top == 0
       && gfi->width == gfs->screen_width && gfi->height == gfs->screen_height
@@ -487,7 +487,7 @@ ensure_picture(Port *port, Gif_Stream *gfs, int n)
     return;
   } else if (p->canonical)
     p->canonical = 0;
-  
+
   p->pix[picn] = Gif_XNextImage
     (port->gfx, (last_last_p ? last_last_p->pix[picn] : None),
      (last_p ? last_p->pix[picn] : None),
@@ -509,13 +509,13 @@ draw_slide(Hand *h)
   gfi = gfs->images[h->slide];
   p = (Picture *)gfi->user_data;
   port = h->port;
-  
+
   if (!p->pix[port->port_number])
     ensure_picture(port, gfs, h->slide);
-  
+
   XSetWindowBackgroundPixmap(port->display, h->w, p->pix[port->port_number]);
   XClearWindow(port->display, h->w);
-  
+
   if (h->clock)
     draw_clock(h, 0);
 }
@@ -569,7 +569,7 @@ Hand *
 find_one_hand(Port *port, int mapped)
 {
     Hand *h, *acceptable;
-    
+
     if (port->master == port) {
 	if (!mapped)
 	    return port->hands;
@@ -588,7 +588,7 @@ find_one_hand(Port *port, int mapped)
 	if (!acceptable)
 	    acceptable = new_hand(port, NEW_HAND_CENTER, NEW_HAND_CENTER);
     }
-    
+
     if (mapped && !acceptable->mapped)
 	hand_map_raised(acceptable);
     return acceptable;

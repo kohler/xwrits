@@ -332,9 +332,9 @@ default_x_processing(XEvent *e)
   Hand *h;
   Display *display = e->xany.display;
   Port *port;
-  
+
   switch (e->type) {
-    
+
    case ConfigureNotify:
     port = find_port(display, e->xconfigure.window);
     h = window_to_hand(port, e->xconfigure.window, 1);
@@ -346,13 +346,13 @@ default_x_processing(XEvent *e)
     h->height = e->xconfigure.height;
     find_root_child(h);
     break;
-    
+
    case ReparentNotify:
     port = find_port(display, e->xreparent.window);
     if ((h = window_to_hand(port, e->xreparent.window, 1)))
       find_root_child(h);
     break;
-    
+
    case MapNotify:
     port = find_port(display, e->xmap.window);
     if ((h = window_to_hand(port, e->xmap.window, 1))) {
@@ -360,13 +360,13 @@ default_x_processing(XEvent *e)
       h->mapped = 1;
     }
     break;
-    
+
    case UnmapNotify:
     port = find_port(display, e->xunmap.window);
     if ((h = window_to_hand(port, e->xunmap.window, 1)))
       h->mapped = 0;
     break;
-    
+
    case VisibilityNotify:
     port = find_port(display, e->xvisibility.window);
     if ((h = window_to_hand(port, e->xvisibility.window, 0))) {
@@ -376,14 +376,14 @@ default_x_processing(XEvent *e)
 	h->obscured = 1;
     }
     break;
-    
+
    case Expose:
     port = find_port(display, e->xexpose.window);
     h = window_to_hand(port, e->xexpose.window, 0);
     if (e->xexpose.count == 0 && h && h->clock)
       draw_clock(h, 0);
     break;
-    
+
    case ClientMessage:
     /* change e->type depending on the message */
     port = find_port(display, e->xclient.window);
@@ -408,7 +408,7 @@ default_x_processing(XEvent *e)
       }
     }
     break;
-    
+
    /* for idle processing */
    case CreateNotify: {
      struct timeval now;
@@ -417,7 +417,7 @@ default_x_processing(XEvent *e)
      watch_keystrokes(port, e->xcreatewindow.window, &now);
      break;
    }
-   
+
    case DestroyNotify:
     /* We must unschedule any IdleSelect events for fear of selecting input on
        a destroyed window. There is a race condition here because X
@@ -426,14 +426,14 @@ default_x_processing(XEvent *e)
     if (verbose)
 	fprintf(stderr, "Window 0x%x: destroyed\n", (unsigned)e->xdestroywindow.window);
     break;
-    
+
    case MappingNotify:
     /* Should listen to X mapping events! */
     XRefreshKeyboardMapping(&e->xmapping);
     break;
-    
+
   }
-  
+
   return 0;
 }
 
@@ -446,7 +446,7 @@ strtointerval(char *s, char **stores, struct timeval *iv)
   double sec = 0;
   long integral_sec;
   int ok = 0;
-  
+
   /* read minutes */
   if (isdigit(*s)) {
     sec = strtol(s, &s, 10) * SEC_PER_MIN;
@@ -456,7 +456,7 @@ strtointerval(char *s, char **stores, struct timeval *iv)
     sec += strtod(s, &s) * SEC_PER_MIN;
     ok = 1;
   }
-  
+
   /* read seconds */
   if (*s == ':' && (isdigit(s[1]) || s[1] == '.')) {
     sec += strtod(s+1, &s);
@@ -491,9 +491,9 @@ optparse(char *arg, char *option, int unique, char *format, ...)
   struct timeval *timeptr;
   char **charptr;
   int *intptr;
-  
+
   va_start(val, format);
-  
+
   /* Allow for long options. --[option] is equivalent to [option]. */
   if (arg[0] == '-' && arg[1] == '-' && isalnum(arg[2]))
     arg += 2;
@@ -508,12 +508,12 @@ optparse(char *arg, char *option, int unique, char *format, ...)
 	  arg++;
       while (arg[0]== 'n' && arg[1] == 'o' && arg[2] == '-' && isalnum(arg[3]))
 	  optparse_yesno = !optparse_yesno, arg += 3;
-      
+
       if (arg[0] == '-')
 	  optparse_yesno = 0, arg++;
       else if (arg[0] == '+')
 	  optparse_yesno = 1, arg++;
-    
+
   } else if (*format == 's') {
     /* Set option. -[option], +[option] and [option] are acceptable.
        Arguments may be given with = syntax or as separate entities. */
@@ -521,7 +521,7 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     separate = 1;
   }
   format++;
-  
+
   while (*arg && *arg != '=' && *opt) {
     if (*arg++ != *opt++) return 0;
     unique--;
@@ -529,34 +529,34 @@ optparse(char *arg, char *option, int unique, char *format, ...)
   /* 4.Sep.2002 - Prevent inappropriate identification of an option (could
      mistake --helpcdsainhfds for --help). */
   if (unique > 0 || (*arg && *arg != '=')) return 0;
-  
+
   if (*arg == '=') {
     arg++;
     separate = 0;
     if (!*format) error("too many arguments to %s", option);
   }
-  
+
   if (separate && *format) {
     ARGSHIFT;
     if (argc == 0) goto doneargs;
     arg = argv[0];
   } else if (!*arg) goto doneargs;
-  
+
   switch (*format++) {
-    
+
    case 't': /* time */
    case 'T': /* optional time */
     timeptr = va_arg(val, struct timeval *);
     if (!strtointerval(arg, &arg, timeptr))
       error("incorrect time format in %s argument", option);
     break;
-    
+
    case 's': /* string */
    case 'S': /* optional string */
     charptr = va_arg(val, char **);
     *charptr = arg;
     break;
-    
+
    case 'i': /* integer */
    case 'I': /* optional integer */
     intptr = va_arg(val, int *);
@@ -564,9 +564,9 @@ optparse(char *arg, char *option, int unique, char *format, ...)
     if (*arg)
       error("argument to %s must be integer", option);
     break;
-    
+
   }
-  
+
  doneargs:
   ARGSHIFT;
   while (*format)
@@ -590,17 +590,17 @@ slideshow_text_append_built_in(Options *o, char *built_in)
   int lis = (o->icon_slideshow_text ? strlen(o->icon_slideshow_text) : 0);
   char *s = xwNEWARR(char, ls + lbi + 3);
   char *is = xwNEWARR(char, lis + lbi + 7);
-  
+
   sprintf(s, "%s%s&%s", (ls ? o->slideshow_text : ""),
 	  (ls ? ";" : ""), built_in);
   sprintf(is, "%s%s*%sicon", (lis ? o->icon_slideshow_text : ""),
 	  (lis ? ";" : ""), built_in);
-  
+
   if (!o->prev || o->prev->slideshow_text != o->slideshow_text)
     xfree((char *)o->slideshow_text);
   if (!o->prev || o->prev->icon_slideshow_text != o->icon_slideshow_text)
     xfree((char *)o->icon_slideshow_text);
-  
+
   o->slideshow_text = s;
   o->icon_slideshow_text = is;
 }
@@ -614,22 +614,22 @@ parse_options(int pargc, char **pargv)
   Options *p;
   struct timeval flash_delay;
   int breaktime_warn_context = 0;
-  
+
   argc = pargc;
   argv = pargv;
 
   while (argc > 0) {
-    
+
     s = argv[0];
     arg = 0;
-    
+
     if (optparse(s, "after", 1, "sT", &o->next_delay)) {
       p = xwNEW(Options);
       *p = *o;
       o->next = p;
       p->prev = o;
       o = p;
-      
+
     } else if (optparse(s, "bars-picture", 2, "ss", &bars_slideshow_text)
 	       || optparse(s, "bp", 2, "ss", &bars_slideshow_text))
       ;
@@ -648,7 +648,7 @@ parse_options(int pargc, char **pargv)
       o->break_clock = optparse_yesno;
     else if (optparse(s, "bc", 2, "t"))
       o->break_clock = optparse_yesno;
-    
+
     else if (optparse(s, "canceltime", 2, "sT", &o->cancel_type_time)
 	     || optparse(s, "ct", 2, "sT", &o->cancel_type_time))
       ;
@@ -661,13 +661,13 @@ parse_options(int pargc, char **pargv)
 	    run_once = 0;
     } else if (optparse(s, "clock", 1, "t"))
       o->clock = optparse_yesno;
-    
+
     else if (optparse(s, "display", 1, "ss", &arg)) {
       if (nports == 1 && ports[0]->display_name == 0)
 	ports[0]->display_name = arg;
       else
 	add_port(arg, 0, 0, 0);
-    
+
     } else if (optparse(s, "finger", 1, "tS", &arg)
 	      || optparse(s, "flipoff", 1, "tS", &arg)) {
       if (!optparse_yesno) {
@@ -681,16 +681,16 @@ parse_options(int pargc, char **pargv)
     } else if (optparse(s, "flashtime", 3, "st", &flash_delay)) {
       double f = flash_delay.tv_sec*MICRO_PER_SEC + flash_delay.tv_usec;
       o->flash_rate_ratio = f / (DEFAULT_FLASH_DELAY_SEC*MICRO_PER_SEC);
-    
+
     } else if (optparse(s, "help", 1, "s")) {
       usage();
       exit(0);
-      
+
     } else if (optparse(s, "iconified", 2, "t"))
       o->appear_iconified = optparse_yesno;
     else if (optparse(s, "idle", 1, "tT", &idle_time))
       check_idle = optparse_yesno;
-    
+
     else if (optparse(s, "lock", 1, "tT", &o->lock_bounce_delay))
       o->lock = optparse_yesno;
     else if (optparse(s, "lock-picture", 5, "ss", &locked_slideshow_text)
@@ -709,7 +709,7 @@ parse_options(int pargc, char **pargv)
 	multiscreen = optparse_yesno;
     else if (optparse(s, "maxhands", 2, "si", &o->max_hands))
       ;
-    
+
     else if (optparse(s, "noiconify", 3, "t"))
       o->never_iconify = optparse_yesno;
     else if (optparse(s, "nooffscreen", 3, "t"))
@@ -721,13 +721,13 @@ parse_options(int pargc, char **pargv)
 
     else if (optparse(s, "okp", 1, "ss", &ready_slideshow_text))
       ;
-    
+
     else if (optparse(s, "password", 1, "ss", &lock_password))
       ;
-    
+
     else if (optparse(s, "quota", 1, "tT", &quota_time))
       check_quota = optparse_yesno;
-    
+
     else if (optparse(s, "rest-picture", 3, "ss", &resting_slideshow_text)
 	     || optparse(s, "rp", 2, "ss", &resting_slideshow_text))
       ;
@@ -752,12 +752,12 @@ This is free software; see the source for copying conditions.\n\
 There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");
       exit(0);
-      
+
     } else if (optparse(s, "warning-picture", 1, "ss", &o->slideshow_text))
       ;
     else if (optparse(s, "wp", 2, "ss", &o->slideshow_text))
       ;
-    
+
     else
       short_usage();
   }
@@ -789,7 +789,7 @@ check_options(Options *o)
     o->max_hands = 1;
   else if (o->max_hands > MAX_HANDS)
     o->max_hands = MAX_HANDS;
-  
+
   /* check min_break_time */
   if (xwTIMELT0(o->min_break_time)) {
     set_fraction_time(&o->min_break_time, o->break_time, 0.5);
@@ -803,7 +803,7 @@ check_options(Options *o)
     if (xwTIMEGT(o->cancel_type_time, normal_type_time))
       o->cancel_type_time = normal_type_time;
   }
-  
+
   /* If the next set of options is supposed to appear before this one, replace
      this one with the next set. Iterate. */
   while (xwTIMELEQ0(o->next_delay)) {
@@ -813,7 +813,7 @@ check_options(Options *o)
     if (o->next) o->next->prev = o;
     xfree(p);
   }
-  
+
   /* create the slideshows */
   if (prev && strcmp(o->slideshow_text, prev->slideshow_text) == 0
       && o->flash_rate_ratio == prev->flash_rate_ratio) {
@@ -822,7 +822,7 @@ check_options(Options *o)
   } else
     o->slideshow = parse_slideshow(o->slideshow_text,
 				   o->flash_rate_ratio, force_mono);
-  
+
   if (prev && strcmp(o->icon_slideshow_text, prev->icon_slideshow_text) == 0
       && o->flash_rate_ratio == prev->flash_rate_ratio) {
     o->icon_slideshow = prev->icon_slideshow;
@@ -848,17 +848,17 @@ default_settings(void)
   /* multiply settings */
   xwSETTIME(onormal.multiply_delay, 2, 300000);
   onormal.max_hands = 25;
-  
+
   /* locking settings */
   xwSETTIME(onormal.lock_bounce_delay, 4, 0);
   xwSETTIME(lock_message_delay, 10, 0);
   lock_password = "quit";
-  
+
   /* keystroke registration functions */
   check_idle = 1;
   xwSETTIME(idle_time, 0, 0);
   xwSETTIME(register_keystrokes_delay, 1, 0);
-  
+
   /* mouse tracking functions */
   check_mouse = 0;
   xwSETTIME(check_mouse_time, 3, 0);
@@ -867,11 +867,11 @@ default_settings(void)
   /* quota settings */
   check_quota = 0;
   xwSETTIME(quota_time, 60, 0);
-  
+
   /* cheating */
   max_cheats = MAX_CHEATS_UNSET;
   allow_cheats = 0;
-  
+
   /* slideshows */
   onormal.slideshow_text = onormal.icon_slideshow_text = 0;
   slideshow_text_append_built_in(&onormal, "clench");
@@ -879,12 +879,12 @@ default_settings(void)
 
   /* window title */
   onormal.window_title = "xwrits";
-  
+
   /* clock tick time functions */
   /* 20 seconds seems like a reasonable clock tick time, even though it'll
      redraw the same hands 3 times. */
   xwSETTIME(clock_tick, 1, 0);
-  
+
   /* next option set */
   xwSETTIME(onormal.next_delay, 15 * SEC_PER_MIN, 0);
   onormal.next = 0;
@@ -958,13 +958,13 @@ initialize_port(int portno)
 
   /* check that relevant fields have been initialized */
   assert(display && screen_number >= 0 && screen_number < ScreenCount(display) && port->port_number == portno);
-  
+
   /* initialize slaves specially */
   if (port->master != port) {
       initialize_slave_port(port);
       return;
   }
-  
+
   /* initialize Port fields */
   port->x_socket = ConnectionNumber(display);
   port->root_window = RootWindow(display, screen_number);
@@ -977,22 +977,22 @@ initialize_port(int portno)
   FD_SET(port->x_socket, &x_socket_set);
   if (port->x_socket > max_x_socket)
       max_x_socket = port->x_socket;
-  
+
   /* choose the Visual */
   default_visualid = DefaultVisual(display, screen_number)->visualid;
   visi_template.screen = screen_number;
   v = XGetVisualInfo(display, VisualScreenMask, &visi_template, &nv);
-  
+
   for (i = 0; i < nv && !best_v; i++)
     if (v[i].visualid == default_visualid)
       best_v = &v[i];
-  
+
   if (!best_v) {
     port->visual = DefaultVisual(display, screen_number);
     port->depth = DefaultDepth(display, screen_number);
     port->colormap = DefaultColormap(display, screen_number);
   } else {
-  
+
     /* Which visual to choose? This isn't exactly a simple decision, since
        we want to avoid colormap flashing while choosing a nice visual. So
        here's the algorithm: Prefer the default visual, or take a TrueColor
@@ -1000,7 +1000,7 @@ initialize_port(int portno)
     for (i = 0; i < nv; i++)
       if (v[i].depth > best_v->depth && v[i].VISUAL_CLASS == TrueColor)
 	best_v = &v[i];
-    
+
     port->visual = best_v->visual;
     port->depth = best_v->depth;
     if (best_v->visualid != default_visualid)
@@ -1008,12 +1008,12 @@ initialize_port(int portno)
 				       port->visual, AllocNone);
     else
       port->colormap = DefaultColormap(display, screen_number);
-    
+
   }
 
   if (v)
       XFree(v);
-  
+
   /* set up black_pixel and white_pixel */
   {
     XColor color;
@@ -1024,12 +1024,12 @@ initialize_port(int portno)
     XAllocColor(display, port->colormap, &color);
     port->white = color.pixel;
   }
-  
+
   /* choose the font */
   port->font = XLoadQueryFont(display, "-*-helvetica-bold-r-*-*-*-180-75-75-*-iso8859-1");
   if (!port->font)
       port->font = XLoadQueryFont(display, "fixed");
-  
+
   /* set gfx */
   port->gfx = Gif_NewXContextFromVisual
     (display, screen_number, port->visual, port->depth, port->colormap);
@@ -1056,7 +1056,7 @@ initialize_port(int portno)
   /* initialize GCs */
   {
     XGCValues gcv;
-    
+
     gcv.foreground = port->black;
     gcv.line_width = 3;
     gcv.cap_style = CapRound;
@@ -1068,7 +1068,7 @@ initialize_port(int portno)
     port->clock_hand_gc = XCreateGC
       (port->display, port->drawable,
        GCForeground | GCLineWidth | GCCapStyle, &gcv);
-    
+
     gcv.foreground = port->white;
     gcv.font = port->font->fid;
     gcv.subwindow_mode = IncludeInferiors;
@@ -1081,7 +1081,7 @@ initialize_port(int portno)
   port->peers = xwNEWARR(Window, 4);
   port->npeers = 0;
   port->peers_capacity = 4;
-  
+
   /* initialize other stuff */
   port->icon_width = port->icon_height = 0;
   port->last_mouse_root = None;
@@ -1174,7 +1174,7 @@ main_loop(void)
 	    unmap_all();
 	    s = ST_NORMAL_WAIT;
 	    break;
-	    
+
 	}
     }
 }
@@ -1186,16 +1186,16 @@ main(int argc, char *argv[])
   int i, j, orig_nports;
   int lock_possible = 0;
   struct timeval now;
-  
+
   xwGETTIMEOFDAY(&genesis_time);
   init_scheduler();
-  
+
   srand((getpid() + 1) * time(0));
 
   add_port(0, 0, 0, 0);
-  
+
   /* parse options. remove first argument = program name */
-  default_settings();  
+  default_settings();
   parse_options(argc - 1, argv + 1);
 
   /* At this point, all ports have 'display_name' valid and everything else
@@ -1241,16 +1241,16 @@ main(int argc, char *argv[])
       }
 #endif
   }
-  
+
   /* check global options */
   if (strlen(lock_password) >= MAX_PASSWORD_SIZE)
     error("password too long");
-  
+
   /* default for idle_time and warn_idle_time is based on break_delay;
      otherwise, warn_idle_time == idle_time */
   if (check_idle && xwTIMELEQ0(idle_time))
     idle_time = onormal.break_time;
-  
+
   /* check quota */
   if (check_quota && check_idle && xwTIMEGEQ(quota_time, onormal.break_time)) {
     warning("quota time is longer than break length");
@@ -1258,13 +1258,13 @@ main(int argc, char *argv[])
     warning("the length of the main break, so a TIME longer than the main");
     warning("break is probably a mistake.)");
   }
-  
+
   /* fix cheats */
   if (!allow_cheats)
     max_cheats = 0;
   else if (max_cheats == MAX_CHEATS_UNSET)
     max_cheats = 5;
-  
+
   /* check local options */
   for (o = &onormal; o; o = o->next) {
     check_options(o);
@@ -1296,23 +1296,23 @@ main(int argc, char *argv[])
         ports[i]->bars_pixmap = Gif_XImage(ports[i]->gfx, bars_slideshow, 0);
     }
   }
-  
+
   /* watch keystrokes on all windows */
   xwGETTIME(now);
   old_x_error_handler = XSetErrorHandler(x_error_handler);
   for (i = 0; i < nports; i++)
       if (ports[i]->master == ports[i])
 	  watch_keystrokes(ports[i], ports[i]->root_window, &now);
-  
+
   /* start mouse checking */
   if (check_mouse) {
     Alarm *a = new_alarm(A_MOUSE);
     xwGETTIME(a->timer);
     schedule(a);
   }
-  
+
   /* main loop */
   main_loop();
-  
+
   return 0;
 }

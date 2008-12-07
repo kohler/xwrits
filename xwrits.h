@@ -35,12 +35,12 @@ typedef struct Alarm Alarm;
 struct Port {
 
   int port_number;		/* 0 <= port_number < nports */
-  
+
   const char *display_name;	/* name of display */
   Display *display;		/* display pointer */
   int display_unique;		/* is this only master Port with display? */
   int x_socket;			/* socket of X connection */
-  
+
   int screen_number;		/* screen number */
   Window root_window;		/* root window of screen */
   int left;			/* left edge of display (Xinerama) */
@@ -57,14 +57,14 @@ struct Port {
   Colormap colormap;		/* colormap on visual */
   unsigned long black;		/* black pixel value on colormap */
   unsigned long white;		/* white pixel value on colormap */
-  
+
   XFontStruct *font;		/* font for lock messages */
   GC white_gc;			/* foreground white, font font */
   GC clock_fore_gc;		/* foreground black, thick rounded line */
   GC clock_hand_gc;		/* same as clock_fore_gc */
-  
+
   Gif_XContext *gfx;		/* GIF X context */
-  
+
   Atom wm_protocols_atom;	/* atoms for window manager communication */
   Atom wm_delete_window_atom;
   Atom wm_client_leader_atom;
@@ -81,7 +81,7 @@ struct Port {
   Hand *hands;			/* list of main hands */
   Hand *icon_hands;		/* list of icon hands */
   Hand *permanent_hand;		/* hand that will never be destroyed */
-  
+
   int icon_width;		/* preferred icon width */
   int icon_height;		/* preferred icon height */
 
@@ -94,7 +94,7 @@ struct Port {
   Window *peers;		/* list of peer windows */
   int npeers;
   int peers_capacity;
-  
+
 };
 
 extern int nports;
@@ -123,21 +123,21 @@ void notify_peers_rest(void);
 /*  Options								     */
 
 struct Options {
-  
+
   struct timeval break_time;		/* length of break */
   struct timeval min_break_time;	/* minimum length of break (+quota) */
   struct timeval cancel_type_time;	/* typing OK for TIME after cancel */
-  
+
   Gif_Stream *slideshow;		/* warn window animation  */
   Gif_Stream *icon_slideshow;		/* warn icon window animation */
   const char *slideshow_text;
   const char *icon_slideshow_text;
   const char *window_title;
-  
+
   double flash_rate_ratio;		/* <1, flash fast; >1, flash slow */
   struct timeval multiply_delay;	/* time between window multiplies */
   struct timeval lock_bounce_delay;	/* time between lock bounces */
-  
+
   unsigned beep: 1;			/* beep when bringing up a warn? */
   unsigned clock: 1;			/* show clock for time since warn? */
   unsigned appear_iconified: 1;		/* show warns as icons? */
@@ -147,11 +147,11 @@ struct Options {
   unsigned lock: 1;			/* lock screen? */
   unsigned break_clock: 1;		/* show clock time left in break? */
   int max_hands;			/* max number of hands (+multiply) */
-  
+
   struct timeval next_delay;		/* delay till go to next options */
   Options *next;			/* next options */
   Options *prev;			/* previous options */
-  
+
 };
 
 extern Options *ocurrent;
@@ -191,16 +191,16 @@ void erase_all_clocks(void);
 #define A_MOUSE			0x0200
 
 struct Alarm {
-  
+
   Alarm *next;
   Alarm *prev;
   struct timeval timer;
   int action;
   void *data1;
   void *data2;
-  
+
   unsigned scheduled: 1;
-  
+
 };
 
 typedef int (*Alarmloopfunc)(Alarm *, const struct timeval *);
@@ -226,7 +226,7 @@ int loopmaster(Alarmloopfunc, Xloopfunc);
 #define MAX_HANDS	137
 
 struct Hand {
-  
+
   Hand *next;
   Hand *prev;
   Hand *icon;
@@ -237,13 +237,13 @@ struct Hand {
   int y;
   int width;
   int height;
-  
+
   Window root_child;
-  
+
   Gif_Stream *slideshow;
   int slide;
   int loopcount;
-  
+
   unsigned is_icon: 1;
   unsigned mapped: 1;
   unsigned withdrawn: 1;
@@ -252,7 +252,7 @@ struct Hand {
   unsigned clock: 1;
   unsigned permanent: 1;
   unsigned toplevel: 1;
-  
+
 };
 
 int active_hands(void);
@@ -290,12 +290,12 @@ void set_all_slideshows(Hand *, Gif_Stream *);
 /*  Pictures								     */
 
 struct Picture {
-  
+
   int clock_x_off;
   int clock_y_off;
   Gif_Image *canonical;
   Pixmap pix[1];
-  
+
 };
 
 void default_pictures(void);

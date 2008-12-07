@@ -23,7 +23,7 @@ lock_hand_position(Port *port, int *x, int *y)
     /* 8.Feb.2002: Fix bug reported by Carlos O'Donell Jr.
        <carlos@baldric.uwo.ca> -- large lock pictures (full screen height or
        width) caused arithmetic problems */
-    
+
     if (port->width <= locked_slideshow->screen_width)
 	*x = port->left;
     else if (bars_slideshow) {	/* Align image with bars. */
@@ -79,13 +79,13 @@ draw_message(const char *message)
   int i, x, y, w, h;
   int redraw = (message == REDRAW_MESSAGE);
   int length;
-  
+
   if (redraw)
     message = (cur_message[0] ? cur_message : 0);
-  
+
   length = (message ? strlen(message) : 0);
   assert(length < MAX_MESSAGE_SIZE);
-  
+
   for (i = 0; i < nports; i++)
     if (covers[i]) {
       if (cur_message[0] && !redraw) {
@@ -117,7 +117,7 @@ check_password(XKeyEvent *xkey)
   char c;
   int nchars = XLookupString(xkey, &c, 1, &keysym, &compose);
   int incorrect_message = 0;
-  
+
   if (keysym == XK_Return ||
       (nchars == 1 && (c == '\n' || c == '\r'))) {
     password[password_pos] = 0;
@@ -149,7 +149,7 @@ check_password(XKeyEvent *xkey)
     }
     draw_message(message);
   }
-  
+
   return 0;
 }
 
@@ -158,21 +158,21 @@ static int
 lock_alarm_loop(Alarm *a, const struct timeval *now)
 {
   switch (a->action) {
-    
+
    case A_LOCK_BOUNCE:
     move_locks();
     draw_message(REDRAW_MESSAGE);
     xwADDTIME(a->timer, a->timer, ocurrent->lock_bounce_delay);
     schedule(a);
     break;
-    
+
    case A_LOCK_MESS_ERASE:
     draw_message(0);
     password_pos = 0;
     break;
-    
+
   }
-  
+
   return 0;
 }
 
@@ -182,9 +182,9 @@ lock_x_loop(XEvent *e, const struct timeval *now)
 {
   Alarm *a;
   Port *port;
-  
+
   switch (e->type) {
-    
+
    case KeyPress:
     if (check_password(&e->xkey))
       return TRAN_FAIL;
@@ -195,7 +195,7 @@ lock_x_loop(XEvent *e, const struct timeval *now)
     xwADDTIME(a->timer, a->timer, lock_message_delay);
     schedule(a);
     break;
-    
+
    case VisibilityNotify:
     if (e->xvisibility.state != VisibilityUnobscured) {
       port = find_port(e->xvisibility.display, e->xvisibility.window);
@@ -203,9 +203,9 @@ lock_x_loop(XEvent *e, const struct timeval *now)
       draw_message(REDRAW_MESSAGE);
     }
     break;
-    
+
   }
-  
+
   return 0;
 }
 
@@ -216,7 +216,7 @@ lock(void)
   struct timeval now, break_over_time;
   Alarm *a;
   int i, successful_grabs;
-  
+
   XEvent event;
   int tran = TRAN_FAIL;
 
@@ -240,7 +240,7 @@ lock(void)
     covers = (Window *)xmalloc(sizeof(Window) * nports);
     lock_hands = (Hand **)xmalloc(sizeof(Hand *) * nports);
   }
-  
+
   for (i = 0; i < nports; i++) {
     XSetWindowAttributes setattr;
     unsigned long cwmask = CWBackingStore | CWSaveUnder | CWOverrideRedirect
@@ -295,11 +295,11 @@ lock(void)
   a = new_alarm(A_AWAKE);
   a->timer = break_over_time;
   schedule(a);
-  
+
   a = new_alarm(A_LOCK_BOUNCE);
   xwADDTIME(a->timer, ocurrent->lock_bounce_delay, now);
   schedule(a);
-  
+
   if (ocurrent->break_clock) {
     clock_zero_time = break_over_time;
     draw_all_clocks(&now);
@@ -310,7 +310,7 @@ lock(void)
 
   draw_message(0);
   password_pos = 0;
-  
+
   tran = loopmaster(lock_alarm_loop, lock_x_loop);
 
  no_keyboard_grab:

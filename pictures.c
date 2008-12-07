@@ -75,7 +75,7 @@ add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
   p->canonical = 0;
   for (i = 0; i < nports; i++)
     p->pix[i] = None;
-  
+
   gfi->user_data = p;
   gfi->free_user_data = free_picture;
 }
@@ -87,12 +87,12 @@ get_built_in_image(const char *name)
   struct named_record *nr;
   Gif_Stream *gfs;
   int i, xoff;
-  
+
   for (nr = built_in_pictures; nr->name; nr++)
     if (strcmp(nr->name, name) == 0)
       goto found;
   return 0;
-  
+
  found:
   if (nr->gfs)
     return nr->gfs;
@@ -100,13 +100,13 @@ get_built_in_image(const char *name)
     nr->gfs = get_built_in_image(nr->synonym);
     return nr->gfs;
   }
-  
+
   nr->gfs = gfs =
     Gif_FullReadRecord(nr->record, GIF_READ_COMPRESSED | GIF_READ_CONST_RECORD,
 		       0, 0);
   if (!gfs)
     return 0;
-  
+
   xoff = (strncmp(name, "locked", 6) == 0 ? 65 : 10);
   for (i = 0; i < gfs->nimages; i++)
     add_picture(gfs->images[i], xoff, 10);
@@ -114,7 +114,7 @@ get_built_in_image(const char *name)
   /* built-in images are all loop-forever. don't change the GIFs because it
      makes the executable bigger */
   if (gfs->loopcount < 0) gfs->loopcount = 0;
-  
+
   return gfs;
 }
 
@@ -151,7 +151,7 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
   Gif_Image *gfi;
   int i;
   double d;
-  
+
   /* adapt delays for 1-frame images */
   if (add->nimages == 1)
     add->images[0]->delay = DEFAULT_FLASH_DELAY_SEC * 100;
@@ -165,13 +165,13 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
     }
     gfs->loopcount = add->loopcount;
   }
-  
+
   /* adapt screen size */
   if (add->screen_width > gfs->screen_width)
     gfs->screen_width = add->screen_width;
   if (add->screen_height > gfs->screen_height)
     gfs->screen_height = add->screen_height;
-  
+
   /* add images from add to gfs */
   for (i = 0; i < add->nimages; i++) {
     gfi = add->images[i];
@@ -194,7 +194,7 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
     /* add image */
     Gif_AddImage(gfs, gfi);
   }
-  
+
   /* add multiple times if it has a loop count, up to a max of 20 loops */
   if (add->nimages > 1 && add->loopcount >= 0) {
     int loop = (add->loopcount <= 20 ? add->loopcount : 20);
@@ -221,18 +221,18 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
   Gif_Stream *gfs, *add;
   Gif_Image *gfi;
   int i;
-  
+
   if (strlen(slideshowtext) >= BUFSIZ) return 0;
   strcpy(buf, slideshowtext);
   s = buf;
-  
+
   gfs = Gif_NewStream();
   gfs->loopcount = 0;
-  
+
   while (*s) {
     char *n, save;
     FILE *f;
-    
+
     while (isspace(*s))
 	s++;
     n = s;
@@ -240,7 +240,7 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 	s++;
     save = *s;
     *s = 0;
-    
+
     if (n[0] == '&' || n[0] == '*') {
       /* built-in image */
       strcpy(name, n + 1);
@@ -296,7 +296,7 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 	gfs->screen_height = gfi->height;
     }
   }
-  
+
   return gfs;
 }
 
@@ -308,7 +308,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
   Alarm *a;
   struct timeval t;
   Port *port = h->port;
-  
+
   if (h->slideshow == gfs)
     return;
   else if (!gfs) {
@@ -316,14 +316,14 @@ set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
     unschedule_data(A_FLASH, h);
     return;
   }
-  
+
   if (now_ptr)
     t = *now_ptr;
   else
     xwGETTIME(t);
-  
+
   a = grab_alarm_data(A_FLASH, h, 0);
-  
+
   if (h->slideshow) {
     Gif_Image *cur_im = h->slideshow->images[h->slide];
     if (a)
@@ -334,7 +334,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
       if (gfs->images[which_im] == cur_im)
 	break;
   }
-  
+
   /* fprintf(stderr, "%p %p %d\n", h, gfs, which_im); */
   if (gfs->nimages > 1) {
     if (!a)
@@ -345,9 +345,9 @@ set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
     if (a)
       destroy_alarm(a);
   }
-  
+
   h->slideshow = gfs;
-  
+
   if ((gfs->screen_width != h->width || gfs->screen_height != h->height)
       && !h->is_icon) {
     XWindowChanges wmch;
@@ -362,7 +362,7 @@ set_slideshow(Hand *h, Gif_Stream *gfs, const struct timeval *now_ptr)
 			 CWWidth | CWHeight, &wmch);
     XFree(xsh);
   }
-  
+
   h->loopcount = 0;
   h->slide = which_im;
   draw_slide(h);

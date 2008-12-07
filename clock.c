@@ -25,7 +25,7 @@ draw_hand(Port *port, Drawable drawable, int xin, int yin, int hand_length,
   GC gc = (thin ? port->clock_hand_gc : port->clock_fore_gc);
   XDrawLine(port->display, drawable, gc, xin, yin,
 	    (int)(xin + hand_length * sinv), (int)(yin - hand_length * cosv));
-  
+
 #if 0
   double x = xin - HandOffset * sinv + 1;
   double y = yin + HandOffset * cosv + 1;
@@ -53,11 +53,11 @@ draw_1_clock(Hand *hand, int seconds)
 
   if (!hand->slideshow)
     return;
-  
+
   p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
   x = p->clock_x_off;
   y = p->clock_y_off;
-  
+
   XFillArc(port->display, hand->w, port->white_gc,
 	   x, y, ClockWidth, ClockHeight, 0, 23040);
   XDrawArc(port->display, hand->w, port->clock_fore_gc,
@@ -68,7 +68,7 @@ draw_1_clock(Hand *hand, int seconds)
   hour = min / MIN_PER_HOUR;
   min %= MIN_PER_HOUR;
   seconds %= SEC_PER_MIN;
-  
+
   if (hour)
     draw_hand(port, hand->w, x, y, ClockHour, hour, HOUR_PER_CYCLE, 0);
   draw_hand(port, hand->w, x, y, ClockMin, min, MIN_PER_HOUR, 0);
@@ -81,7 +81,7 @@ now_to_clock_sec(const struct timeval *now_ptr)
 {
   struct timeval now;
   struct timeval diff;
-  
+
   if (now_ptr)
     now = *now_ptr;
   else
@@ -91,7 +91,7 @@ now_to_clock_sec(const struct timeval *now_ptr)
     xwSUBTIME(diff, now, clock_zero_time);
   else
     xwSUBTIME(diff, clock_zero_time, now);
-  
+
   return diff.tv_sec + (diff.tv_usec >= 500000 ? 1 : 0);
 }
 
