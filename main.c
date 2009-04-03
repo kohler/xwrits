@@ -398,7 +398,7 @@ default_x_processing(XEvent *e)
 		 && (Atom)(e->xclient.data.l[0]) == port->net_wm_ping_atom) {
 	/* window manager pinging us to make sure we're still alive */
 	e->xclient.window = port->root_window;
-	XSendEvent(port->display, port->root_window, True, 0, e);
+	XSendEvent(port->display, port->root_window, False, SubstructureNotifyMask | SubstructureRedirectMask, e);
       } else if (e->xclient.message_type == port->xwrits_break_atom
 		 && e->xclient.data.l[0] != 0)
 	e->type = Xw_TakeBreak;
