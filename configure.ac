@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(xwrits.h)
-AM_INIT_AUTOMAKE(xwrits, 2.25)
+AM_INIT_AUTOMAKE(xwrits, 2.26)
 AM_CONFIG_HEADER(config.h)
 
 AC_PROG_CC

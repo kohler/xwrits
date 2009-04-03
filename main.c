@@ -747,7 +747,7 @@ parse_options(int pargc, char **pargv)
     else if (optparse(s, "version", 1, "s")) {
       printf("LCDF Xwrits %s\n", VERSION);
       printf("\
-Copyright (C) 1994-2006 Eddie Kohler\n\
+Copyright (C) 1994-2009 Eddie Kohler\n\
 This is free software; see the source for copying conditions.\n\
 There is NO warranty, not even for merchantability or fitness for a\n\
 particular purpose.\n");

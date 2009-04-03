@@ -1,5 +1,13 @@
 Xwrits NEWS
 
+Version 2.26   3.Apr.2009
+
+* Correct handling of idle-time freedesktop.org ping messages, to avoid
+  window managers thinking xwrits has died.
+
+* Some internal refactoring.
+
+
 Version 2.25   10.Jul.2006
 
 * Change behavior of '+idle=TIME' when a warning window pops up.  Requested
