@@ -288,6 +288,7 @@ new_hand(Port *slave_port, int x, int y)
   nh_icon->port = port;
   nh_icon->icon = nh;
   nh_icon->root_child = nh->w;
+  nh_icon->width = nh_icon->height = 0;
   nh_icon->is_icon = 1;
   nh_icon->mapped = 0;
   nh_icon->withdrawn = 0;
@@ -461,59 +462,27 @@ window_to_hand(Port *port, Window w, int allow_icons)
 
 /* draw a picture on a hand */
 
-static void
-ensure_picture(Port *port, Gif_Stream *gfs, int n)
-{
-  Gif_Image *gfi = gfs->images[n];
-  Picture *p, *last_p, *last_last_p;
-  int i;
-  int picn = port->port_number;
-
-  for (i = 0; i < n; i++) {
-    p = (Picture *)gfs->images[i]->user_data;
-    if (!p->pix[picn])		/* no picture cached for earlier image */
-      ensure_picture(port, gfs, i);
-  }
-
-  p = (Picture *)gfi->user_data;
-  last_p = (n > 0 ? (Picture *)gfs->images[n-1]->user_data : 0);
-  last_last_p = (n > 1 ? (Picture *)gfs->images[n-2]->user_data : 0);
-
-  /* reuse pixmaps from other streams */
-  if (p->canonical && gfi->transparent < 0 && gfi->left == 0 && gfi->top == 0
-      && gfi->width == gfs->screen_width && gfi->height == gfs->screen_height
-      && ((Picture *)p->canonical->user_data)->pix[picn]) {
-    p->pix[picn] = ((Picture *)p->canonical->user_data)->pix[picn];
-    return;
-  } else if (p->canonical)
-    p->canonical = 0;
-
-  p->pix[picn] = Gif_XNextImage
-    (port->gfx, (last_last_p ? last_last_p->pix[picn] : None),
-     (last_p ? last_p->pix[picn] : None),
-     gfs, n);
-}
-
 void
 draw_slide(Hand *h)
 {
   Gif_Stream *gfs;
   Gif_Image *gfi;
   Port *port;
-  Picture *p;
+  PictureList *pl;
 
   if (!h || !h->slideshow)
     return;
 
   gfs = h->slideshow;
   gfi = gfs->images[h->slide];
-  p = (Picture *)gfi->user_data;
+  pl = (PictureList *)gfi->user_data;
   port = h->port;
 
-  if (!p->pix[port->port_number])
-    ensure_picture(port, gfs, h->slide);
+  if (!pl->frames[port->port_number][h->slide].pixmap)
+    (void) Gif_XNextImage(port->gfx, gfs, h->slide,
+			  pl->frames[port->port_number]);
 
-  XSetWindowBackgroundPixmap(port->display, h->w, p->pix[port->port_number]);
+  XSetWindowBackgroundPixmap(port->display, h->w, pl->frames[port->port_number][h->slide].pixmap);
   XClearWindow(port->display, h->w);
 
   if (h->clock)

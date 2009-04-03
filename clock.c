@@ -47,16 +47,16 @@ static void
 draw_1_clock(Hand *hand, int seconds)
 {
   Port *port = hand->port;
-  Picture *p;
+  PictureList *pl;
   int x, y;
   int hour, min;
 
   if (!hand->slideshow)
     return;
 
-  p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
-  x = p->clock_x_off;
-  y = p->clock_y_off;
+  pl = (PictureList *)(hand->slideshow->images[hand->slide]->user_data);
+  x = pl->clock_x_off;
+  y = pl->clock_y_off;
 
   XFillArc(port->display, hand->w, port->white_gc,
 	   x, y, ClockWidth, ClockHeight, 0, 23040);
@@ -122,18 +122,19 @@ void
 erase_clock(Hand *hand)
 {
   Port *port = hand->port;
-  Picture *p;
+  PictureList *pl;
 
   if (!hand->slideshow)
     return;
 
-  p = (Picture *)(hand->slideshow->images[hand->slide]->user_data);
+  pl = (PictureList *)(hand->slideshow->images[hand->slide]->user_data);
 
-  XCopyArea(port->display, p->pix[port->port_number], hand->w,
+  XCopyArea(port->display, pl->frames[port->port_number][hand->slide].pixmap,
+	    hand->w,
 	    port->clock_fore_gc,
-	    p->clock_x_off - 2, p->clock_y_off - 2,
+	    pl->clock_x_off - 2, pl->clock_y_off - 2,
 	    ClockWidth + 4, ClockHeight + 4,
-	    p->clock_x_off - 2, p->clock_y_off - 2);
+	    pl->clock_x_off - 2, pl->clock_y_off - 2);
   hand->clock = 0;
 }
 

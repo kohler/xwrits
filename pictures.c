@@ -51,37 +51,43 @@ struct named_record built_in_pictures[] = {
 
 
 static void
-free_picture(void *v)
+free_picturelist(void *v)
 {
-  Picture *p = (Picture *)v;
+  PictureList *pl = (PictureList *)v;
   int i;
-  if (p->canonical)
-    Gif_DeleteImage(p->canonical);
-  else
+  if (--pl->refcount == 0) {
     for (i = 0; i < nports; i++)
-      if (p->pix[i])
-	XFreePixmap(ports[i]->display, p->pix[i]);
-  xfree(p);
+      Gif_DeleteXFrames(ports[i]->gfx, pl->gfs, pl->frames[i]);
+    xfree(pl);
+  }
 }
 
-static void
-add_picture(Gif_Image *gfi, int clock_x_off, int clock_y_off)
+static int
+add_picturelist(Gif_Stream *gfs, int clock_x_off, int clock_y_off)
 {
-  Picture *p = (Picture *)
-    xmalloc(sizeof(Picture) + (nports-1)*sizeof(Pixmap));
   int i;
-  p->clock_x_off = clock_x_off;
-  p->clock_y_off = clock_y_off;
-  p->canonical = 0;
-  for (i = 0; i < nports; i++)
-    p->pix[i] = None;
+  PictureList *pl = (PictureList *)
+    xmalloc(sizeof(PictureList) + (nports-1) * sizeof(Gif_XFrame *));
+  if (!pl)
+    return -1;
 
-  gfi->user_data = p;
-  gfi->free_user_data = free_picture;
+  pl->clock_x_off = clock_x_off;
+  pl->clock_y_off = clock_y_off;
+  pl->gfs = gfs;
+  pl->refcount = 0;
+  for (i = 0; i < nports; i++)
+    if (!(pl->frames[i] = Gif_NewXFrames(gfs)))
+      return 0;
+  for (i = 0; i < gfs->nimages; ++i) {
+    gfs->images[i]->user_data = pl;
+    gfs->images[i]->free_user_data = free_picturelist;
+    ++pl->refcount;
+  }
+  return 0;
 }
 
 
-Gif_Stream *
+static Gif_Stream *
 get_built_in_image(const char *name)
 {
   struct named_record *nr;
@@ -107,13 +113,12 @@ get_built_in_image(const char *name)
   if (!gfs)
     return 0;
 
-  xoff = (strncmp(name, "locked", 6) == 0 ? 65 : 10);
-  for (i = 0; i < gfs->nimages; i++)
-    add_picture(gfs->images[i], xoff, 10);
-
   /* built-in images are all loop-forever. don't change the GIFs because it
      makes the executable bigger */
   if (gfs->loopcount < 0) gfs->loopcount = 0;
+
+  for (i = 0; i < gfs->nimages; ++i)
+    gfs->images[i]->user_data = (void *) gfs;
 
   return gfs;
 }
@@ -125,8 +130,7 @@ static Gif_Image *
 clone_image_skeleton(Gif_Image *gfi)
 {
   Gif_Image *ngfi = Gif_NewImage();
-  Picture *p = (Picture *)gfi->user_data;
-  assert(!gfi->image_data && gfi->compressed && p);
+  assert(!gfi->image_data && gfi->compressed);
   ngfi->local = gfi->local;
   if (ngfi->local) ngfi->local->refcount++;
   ngfi->transparent = gfi->transparent;
@@ -138,8 +142,6 @@ clone_image_skeleton(Gif_Image *gfi)
   ngfi->compressed_len = gfi->compressed_len;
   ngfi->free_compressed = 0;
   ngfi->delay = gfi->delay;
-  add_picture(ngfi, p->clock_x_off, p->clock_y_off);
-  ((Picture *)ngfi->user_data)->canonical = gfi;
   gfi->refcount++;
   return ngfi;
 }
@@ -149,7 +151,7 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
 			double flash_rate_ratio)
 {
   Gif_Image *gfi;
-  int i;
+  int i, duplicate;
   double d;
 
   /* adapt delays for 1-frame images */
@@ -178,8 +180,6 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
     /* don't use an image directly if it is shared */
     if (gfi->user_data)
       gfi = clone_image_skeleton(gfi);
-    else
-      add_picture(gfi, 10, 10);
     /* ensure local colormap */
     if (!gfi->local && add->global) {
       gfi->local = add->global;
@@ -220,7 +220,7 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
   char *s;
   Gif_Stream *gfs, *add;
   Gif_Image *gfi;
-  int i;
+  int i, clock_xoff = -1;
 
   if (strlen(slideshowtext) >= BUFSIZ) return 0;
   strcpy(buf, slideshowtext);
@@ -256,7 +256,11 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 	  warning("no monochrome version of built-in picture '%s'", name);
 	name[i-4] = 'm';
       }
-      if (add) {		/* add images */
+      /* set clock X offset */
+      if (clock_xoff < 0)
+	  clock_xoff = (strncmp(name, "locked", 6) == 0 ? 65 : 10);
+      /* add images */
+      if (add) {
 	  add_stream_to_slideshow(add, gfs, flash_rate_ratio);
 	  goto done;
       } else if (n[0] == '*')
@@ -296,6 +300,11 @@ parse_slideshow(const char *slideshowtext, double flash_rate_ratio, int mono)
 	gfs->screen_height = gfi->height;
     }
   }
+
+  /* create picture list */
+  if (gfs->nimages > 0
+      && add_picturelist(gfs, (clock_xoff < 0 ? 10 : clock_xoff), 10) < 0)
+    return 0;
 
   return gfs;
 }

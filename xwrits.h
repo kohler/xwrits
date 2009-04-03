@@ -15,7 +15,7 @@
 typedef struct Port Port;
 typedef struct Options Options;
 typedef struct Hand Hand;
-typedef struct Picture Picture;
+typedef struct PictureList PictureList;
 typedef struct Alarm Alarm;
 
 #ifdef __cplusplus
@@ -280,7 +280,6 @@ extern Gif_Stream *ready_slideshow, *ready_icon_slideshow;
 extern Gif_Stream *locked_slideshow, *bars_slideshow;
 #define DEFAULT_FLASH_DELAY_SEC 2
 
-Gif_Stream *get_built_in_image(const char *);
 Gif_Stream *parse_slideshow(const char *, double, int mono);
 void set_slideshow(Hand *, Gif_Stream *, const struct timeval *);
 void set_all_slideshows(Hand *, Gif_Stream *);
@@ -289,13 +288,12 @@ void set_all_slideshows(Hand *, Gif_Stream *);
 /*****************************************************************************/
 /*  Pictures								     */
 
-struct Picture {
-
+struct PictureList {
   int clock_x_off;
   int clock_y_off;
-  Gif_Image *canonical;
-  Pixmap pix[1];
-
+  Gif_Stream *gfs;
+  int refcount;
+  Gif_XFrame *frames[1];
 };
 
 void default_pictures(void);
