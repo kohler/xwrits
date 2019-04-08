@@ -92,7 +92,7 @@ get_built_in_image(const char *name)
 {
   struct named_record *nr;
   Gif_Stream *gfs;
-  int i, xoff;
+  int i;
 
   for (nr = built_in_pictures; nr->name; nr++)
     if (strcmp(nr->name, name) == 0)
@@ -151,7 +151,7 @@ add_stream_to_slideshow(Gif_Stream *add, Gif_Stream *gfs,
 			double flash_rate_ratio)
 {
   Gif_Image *gfi;
-  int i, duplicate;
+  int i;
   double d;
 
   /* adapt delays for 1-frame images */

@@ -51,18 +51,6 @@ dist-hook:
 	@d=`cd $(distdir)/color; pwd` && cd $(srcdir) && cp -p $(COLOR_PIC) $$d
 	@d=`cd $(distdir)/mono; pwd` && cd $(srcdir) && cp -p $(MONO_PIC) $$d
 
-srclinks:
-	cd $(top_srcdir); for i in fmalloc.c strerror.c ; do \
-	ln -sf ../liblcdf/liblcdf/$$i $$i ; done
-	cd $(top_srcdir); test -d include/lcdf || mkdir -p include/lcdf
-	cd $(top_srcdir); test -d include/lcdfgif || mkdir -p include/lcdfgif
-	cd $(top_srcdir); for i in inttypes.h; do \
-	ln -sf ../../../liblcdf/include/lcdf/$$i include/lcdf/$$i; done
-	cd $(top_srcdir); for i in gif.h gifx.h; do \
-	ln -sf ../../../liblcdf/include/lcdfgif/$$i include/lcdfgif/$$i; done
-	cd $(top_srcdir); for i in giffunc.c gifread.c giftoc.c gifx.c ; do \
-	ln -sf ../liblcdf/liblcdfgif/$$i $$i ; done
-
 versionize:
 	perl -pi -e "s/^\\.ds V.*/.ds V $(VERSION)/;" xwrits.1
 	perl -pi -e "s/^Version: .*/Version: $(VERSION)/; s/$(PACKAGE)-[\w.]+\.tar\.gz/$(PACKAGE)-$(VERSION).tar.gz/;" xwrits.spec
@@ -79,4 +67,4 @@ rpm: dist
 	cp /tmp/rpm-xw/RPMS/$$buildarch/*.rpm .
 	rm -rf /tmp/rpm-xw
 
-.PHONY: srclinks versionize rpm
+.PHONY: versionize rpm
