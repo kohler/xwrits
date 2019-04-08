@@ -42,7 +42,7 @@ colorpic.c: $(COLOR_PIC) giftoc
 monopic.c: $(MONO_PIC) giftoc
 	./giftoc -makename -dir $(srcdir) $(MONO_PIC) > $@
 
-EXTRA_DIST = GESTURES xwrits.1 logo.gif xwrits.spec \
+EXTRA_DIST = README.md GESTURES.md xwrits.1 logo.gif xwrits.spec \
 	include/lcdf/inttypes.h include/lcdfgif/gif.h include/lcdfgif/gifx.h
 MOSTLYCLEANFILES = colorpic.c monopic.c
 

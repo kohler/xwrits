@@ -6,9 +6,7 @@ Do you know any obscene hand gestures not described in this file? Please
 email them to me at <ekohler@gmail.com>! Your name and/or email address
 will be included with your comments unless you state otherwise.
 
---------
-
-ENCOURAGEMENT
+## ENCOURAGEMENT
 
 Good hunting in your quest. I have heard of instances where even Presidents
 have given thumbs up or #1 hand signals on foreign visits only to be
@@ -20,14 +18,14 @@ Andy Miller
 
 --------
 
-AMERICA
+## AMERICA
 
 See United States of America.
 
 
 --------
 
-"ARAB CULTURE"
+## "ARAB CULTURE"
 
 If the finger goes forward instead of up it is equally offensive in Arab
 culture.  I hpe it adds to your collection of cultural offensive
@@ -37,18 +35,18 @@ behavior
 
 - - - -
 
-Well...there's the one that's particularly offensive to Arabs, Turks*, and
+Well...there's the one that's particularly offensive to Arabs, Turks\*, and
 Greeks. Instead of the middle finger, the index finger is held up along
 with the phrase, "Yuppa, Yuppa".
 
 Dave Blain <djblain@hotmail.com>
 
-*See "TURKEY" for a contradiction. -- editor
+\*See "TURKEY" for a contradiction. -- editor
 
 
 --------
 
-BANGLADESH
+## BANGLADESH
 
 related to me by a computer contractor from bangladesh
 once.
@@ -69,7 +67,7 @@ comfortable :)
 
 --------
 
-BRAZIL
+## BRAZIL
 
 In Brazil the "OK" sign is the equivalent of the middle finger.
 
@@ -90,14 +88,14 @@ http://www.youtube.com/watch?v=URI6HNH8rgk )
 
 --------
 
-CENTRAL AMERICA
+## CENTRAL AMERICA
 
 See "SOUTH/CENTRAL AMERICA"
 
 
 --------
 
-ENGLAND
+## ENGLAND
 
 make a victory sign (v) with palms facing yourself and back of hand
 toward victim.  It means the same as the bird in England.
@@ -123,9 +121,9 @@ this, but I saw your page and thought I might as well share the story.
 
 [Note that the following text is controversial; see below. -- Editor]
 
-    I found your page and wanted to correct some information.
+I found your page and wanted to correct some information.
 
-    When archers were caught, regardless in what conflict they were
+When archers were caught, regardless in what conflict they were
 engaged, it was common-place to cut-off their plucking finger.  Notice this
 is a singular finger because the bows of the day would not have required
 more than one finger.  The bows used were not compound, relying on pulleys
@@ -139,7 +137,7 @@ exclaim a slang phrase "Plume-tu!" the next time he was enaged in battle
 with them.  Apparently, the English did not hear so well and bastardized
 the phrase further to its modern incantation.
 
-    Historians more commonly believe the traditional "two-finger" gesture
+Historians more commonly believe the traditional "two-finger" gesture
 seen most commonly in Europe is meant to signify a woman upside-down;
 often, tongue-action is added to the gesture to assist the viewer in
 understanding the sign.  The woman is implied to be one's significant
@@ -207,14 +205,14 @@ Keith Rhodes <krhodes@teaser.fr>
 
 Subject: "Victory" V
 
-There seems to be some misunderstanding about the meaning of different V 
+There seems to be some misunderstanding about the meaning of different V
 signs over here in rainy ol' England.
 
 The V with the palm facing away is a sign for peace.
 
-The V with the palm facing towards the oneself is the rude one. This is 
-also the one that comes from English bowmen. This seems to be much less 
-common nowadays though, with the middle finger on it's own coming into 
+The V with the palm facing towards the oneself is the rude one. This is
+also the one that comes from English bowmen. This seems to be much less
+common nowadays though, with the middle finger on it's own coming into
 greater use.
 
 Gerard <XXX@XXX.org.uk>
@@ -288,7 +286,7 @@ Tim Scott
 
 --------
 
-GERMANY
+## GERMANY
 
 just wanted to tell you that people on the streets of Germany will also
 recognize the gesture for what it is meant for in Russia.
@@ -319,7 +317,7 @@ Min Jae Kim
 
 --------
 
-GHANA
+## GHANA
 
 10 years ago while in Ghana, Africa, we were instructed not to make the
 palm up gesture for come here (with all fingers or just 1) but rather to
@@ -331,14 +329,14 @@ Kristy [2006]
 
 --------
 
-GREAT BRITAIN
+## GREAT BRITAIN
 
 See "ENGLAND".
 
 
 --------
 
-GREECE
+## GREECE
 
 Here's another one for you. I got it from "How to Hold a Crocodile"
 (Diagram group). I'm quoting it from memory, and I've not read this
@@ -381,14 +379,14 @@ See also Dave Blain's message under "ARAB CULTURE".
 
 --------
 
-INDIA
+## INDIA
 
 One hand gesture my mother taught me was "cutis."  It has an Indian (Hindu)
 meaning accosiated with it.  First, make your hand into a fist with the
 thumb sticking out.  Second, hold up your thumb to your two front teeth,
 put the nail into your mouth, and flick it.  While doing this say "Cutta".
 It is basiclly fuck you and your family too.
- 
+
 Krisya Spulio
 
 - - - -
@@ -409,7 +407,7 @@ Sarthak Parikh
 
 --------
 
-IRAN
+## IRAN
 
 Some gestures I have found are the "thumbs-up" which is obscene in Iran. It
 literally means "go screw yourself".
@@ -430,7 +428,7 @@ Masoud Sharbiani <masouds@oeone.com>
 
 --------
 
-ISRAEL
+## ISRAEL
 
 a rude hand gesture in israel is to point down at your upturned palm
 with the forefinger of your other hand.  This means "grass will grow on
@@ -441,10 +439,10 @@ my hand" before the words of the speaker come true.
 
 --------
 
-ITALY
+## ITALY
 
-In Italy, a reverse V sign, with knuckles facing the 
-viewer, also means fuck you. A variation of this 
+In Italy, a reverse V sign, with knuckles facing the
+viewer, also means fuck you. A variation of this
 gesture is to insert your nose at the crotch of the V.
 The "variation" is perhaps the original gesture. I
 gather that the nose is supposed to be a penis and
@@ -478,6 +476,7 @@ penetration (how romantic).
 Since my explanation is really hard to understand i'll try to 'draw' the
 scene (as someone over the person would see):
 
+```
 first:     then:
 
 o               
@@ -485,6 +484,7 @@ o
 |   o       /
 =   |      o---.
 |   |      |   |
+```
 
 
 There a very old video of an italian rebel, prisoner of war, forced to
@@ -501,7 +501,7 @@ Tommaso Gagliardi <m_0@autistici.org>
 
 - - - -
 
--- i think its italian -- 
+-- i think its italian --
 
 partially close your hand, not quite curling the
 fingers, then bring your fingertips upward against
@@ -546,7 +546,7 @@ See also "SHAKESPEARE".
 
 --------
 
-JAPAN
+## JAPAN
 
 In Japan, inserting the thumb between the first two 
 fingers, in imitation of the clitoris, means something
@@ -557,7 +557,7 @@ Name withheld by request
 
 --------
 
-KOREA
+## KOREA
 
 If you're in Korea (or around Koreans), NEVER play "got your nose" with
 little kids: If you make a fist and put your thumb between your index
@@ -573,7 +573,7 @@ Ivon Katz <ivon@imagination.co.kr>
 
 --------
 
-NETHERLANDS
+## NETHERLANDS
 
 This is probably quite common worldwide, but a nice dutch gesture goes like
 this:
@@ -588,7 +588,7 @@ Lennaert
 
 --------
 
-PHILLIPINES
+## PHILLIPINES
 
 Waving your index finger in a curl towards you as in telling people to
 "come here."  This is how you call a dog in the Philippines!  If the
@@ -601,7 +601,7 @@ Brian Velasco <BVel111575@aol.com>
 
 --------
 
-POLAND
+## POLAND
 
 
 In Poland we use the same as Russia - but it's not too offensive.
@@ -616,7 +616,7 @@ Michal Pasternak <doc@safenet.pl>
 
 --------
 
-RUSSIA
+## RUSSIA
 
 in russian it is a clenched fist with the thumb going between
 the first and second fingers(i think kinda like an m in sign language
@@ -646,7 +646,7 @@ kcmartin
 
 --------
 
-SHAKESPEARE
+## SHAKESPEARE
 
 close your hand into a fist with your thumb sticking
 out over the top. place the tip of the thumb behind
@@ -657,18 +657,18 @@ your front two teeth, then pop it out at your recipient.
 I recall this gesture from Romeo and Juliet in English lessons, which means
 it may well be Italian in origin. Here's a relevant quote:
 
-> Sam. Nay, as they dare. I wil bite my Thumb at them,
->      which is a disgrace to them, if they beare it
+> Sam. Nay, as they dare. I wil bite my Thumb at them, \
+>      which is a disgrace to them, if they beare it
 >
-> Abra. Do you bite your Thumbe at vs sir?
+> Abra. Do you bite your Thumbe at vs sir? \
 > Samp. I do bite my Thumbe, sir
 >
-> Abra. Do you bite your Thumb at vs, sir?
-> Sam. Is the Law of our side, if I say I?
+> Abra. Do you bite your Thumb at vs, sir? \
+> Sam. Is the Law of our side, if I say I? \
 > Gre. No
 >
-> Sam. No sir, I do not bite my Thumbe at you sir: but
->      I bite my Thumbe sir
+> Sam. No sir, I do not bite my Thumbe at you sir: but \
+>      I bite my Thumbe sir
 
 P.S. I found your GESTURES file very useful.
 
@@ -677,7 +677,7 @@ Tom Adams
 
 --------
 
-SOUTH/CENTRAL AMERICA
+## SOUTH/CENTRAL AMERICA
 
 --Flicking someone off--the preferred way to do it in Ecuador, Colombia,
 Peru, Venezuela (most of south/central america) is with the pointer and
@@ -698,7 +698,7 @@ Phillip O. Knoll <pknoll@gac.edu>
 
 --------
 
-SPAIN
+## SPAIN
 
 perhaps the most typical Spanish gesture is the horns one: with the palm
 facing you, index and little fingers raised while the middle ones are
@@ -709,17 +709,17 @@ standing for a photo, usually when he is ahead of you and looking at the
 camera, so he can't notice it until he sees the photo (better don't try
 this with someone you don't have familiarity enough).
 
-Other gestures, like the middle finger one and the "umbrella"* (we call
+Other gestures, like the middle finger one and the "umbrella"\* (we call
 it "sleeve cut") are widely used.
 
 Anonymous <xxx@xxx.org>
 
-*For "umbrella", see "ITALY" above.
+\*For "umbrella", see "ITALY" above.
 
 
 --------
 
-TURKEY
+## TURKEY
 
 we don't make that "Yuppa, Yuppa" sound, it doesn't even have a meaning in
 Turkish.. [refers to Dave Blain's message under "ARAB CULTURE" -- editor]
@@ -737,7 +737,7 @@ Anonymous <gokce@gumur.com>
 
 --------
 
-UNITED STATES OF AMERICA
+## UNITED STATES OF AMERICA
 
 This is from the old west,
 
@@ -785,7 +785,7 @@ in all three states.
 
 --------
 
-UNKNOWN/UNSURE
+## UNKNOWN/UNSURE
 
 I'm not sure which country the following gesture comes from, but my
 guess is somewhere in Africa or middle-east, correct me if I'm wrong. I
